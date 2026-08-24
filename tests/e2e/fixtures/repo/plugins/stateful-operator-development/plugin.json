@@ -1,0 +1,13 @@
+{
+  "name": "stateful-operator-development",
+  "description": "Operator development: planning, execution, state, and data structures of stateful operators",
+  "description_zh": "算子开发：stateful 算子的规划、执行、状态与数据结构",
+  "workflow": "workflow.md",
+  "agents": ["stateful-operator-reviewer"],
+  "skills": ["stateful-operator-codegen"],
+  "docs": ["stateful-arch.md"],
+  "templates": ["spec.md", "spec.zh.md"],
+  "shared": {
+    "skills": ["flink-velox-build"]
+  }
+}
