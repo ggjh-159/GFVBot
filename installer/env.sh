@@ -8,8 +8,10 @@
 # <target>/.gfvbot/env.json. jq is this checker's own prerequisite and gets
 # auto-installed up front. When dependencies are missing, the run hands over
 # to the OS-specific installer under installer/env-init/ (which installs,
-# then re-execs this script). Re-running rescans everything, so
-# appearing/disappearing tools and agents are reflected in the archive.
+# then re-execs this script); flink and nexmark count as missing there too,
+# but the installer's tick-list lets the user leave them out. Re-running
+# rescans everything, so appearing/disappearing tools and agents are
+# reflected in the archive.
 
 set -u
 
@@ -59,23 +61,6 @@ tool_json() {  # <name> → {path,version,ok} or {ok:false}
   fi
   ver=$("$name" --version 2>&1 | head -1)
   jq -cn --arg p "$path" --arg v "$ver" '{path:$p,version:$v,ok:true}'
-}
-
-find_jdk() {  # <8|17> → echo jdk dir (has bin/javac) or nothing
-  local d
-  case "$1" in
-    8)
-      for d in /usr/lib/jvm/java-1.8.0-openjdk-* /usr/lib/jvm/java-8-openjdk-*; do
-        [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
-      done ;;
-    17)
-      # java-17-* covers both distro packages (java-17-openjdk-*) and the
-      # Temurin tarball the installers drop in (java-17-adoptium)
-      for d in /usr/lib/jvm/java-17-*; do
-        [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
-      done ;;
-  esac
-  return 1
 }
 
 jdk_json() {  # <8|17>
@@ -152,22 +137,12 @@ system_json() {
       cpu:{model:$cm,cores:$cores}, mem_total_gb:$mem, disk_root_avail_gb:$disk}'
 }
 
-flink_root() {  # FLINK_HOME first, then a flink on PATH → root dir or nothing
-  if [ -n "${FLINK_HOME:-}" ] && [ -x "$FLINK_HOME/bin/flink" ]; then
-    printf '%s' "$FLINK_HOME"
-    return 0
-  fi
-  local p
-  p=$(command -v flink 2>/dev/null) || return 1
-  printf '%s' "$(dirname "$(dirname "$p")")"
-}
-
 stack_json() {  # flink dist + nexmark jar under its lib/
   local froot fver="" fpath="" njar="" nver=""
-  if froot=$(flink_root); then
+  if froot=$(stack_flink_root); then
     fpath=$froot
     fver=$("$froot/bin/flink" --version 2>&1 | head -1)
-    njar=$(ls "$froot"/lib/*nexmark*.jar 2>/dev/null | head -1)
+    njar=$(stack_nexmark_jar)
     [ -n "$njar" ] && nver=$(basename "$njar" | sed -n 's/.*nexmark[^0-9]*\([0-9][0-9.]*\(-[A-Za-z][A-Za-z0-9]*\)\?\).*/\1/p' | sed 's/\.$//')
   fi
   local flink_j nexmark_j
@@ -308,7 +283,9 @@ report() {  # <env.json>
 missing_deps() {  # <env.json> → list of missing dep names (jdk counts as jdk-17
                   # only when neither 8 nor 17 is present; build tools and C++
                   # libs are checked per group — one missing member adds the
-                  # group, the installers treat a group as one tick entry)
+                  # group, the installers treat a group as one tick entry;
+                  # flink/nexmark are optional runtime-stack entries, the
+                  # tick-list lets the user leave them unticked)
   local j=$1 m=() t
   for t in git cmake gcc g++ mvn; do
     [ "$(jq -r ".tools[\"$t\"].ok" "$j")" = false ] && m+=("$t")
@@ -322,6 +299,8 @@ missing_deps() {  # <env.json> → list of missing dep names (jdk counts as jdk-
   if [ "$(jq -r '[.cpp_deps[]] | any(. == false)' "$j")" = true ]; then
     m+=("cpp-deps")
   fi
+  [ "$(jq -r '.stack.flink.ok' "$j")" = false ] && m+=("flink")
+  [ "$(jq -r '.stack.nexmark.ok' "$j")" = false ] && m+=("nexmark")
   printf '%s\n' "${m[@]:-}"
 }
 

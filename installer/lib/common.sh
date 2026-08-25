@@ -74,10 +74,13 @@ GFVBOT_CPP_DEPS=(
 )
 
 header_exists() {  # <header>... → rc 0 when any candidate is on disk
-  local h
+  local h d
   for h in "$@"; do
-    [ -f "/usr/include/$h" ] && return 0
-    [ -f "/usr/local/include/$h" ] && return 0
+    # /usr/include/*/ covers Debian multiarch triplets (e.g. curl.h lives
+    # under aarch64-linux-gnu/ on Ubuntu arm64); no match elsewhere
+    for d in "/usr/include/" "/usr/local/include/" /usr/include/*/; do
+      [ -f "$d$h" ] && return 0
+    done
   done
   return 1
 }
@@ -101,6 +104,130 @@ cpp_dep_missing() {  # → missing lib names, space separated
   printf '%s' "${out% }"
 }
 
+find_jdk() {  # <8|17> → jdk dir (has bin/javac) or nothing
+  local d
+  case "$1" in
+    8)  for d in /usr/lib/jvm/java-1.8.0-openjdk-* /usr/lib/jvm/java-8-openjdk-*; do
+          [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
+        done ;;
+    17) # java-17-* covers both distro packages (java-17-openjdk-*) and the
+        # Temurin tarball the env-init scripts drop in (java-17-adoptium)
+        for d in /usr/lib/jvm/java-17-*; do
+          [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
+        done ;;
+  esac
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# flink / nexmark runtime stack — probed by env.sh's scan and installed by the
+# env-init scripts. Not package-manager territory: flink lands as the official
+# Apache tarball under a versioned /opt dir with a stable symlink, nexmark has
+# no released artifacts and is built from source.
+# ---------------------------------------------------------------------------
+GFVBOT_FLINK_VERSION=1.19.2
+GFVBOT_FLINK_HOME=/opt/flink                        # symlink -> versioned dir
+GFVBOT_NEXMARK_REPO=https://github.com/nexmark/nexmark.git
+GFVBOT_NEXMARK_SRC=/opt/src/nexmark                 # source cache; plain git
+                                                   # territory once cloned
+
+stack_flink_root() {  # → flink dir (has bin/flink) or nothing; FLINK_HOME
+                      # first, then a flink on PATH, then the /opt symlink
+  local p
+  if [ -n "${FLINK_HOME:-}" ] && [ -x "$FLINK_HOME/bin/flink" ]; then
+    printf '%s' "$FLINK_HOME"
+    return 0
+  fi
+  p=$(command -v flink 2>/dev/null) && { printf '%s' "$(dirname "$(dirname "$p")")"; return 0; }
+  if [ -x "$GFVBOT_FLINK_HOME/bin/flink" ]; then
+    printf '%s' "$GFVBOT_FLINK_HOME"
+    return 0
+  fi
+  return 1
+}
+
+stack_nexmark_jar() {  # → nexmark jar path inside flink's lib/, or nothing
+  local root jar
+  root=$(stack_flink_root) || return 1
+  jar=$(ls "$root"/lib/*nexmark*.jar 2>/dev/null | head -1)
+  [ -n "$jar" ] || return 1   # the ls|head pipeline alone always yields rc 0
+  printf '%s' "$jar"
+}
+
+install_flink() {  # → rc 0 when $GFVBOT_FLINK_HOME is usable; idempotent
+  local dir="/opt/flink-$GFVBOT_FLINK_VERSION"
+  local tgz="flink-$GFVBOT_FLINK_VERSION-bin-scala_2.12.tgz"
+  local base="https://archive.apache.org/dist/flink/flink-$GFVBOT_FLINK_VERSION"
+  # the huaweicloud mirror carries archived releases at CN speeds but skips
+  # the checksum files, so the sha512 always comes from archive.apache.org
+  local mirror="https://mirrors.huaweicloud.com/apache/flink/flink-$GFVBOT_FLINK_VERSION"
+  if [ -x "$dir/bin/flink" ]; then
+    ln -sfn "$dir" "$GFVBOT_FLINK_HOME"
+    return 0
+  fi
+  local tmp; tmp=$(mktemp -d)
+  local src=""
+  local b
+  for b in "$mirror" "$base"; do
+    echo "  $(t env_dl_flink "$b/$tgz")"
+    if curl -fsSL --retry 3 --max-time 3600 -o "$tmp/$tgz" "$b/$tgz"; then
+      src=$b
+      break
+    fi
+  done
+  if [ -z "$src" ] \
+     || ! curl -fsSL --retry 3 --max-time 120 -o "$tmp/$tgz.sha512" "$base/$tgz.sha512" \
+     || ! ( cd "$tmp" && sha512sum -c "$tgz.sha512" >/dev/null 2>&1 ) \
+     || ! tar -xzf "$tmp/$tgz" -C /opt; then
+    rm -rf "$tmp"
+    err "$(t env_flink_failed)"
+    return 1
+  fi
+  rm -rf "$tmp"
+  if [ ! -x "$dir/bin/flink" ]; then
+    err "$(t env_flink_failed)"
+    return 1
+  fi
+  ln -sfn "$dir" "$GFVBOT_FLINK_HOME"
+  ok "$(t env_flink_done "$GFVBOT_FLINK_HOME" "$GFVBOT_FLINK_HOME")"
+  return 0
+}
+
+install_nexmark() {  # → rc 0 when the nexmark jar sits in flink's lib/;
+                     # rebuilds after the first deploy are plain git+mvn work
+  local root jar jdk
+  if jar=$(stack_nexmark_jar); then
+    return 0
+  fi
+  root=$(stack_flink_root) \
+    || { install_flink || return 1; root=$(stack_flink_root) || return 1; }
+  command -v mvn >/dev/null 2>&1 || { err "$(t env_nexmark_needs_mvn)"; return 1; }
+  jdk=$(find_jdk 17) || jdk=$(find_jdk 8) \
+    || { err "$(t env_nexmark_needs_jdk)"; return 1; }
+  if [ ! -d "$GFVBOT_NEXMARK_SRC/.git" ]; then
+    echo "  $(t env_nexmark_clone "$GFVBOT_NEXMARK_REPO")"
+    mkdir -p "$(dirname "$GFVBOT_NEXMARK_SRC")"
+    local attempt
+    for attempt in 1 2 3; do   # github TLS transients: same retry policy as clone
+      rm -rf "$GFVBOT_NEXMARK_SRC"
+      git clone --depth 1 "$GFVBOT_NEXMARK_REPO" "$GFVBOT_NEXMARK_SRC" && break
+      [ "$attempt" -lt 3 ] && continue
+      err "$(t env_nexmark_clone_failed)"; return 1
+    done
+  fi
+  echo "  $(t env_nexmark_build "$jdk")"
+  ( cd "$GFVBOT_NEXMARK_SRC" \
+    && JAVA_HOME="$jdk" mvn -pl nexmark-flink -am package -DskipTests ) \
+    > /tmp/gfvbot-nexmark-build.log 2>&1 \
+    || { err "$(t env_nexmark_failed)"; return 1; }
+  jar=$(ls "$GFVBOT_NEXMARK_SRC"/nexmark-flink/target/nexmark-flink-*.jar 2>/dev/null \
+        | grep -v sources | head -1)
+  [ -n "$jar" ] || { err "$(t env_nexmark_failed)"; return 1; }
+  cp "$jar" "$root/lib/"
+  ok "$(t env_nexmark_done "$root/lib/$(basename "$jar")")"
+  return 0
+}
+
 # setup_script_for <os-id> <os-version> → matching env-init script, or nothing.
 # Callers must have ROOT (repo root) defined. Used by env.sh (check handover)
 # and the gfvbot CLI (env-init subcommand).
@@ -113,6 +240,8 @@ setup_script_for() {
         7*) printf '%s' "$ROOT/installer/env-init/setup-centos7.sh" ;;
         9*) printf '%s' "$ROOT/installer/env-init/setup-centos9.sh" ;;
       esac ;;
+    ubuntu|debian)
+      printf '%s' "$ROOT/installer/env-init/setup-ubuntu.sh" ;;
   esac
 }
 

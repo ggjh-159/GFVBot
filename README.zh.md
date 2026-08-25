@@ -79,7 +79,7 @@ opencode
 
 ## 环境检查
 
-`gfvbot env` 扫描构建依赖（git、cmake、gcc/g++、OpenJDK 8/17、Maven、JAVA_HOME、构建工具组与Velox系统级C++库组）、本机可用的AI Agent CLI以及flink/nexmark安装情况，并归档到目标项目的`.gfvbot/env.json`；其中`repos`节记录四个源码仓的路径、克隆源地址、上游地址与主线分支，首次扫描只留占位并提醒，`gfvbot clone`克隆后自动回填，也可直接手工编辑。有缺失时转交对应OS的安装脚本（`installer/env-init/`）补齐：
+`gfvbot env` 扫描构建依赖（git、cmake、gcc/g++、OpenJDK 8/17、Maven、JAVA_HOME、构建工具组与Velox系统级C++库组）、本机可用的AI Agent CLI以及flink/nexmark安装情况，并归档到目标项目的`.gfvbot/env.json`；其中`repos`节记录四个源码仓的路径、克隆源地址、上游地址与主线分支，首次扫描只留占位并提醒，`gfvbot clone`克隆后自动回填，也可直接手工编辑。有缺失时转交对应OS的安装脚本（`installer/env-init/`，支持openEuler、CentOS 7/9与Ubuntu/Debian）补齐。安装脚本的勾选清单也覆盖运行栈：flink按官方发行包装到`/opt/flink-<版本>`并建稳定的`/opt/flink`软链，nexmark从源码克隆、maven构建后把jar部署进flink的`lib/`——这两项可选，不勾即跳过：
 
 ```bash
 gfvbot env

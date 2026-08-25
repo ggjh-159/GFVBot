@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# setup-centos9.sh — dependency installer for CentOS Stream 9 (gfvbot env backend).
+# setup-ubuntu.sh — dependency installer for Ubuntu (gfvbot env backend);
+# also serves Debian (os.id=debian — same package family).
 #
-# CentOS 9 specifics handled here:
-#   * EPEL + CRB repos are enabled before build-tools: ninja-build and ccache
-#     live there, not in BaseOS/AppStream (mirroring Velox's own centos9
-#     setup). Enabling is idempotent and failure-tolerered; if it fails the
-#     package install reports the failure instead.
-#   * RHEL9 package names: libzstd-devel / curl-devel (openEuler calls them
-#     zstd-devel / libcurl-devel).
+# Ubuntu specifics handled here:
+#   * Debian-style -dev package names (libssl-dev / zlib1g-dev /
+#     libcurl4-openssl-dev ...) and openjdk-* JDK packages.
+#   * curl is probed alongside the tools: the base image ships without it,
+#     and the flink tarball download needs it.
+#   * apt-get update runs (best-effort) before installing: a fresh
+#     container carries empty package lists and every install would fail.
+#
+# flink (Apache tarball under /opt) and nexmark (built from source) are
+# shared with the other OS scripts via lib/common.sh.
 #
 # Probes everything itself (no jq / no env.json needed), shows an interactive
-# tick-list, installs via dnf, then re-execs the environment check so
-# .gfvbot/env.json reflects the new state. flink (Apache tarball under /opt)
-# and nexmark (built from source) are optional entries shared with the other
-# OS scripts via lib/common.sh.
+# tick-list, installs via apt-get, then re-execs the environment check so
+# .gfvbot/env.json reflects the new state.
 #
 # Invoked automatically by env.sh when the OS matches; can also be run
-# directly:  bash installer/env-init/setup-centos9.sh [--target <dir>]
+# directly:  bash installer/env-init/setup-ubuntu.sh [--target <dir>]
 
 set -u
 
@@ -34,7 +36,7 @@ done
 
 # --- probe what is missing (self-contained, mirrors env.sh's scan) -----------
 MISSING=()
-for dep in jq git cmake gcc g++ mvn; do
+for dep in jq curl git cmake gcc g++ mvn; do
   command -v "$dep" >/dev/null 2>&1 || MISSING+=("$dep")
 done
 if ! find_jdk 8 && ! find_jdk 17; then
@@ -57,7 +59,7 @@ if ! { [ -t 0 ] && [ -t 1 ]; }; then
   exit 0
 fi
 
-command -v dnf >/dev/null 2>&1 || { warn "$(t env_no_pm)"; exit 0; }
+command -v apt-get >/dev/null 2>&1 || { warn "$(t env_no_pm)"; exit 0; }
 
 ui_pick env_pick_title ui_pick_hint "${MISSING[@]}" || { echo; warn "$(t env_install_cancelled)"; exit 0; }
 if [ "${#PICKED[@]}" -eq 0 ]; then
@@ -66,17 +68,20 @@ if [ "${#PICKED[@]}" -eq 0 ]; then
   exit 0
 fi
 
-pkg_for() {  # <dep> → CentOS 9 package name
+echo "  $(t env_apt_update)"
+apt-get update -qq >/dev/null 2>&1 || true
+
+pkg_for() {  # <dep> → Ubuntu package name
   case "$1" in
-    g++)    echo gcc-c++ ;;
+    g++)    echo g++ ;;
     mvn)    echo maven ;;
-    jdk-17) echo java-17-openjdk-devel ;;
+    jdk-17) echo openjdk-17-jdk ;;
     build-tools)
-      echo "ninja-build ccache autoconf automake libtool flex bison python3" ;;
+      echo "ninja-build ccache autoconf automake libtool libtool-bin flex bison python3" ;;
     cpp-deps)
-      echo "libevent-devel openssl-devel re2-devel libzstd-devel lz4-devel \
-double-conversion-devel libdwarf-devel elfutils-libelf-devel curl-devel \
-libicu-devel libsodium-devel zlib-devel" ;;
+      echo "libevent-dev libssl-dev libre2-dev libzstd-dev liblz4-dev \
+libdouble-conversion-dev libdwarf-dev libelf-dev libcurl4-openssl-dev \
+libicu-dev libsodium-dev zlib1g-dev" ;;
     *)      echo "$1" ;;
   esac
 }
@@ -86,21 +91,13 @@ for dep in "${PICKED[@]}"; do
   case "$dep" in
     flink)   install_flink || { err "$(t env_install_failed flink)"; FAIL=1; } ;;
     nexmark) install_nexmark || { err "$(t env_install_failed nexmark)"; FAIL=1; } ;;
-    build-tools)
-      # ninja/ccache need EPEL + CRB first; failure here surfaces via the
-      # package install that follows, so enabling itself stays best-effort
-      echo "  $(t env_enable_epel_crb)"
-      dnf install -y -q epel-release dnf-plugins-core >/dev/null 2>&1 || true
-      dnf config-manager --set-enabled crb >/dev/null 2>&1 || true
-      pkg=$(pkg_for "$dep")
-      echo "  $(t env_installing "$dep ($pkg)")"
-      # shellcheck disable=SC2086
-      dnf install -y $pkg || { err "$(t env_install_failed "$dep")"; FAIL=1; } ;;
     *)
       pkg=$(pkg_for "$dep")
       echo "  $(t env_installing "$dep ($pkg)")"
+      # DEBIAN_FRONTEND: distro prompts (tzdata region etc.) must not pierce
+      # our tick-list interaction — the tool's own UI is the only dialog
       # shellcheck disable=SC2086
-      dnf install -y $pkg || { err "$(t env_install_failed "$dep")"; FAIL=1; } ;;
+      DEBIAN_FRONTEND=noninteractive apt-get install -y $pkg || { err "$(t env_install_failed "$dep")"; FAIL=1; } ;;
   esac
 done
 if [ "$FAIL" -eq 1 ]; then

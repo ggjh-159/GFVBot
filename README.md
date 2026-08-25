@@ -79,7 +79,7 @@ Use `gfvbot list` to see what is installed and what the repo offers.
 
 ## Environment check
 
-`gfvbot env` scans build dependencies (git, cmake, gcc/g++, OpenJDK 8/17, Maven, JAVA_HOME, build tools like ninja/autoconf, and Velox's system-level C++ libraries), the locally available AI agent CLIs, and the flink/nexmark stack, then archives everything to the target project's `.gfvbot/env.json`. The `repos` section records each source repo's path, clone-source URL, upstream URL, and main branch: a fresh scan leaves placeholders with a hint, `gfvbot clone` back-fills them, and hand-editing works too. When dependencies are missing it hands over to the OS-specific installer (`installer/env-init/`):
+`gfvbot env` scans build dependencies (git, cmake, gcc/g++, OpenJDK 8/17, Maven, JAVA_HOME, build tools like ninja/autoconf, and Velox's system-level C++ libraries), the locally available AI agent CLIs, and the flink/nexmark stack, then archives everything to the target project's `.gfvbot/env.json`. The `repos` section records each source repo's path, clone-source URL, upstream URL, and main branch: a fresh scan leaves placeholders with a hint, `gfvbot clone` back-fills them, and hand-editing works too. When dependencies are missing it hands over to the OS-specific installer (`installer/env-init/`; openEuler, CentOS 7/9, and Ubuntu/Debian are covered). The installer's tick-list also covers the runtime stack: flink lands as the official tarball under `/opt/flink-<version>` with a stable `/opt/flink` symlink, and nexmark is cloned from source, built with maven, and its jar deployed into flink's `lib/` — both entries are optional:
 
 ```bash
 gfvbot env

@@ -8,6 +8,8 @@
 #   * No OpenJDK 17 in the archives: a Temurin 17 tarball is downloaded
 #     (Adoptium API, Tsinghua mirror as fallback) and unpacked to
 #     /usr/lib/jvm/java-17-adoptium, which env.sh's probe picks up.
+#   * flink (Apache tarball under /opt) and nexmark (source build) are
+#     available like on the other OS scripts — see lib/common.sh.
 #
 # Probes everything itself (no jq / no env.json needed), shows an interactive
 # tick-list, installs, then re-execs the environment check so
@@ -29,19 +31,6 @@ while [ $# -gt 0 ]; do
     *) die "$(t err_unknown_arg "$1")" ;;
   esac
 done
-
-find_jdk() {  # <8|17> → jdk dir (has bin/javac) or nothing
-  local d
-  case "$1" in
-    8)  for d in /usr/lib/jvm/java-1.8.0-openjdk-* /usr/lib/jvm/java-8-openjdk-*; do
-          [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
-        done ;;
-    17) for d in /usr/lib/jvm/java-17-*; do
-          [ -x "$d/bin/javac" ] && { printf '%s' "$d"; return 0; }
-        done ;;
-  esac
-  return 1
-}
 
 install_jdk17_tarball() {
   local mfile arch=$(uname -m) dir
@@ -92,6 +81,8 @@ if ! find_jdk 8 && ! find_jdk 17; then
 fi
 [ -n "$(build_tool_missing)" ] && MISSING+=("build-tools")
 [ -n "$(cpp_dep_missing)" ] && MISSING+=("cpp-deps")
+stack_flink_root >/dev/null 2>&1 || MISSING+=("flink")
+[ -z "$(stack_nexmark_jar)" ] && MISSING+=("nexmark")
 if [ "${#MISSING[@]}" -eq 0 ]; then
   echo
   ok "$(t env_all_present)"
@@ -138,6 +129,8 @@ elfutils-libelf-devel libcurl-devel libicu-devel zlib-devel" ;;
 FAIL=0
 for dep in "${PICKED[@]}"; do
   case "$dep" in
+    flink)   install_flink || { err "$(t env_install_failed flink)"; FAIL=1; } ;;
+    nexmark) install_nexmark || { err "$(t env_install_failed nexmark)"; FAIL=1; } ;;
     jdk-17)
       install_jdk17_tarball || FAIL=1 ;;
     jq)
