@@ -151,8 +151,10 @@ stack_json() {  # flink dist + nexmark jar under its lib/
   else
     flink_j=$(jq -cn '{ok:false}')
   fi
+  local nhome=""
+  [ -x "$GFVBOT_NEXMARK_HOME/bin/run_query.sh" ] && nhome=$GFVBOT_NEXMARK_HOME
   if [ -n "$njar" ]; then
-    nexmark_j=$(jq -cn --arg p "$njar" --arg v "$nver" '{path:$p,version:$v,ok:true}')
+    nexmark_j=$(jq -cn --arg p "$njar" --arg v "$nver" --arg h "$nhome" '{path:$p,version:$v,home:$h,ok:true}')
   else
     nexmark_j=$(jq -cn '{ok:false}')
   fi

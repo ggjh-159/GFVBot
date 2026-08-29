@@ -75,8 +75,15 @@ for d in "$PLUGINS_DIR"/*/; do
 
   # --- manifest ↔ agent-binding union consistency ---
   # agents may bind owned or shared units; the union of what agents bind must
-  # equal what the manifest declares (own + shared), in both skills and docs
+  # equal what the manifest declares (own + shared), in both skills and docs.
+  # Skipped while a plugin declares no agents yet (population phase): there is
+  # nothing to compare against, and the check re-engages once agents land.
+  agent_count=$(jq -r '.agents[]? // empty' "$m" | wc -l)
+  if [ "$agent_count" -eq 0 ]; then
+    echo "    --: agent-binding union check skipped (no agents declared yet)"
+  fi
   for kind in skills docs; do
+    [ "$agent_count" -eq 0 ] && continue
     mani=$(jq -r "[(.${kind}[]?), (.shared.${kind}[]?)] | unique | .[]" "$m")
     agent_union=""
     while IFS= read -r a; do

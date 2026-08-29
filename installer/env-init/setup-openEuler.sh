@@ -39,6 +39,11 @@ fi
 [ -n "$(cpp_dep_missing)" ] && MISSING+=("cpp-deps")
 stack_flink_root >/dev/null 2>&1 || MISSING+=("flink")
 [ -z "$(stack_nexmark_jar)" ] && MISSING+=("nexmark")
+# source-deps (Velox's source-built C++ libs): only offered when the velox
+# checkout exists — the library list and the install functions come from it.
+if find_velox_checkout_dir "$TARGET" >/dev/null 2>&1; then
+  [ -n "$(bash "$ROOT/installer/env-init/source-deps.sh" --target "$TARGET" --probe-only)" ] && MISSING+=("source-deps")
+fi
 if [ "${#MISSING[@]}" -eq 0 ]; then
   echo
   ok "$(t env_all_present)"
@@ -72,11 +77,11 @@ pkg_for() {  # <dep> → openEuler package name (groups expand to a package list
     jdk-17) echo java-17-openjdk-devel ;;
     # ninja/ccache live in EPEL on CentOS but ship in the openEuler repos
     build-tools)
-      echo "ninja-build ccache autoconf automake libtool flex bison python3" ;;
+      echo "ninja-build ccache autoconf automake libtool flex bison python3 patchelf" ;;
     cpp-deps)
       echo "libevent-devel openssl-devel re2-devel zstd-devel lz4-devel \
 double-conversion-devel libdwarf-devel elfutils-libelf-devel libcurl-devel \
-libicu-devel libsodium-devel zlib-devel" ;;
+libicu-devel libsodium-devel zlib-devel librdkafka-devel" ;;
     *)      echo "$1" ;;
   esac
 }
@@ -86,6 +91,9 @@ for dep in "${PICKED[@]}"; do
   case "$dep" in
     flink)   install_flink || { err "$(t env_install_failed flink)"; FAIL=1; } ;;
     nexmark) install_nexmark || { err "$(t env_install_failed nexmark)"; FAIL=1; } ;;
+    source-deps)
+      bash "$ROOT/installer/env-init/source-deps.sh" --target "$TARGET" \
+        || { err "$(t env_install_failed source-deps)"; FAIL=1; } ;;
     *)
       pkg=$(pkg_for "$dep")
       echo "  $(t env_installing "$dep ($pkg)")"

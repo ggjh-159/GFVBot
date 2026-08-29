@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # check_language.sh — L1: content language policy.
-#   AI-facing content (workflow.md, agents/, skills/, docs/, base templates)
-#   must be English-only; human-facing content carries Chinese in a <base>.zh.md
-#   sibling; every declared .md template unit must have that pair.
+#   AI-facing content (workflow.md, agents/, skills/) must be English-only.
+#   Docs and base templates are bilingual: the main file is English-only and
+#   Chinese lives in a <base>.zh.md sibling; templates pair through the
+#   manifest, docs pair through the filesystem.
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -40,6 +41,25 @@ check_base_templates_english() {  # <templates-dir>
   done < <(find "$1" -type f ! -name .gitkeep | LC_ALL=C sort)
 }
 
+check_docs_english() {  # <dir> <what> — main doc files are English-only, the
+                        # Chinese lives in a .zh.md sibling, and the pair must
+                        # exist on disk
+  local f sib
+  [ -d "$1" ] || return 0
+  while IFS= read -r f; do
+    case "$f" in *.zh.md) continue ;; esac
+    if has_cjk "$f"; then
+      fail "CJK in $2 (Chinese belongs in the .zh.md sibling): ${f#"$ROOT"/}"
+    else
+      pass "english-only $2: ${f#"$ROOT"/}"
+    fi
+    sib="${f%.md}.zh.md"
+    [ -f "$sib" ] \
+      && pass "doc pair file exists: ${sib#"$ROOT"/}" \
+      || fail "doc missing .zh.md pair file: ${sib#"$ROOT"/}"
+  done < <(find "$1" -type f -name "*.md" ! -name .gitkeep | LC_ALL=C sort)
+}
+
 for d in "$PLUGINS_DIR"/*/; do
   p=$(basename "$d")
   echo "plugin: $p"
@@ -51,9 +71,9 @@ for d in "$PLUGINS_DIR"/*/; do
   else
     fail "workflow.md missing: $p"
   fi
-  for sub in agents skills docs; do
-    check_english_tree "$d/$sub" "$sub"
-  done
+  check_english_tree "$d/agents" "agents"
+  check_english_tree "$d/skills" "skills"
+  check_docs_english "$d/docs" "docs"
   check_base_templates_english "$d/templates"
 
   # bilingual pairing: every declared .md template unit has a <base>.zh.md
@@ -104,7 +124,7 @@ done
 
 # shared AI-facing content: English only
 check_english_tree "$SHARED_DIR/skills" "shared skills"
-check_english_tree "$SHARED_DIR/docs" "shared docs"
+check_docs_english "$SHARED_DIR/docs" "shared docs"
 check_base_templates_english "$SHARED_DIR/templates"
 
 finish

@@ -432,11 +432,11 @@ cmd_clone() {
     local e
     for e in "${GFVBOT_REPOS[@]}"; do repos+=("${e%%|*}"); done
   fi
-  command -v git >/dev/null 2>&1 || { echo "$(t err_no_git)" >&2; exit 1; }
+  ensure_git || { echo "$(t err_no_git)" >&2; exit 1; }
 
   local root="$target/repos" name url branch dest FAIL=0 failed="" recorded=0
   local envjson="$target/.gfvbot/env.json"
-  local tries="${GFVBOT_CLONE_TRIES:-3}" pause="${GFVBOT_CLONE_RETRY_SLEEP:-3}"
+  local tries="${GFVBOT_CLONE_TRIES:-5}" pause="${GFVBOT_CLONE_RETRY_SLEEP:-3}"
   step "$(t clone_title)"
   for name in "${repos[@]}"; do
     url=$(repo_url "$name" "$fork")
@@ -476,6 +476,8 @@ cmd_clone() {
   [ "$recorded" = 1 ] && ok "$(t clone_env_recorded "$envjson")"
   if [ "$FAIL" -eq 0 ]; then
     ok "$(t clone_all_done "$root")"
+    echo
+    warn "$(t clone_source_deps_hint)"
   else
     err "$(t clone_failed_summary "${failed# }")"
   fi

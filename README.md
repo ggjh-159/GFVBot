@@ -46,6 +46,30 @@ bash /path/to/gfvbot/plugins/stateful-operator-development/install.sh claude   #
 
 Two AI agents are currently selectable: `claude` (Claude Code) and `opencode`. The `codex` and `dsh` (DeepSeek Harness) adapters are ready and will be enabled once verification environments are available.
 
+## Initialization walkthrough
+
+Bringing a bare machine to a ready-to-build GFV workspace is the same command sequence on every supported OS — `env-init` dispatches to the OS-specific backend internally (openEuler, CentOS 9, Ubuntu/Debian; on CentOS 7 the source-deps entry is absent because its archived vault repos cannot drive the velox setup script):
+
+```bash
+bash installer/setup.sh      # 1. install the gfvbot CLI
+cd /path/to/gfv              #    the target project root; run everything below from here
+gfvbot install <plugin>      # 2. install a scenario plugin (interactive AI-agent picker)
+gfvbot clone                 # 3. velox / velox4j / gluten / flink under repos/ (installs git when missing)
+gfvbot env                   # 4. scan dependencies into .gfvbot/env.json
+gfvbot env-init              # 5. tick-list install: build deps, flink / nexmark, source-deps
+```
+
+`clone` leads the setup and installs git itself when the package manager can provide it, so the repos land before any installer pass. By the time the installer runs, the velox checkout exists and the tick-list carries source-deps — one pass with everything ticked completes any machine, bare or not (`gfvbot env` offers exactly that pass when the scan finds gaps; `gfvbot env-init` opens it directly).
+
+Every step resumes on a machine that is already partway there: detected dependencies are skipped, existing repos are left untouched, and existing configuration is only filled in when absent, never overwritten.
+
+With the workspace in place, the flink-velox-build skill builds the stack and the cluster starts directly (the stock tarball's all-comment flink-conf.yaml was filled in at flink install time, and the build pins the cluster JDK):
+
+```bash
+bash <installed-skill>/bin/compile.sh     # velox4j + gluten-flink jars land in /opt/flink/lib/
+/opt/flink/bin/start-cluster.sh
+```
+
 ## Using an installed plugin
 
 `gfvbot prompt` prints a plugin's task template; pass `--task` with `--tool` to have the AI agent generate the complete prompt (run it inside the target project — the agent reads the plugin docs and the project's source files to fill it in), and `--file` to write the result to a file:
@@ -102,7 +126,13 @@ gfvbot clone --fork <user>       # velox/velox4j/gluten from your forks, baselin
 gfvbot clone --shallow           # --depth 1: smaller download, no full history
 ```
 
-Existing repos are skipped; after cloning, version control is plain git. A failed clone removes its partial directory and retries (3 attempts by default); failed repos are summed up at the end, and re-running the same command resumes them — completed repos are skipped. Cloned (or skipped) repos have their path, clone-source URL (your fork under `--fork`), upstream URL, and main branch back-filled into the `repos` section of `.gfvbot/env.json`.
+Existing repos are skipped; after cloning, version control is plain git. A failed clone removes its partial directory and retries (5 attempts by default); failed repos are summed up at the end, and re-running the same command resumes them — completed repos are skipped. Cloned (or skipped) repos have their path, clone-source URL (your fork under `--fork`), upstream URL, and main branch back-filled into the `repos` section of `.gfvbot/env.json`.
+
+## Source-built C++ libraries
+
+Beyond the package-manager dependencies, the GFV build links Velox's source-built C++ libraries (boost, the folly chain, protobuf, arrow, ...) from `/usr/local`. They are installed through the env-init tick-list: run `gfvbot env-init` after `gfvbot clone` and tick `source-deps` — the entry only appears once the velox checkout exists, and `gfvbot clone` prints a reminder at the end. The installs are driven by the official setup script shipped in the velox checkout, so every version stays pinned by the workspace; the library list itself is parsed from that script, so it always matches the checkout.
+
+Libraries already detectable under `/usr/local` are skipped, so reruns only build what is missing; the build stops at the first failure since later libraries build against earlier ones.
 
 ## Uninstall
 

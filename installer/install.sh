@@ -78,7 +78,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-require_jq
+require_core_tools
 [ -d "$SHARED_DIR" ] || die "$(t err_shared_missing "$ROOT")"
 
 # interactive fallback: no plugin selected → choose; no tool → choose

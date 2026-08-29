@@ -14,8 +14,36 @@ err()  { printf '  \033[31m✘\033[0m %s\n' "$*" >&2; }
 step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 die()  { err "$*"; exit 1; }
 
-require_jq() {
-  command -v jq >/dev/null 2>&1 || { err "jq is required but not found in PATH"; exit 1; }
+require_core_tools() {
+  # jq (records/manifests), diff + find + xargs (idempotent-install compare
+  # and fingerprinting). Minimal container images ship without diffutils and
+  # findutils, so the installer bootstraps them itself: root + a package
+  # manager installs the distro packages; jq alone also has a static-binary
+  # fallback for repo-less distros. Non-root callers get guidance instead.
+  local missing=() t pkgs=() pm
+  for t in jq diff find xargs; do
+    command -v "$t" >/dev/null 2>&1 || missing+=("$t")
+  done
+  [ ${#missing[@]} -eq 0 ] && return 0
+  if [ "$(id -u)" = "0" ]; then
+    for t in "${missing[@]}"; do
+      case "$t" in
+        jq)                 pkgs+=(jq) ;;
+        diff)               pkgs+=(diffutils) ;;
+        find|xargs)         pkgs+=(findutils) ;;
+      esac
+    done
+    if pm=$(detect_pm); then
+      "$pm" install -y "${pkgs[@]}" && return 0
+    elif command -v curl >/dev/null 2>&1; then
+      # only jq has a static fallback; diffutils/findutils need a real repo
+      for t in "${missing[@]}"; do
+        [ "$t" = "jq" ] && install_jq_static && return 0
+      done
+    fi
+  fi
+  { err "core tools missing from PATH: ${missing[*]}"
+    err "install them (${pkgs[*]:-jq diffutils findutils}), or run as root so the installer can, or run 'gfvbot env-init' first"; exit 1; }
 }
 
 # package manager used for dependency bootstrap (dnf / yum / apt-get, or empty)
@@ -25,6 +53,22 @@ detect_pm() {
   elif command -v apt-get >/dev/null 2>&1; then echo apt-get
   else echo ""
   fi
+}
+
+# git is clone's only hard prerequisite; install it from the OS package
+# manager when absent so clone can lead the machine setup. rc 1 = not
+# installable here (no package manager, or the install failed); the caller
+# reports the manual env-init hint.
+ensure_git() {
+  command -v git >/dev/null 2>&1 && return 0
+  warn "$(t clone_installing_git)"
+  local pm
+  pm=$(detect_pm)
+  case "$pm" in
+    dnf|yum|apt-get) "$pm" install -y git ;;
+    *) return 1 ;;
+  esac
+  command -v git >/dev/null 2>&1
 }
 
 # ---------------------------------------------------------------------------
@@ -48,11 +92,12 @@ install_jq_static() {
 # GFV build dependency table — the pieces Velox's official setup scripts
 # install from the system package manager: build tool prerequisites plus the
 # dnf-level C++ libraries. Libraries Velox builds from source (gflags, glog,
-# folly, boost, protobuf, ...) are deliberately absent: GFV's CMake resolves
-# those via BUNDLED FetchContent, so they need no system package.
+# folly, boost, protobuf, arrow, ...) are NOT here: the GFV build links them
+# from /usr/local, and the env-init "source-deps" entry installs them via the
+# official setup script shipped in the velox checkout.
 # Shared by env.sh (scan / report) and env-init scripts (probe / install).
 # ---------------------------------------------------------------------------
-GFVBOT_BUILD_TOOLS=(ninja ccache autoconf automake libtool flex bison python3)
+GFVBOT_BUILD_TOOLS=(ninja ccache autoconf automake libtool flex bison python3 patchelf)
 
 # <lib>:<header candidates> — probed under both /usr/include and
 # /usr/local/include (source installs land in the latter); a lib may list
@@ -71,6 +116,7 @@ GFVBOT_CPP_DEPS=(
   "icu:unicode/uversion.h"
   "sodium:sodium.h"
   "zlib:zlib.h"
+  "librdkafka:librdkafka/rdkafka.h"
 )
 
 header_exists() {  # <header>... → rc 0 when any candidate is on disk
@@ -130,6 +176,10 @@ GFVBOT_FLINK_HOME=/opt/flink                        # symlink -> versioned dir
 GFVBOT_NEXMARK_REPO=https://github.com/nexmark/nexmark.git
 GFVBOT_NEXMARK_SRC=/opt/src/nexmark                 # source cache; plain git
                                                    # territory once cloned
+GFVBOT_NEXMARK_HOME=/opt/nexmark                    # runnable benchmark tree:
+                                                   # bin/ conf/ queries/ from the
+                                                   # source resources, lib/ with
+                                                   # the built jar
 
 stack_flink_root() {  # → flink dir (has bin/flink) or nothing; FLINK_HOME
                       # first, then a flink on PATH, then the /opt symlink
@@ -154,6 +204,29 @@ stack_nexmark_jar() {  # → nexmark jar path inside flink's lib/, or nothing
   printf '%s' "$jar"
 }
 
+ensure_flink_conf() {  # <flink-home>: the stock tarball's flink-conf.yaml is
+                        # all comments, and a cluster started under a modern
+                        # JDK refuses to come up without explicit rpc/memory
+                        # keys. Fill-only: any effective line means the user
+                        # already configured this file — hands off entirely.
+  local conf="$1/conf/flink-conf.yaml"
+  [ -f "$conf" ] || return 0
+  grep -Eq '^[^#[:space:]]' "$conf" && return 0
+  cat >> "$conf" <<'EOF'
+jobmanager.rpc.address: localhost
+jobmanager.rpc.port: 6123
+jobmanager.bind-host: localhost
+taskmanager.bind-host: 0.0.0.0
+taskmanager.host: localhost
+taskmanager.data.bind-host: 0.0.0.0
+rest.bind-address: localhost
+client.address: localhost
+jobmanager.memory.process.size: 2048m
+taskmanager.memory.process.size: 8192m
+taskmanager.numberOfTaskSlots: 8
+EOF
+}
+
 install_flink() {  # → rc 0 when $GFVBOT_FLINK_HOME is usable; idempotent
   local dir="/opt/flink-$GFVBOT_FLINK_VERSION"
   local tgz="flink-$GFVBOT_FLINK_VERSION-bin-scala_2.12.tgz"
@@ -163,6 +236,7 @@ install_flink() {  # → rc 0 when $GFVBOT_FLINK_HOME is usable; idempotent
   local mirror="https://mirrors.huaweicloud.com/apache/flink/flink-$GFVBOT_FLINK_VERSION"
   if [ -x "$dir/bin/flink" ]; then
     ln -sfn "$dir" "$GFVBOT_FLINK_HOME"
+    ensure_flink_conf "$dir"
     return 0
   fi
   local tmp; tmp=$(mktemp -d)
@@ -189,42 +263,62 @@ install_flink() {  # → rc 0 when $GFVBOT_FLINK_HOME is usable; idempotent
     return 1
   fi
   ln -sfn "$dir" "$GFVBOT_FLINK_HOME"
+  ensure_flink_conf "$dir"
   ok "$(t env_flink_done "$GFVBOT_FLINK_HOME" "$GFVBOT_FLINK_HOME")"
   return 0
 }
 
-install_nexmark() {  # → rc 0 when the nexmark jar sits in flink's lib/;
-                     # rebuilds after the first deploy are plain git+mvn work
-  local root jar jdk
-  if jar=$(stack_nexmark_jar); then
+install_nexmark() {  # → rc 0 when the nexmark jar sits in flink's lib/ and the
+                     # runnable benchmark tree is in place under
+                     # $GFVBOT_NEXMARK_HOME; rebuilds after the first deploy
+                     # are plain git+mvn work
+  local root jar jdk res
+  if jar=$(stack_nexmark_jar) \
+     && [ -x "$GFVBOT_NEXMARK_HOME/bin/run_query.sh" ]; then
     return 0
   fi
   root=$(stack_flink_root) \
     || { install_flink || return 1; root=$(stack_flink_root) || return 1; }
-  command -v mvn >/dev/null 2>&1 || { err "$(t env_nexmark_needs_mvn)"; return 1; }
-  jdk=$(find_jdk 17) || jdk=$(find_jdk 8) \
-    || { err "$(t env_nexmark_needs_jdk)"; return 1; }
-  if [ ! -d "$GFVBOT_NEXMARK_SRC/.git" ]; then
-    echo "  $(t env_nexmark_clone "$GFVBOT_NEXMARK_REPO")"
-    mkdir -p "$(dirname "$GFVBOT_NEXMARK_SRC")"
-    local attempt
-    for attempt in 1 2 3; do   # github TLS transients: same retry policy as clone
-      rm -rf "$GFVBOT_NEXMARK_SRC"
-      git clone --depth 1 "$GFVBOT_NEXMARK_REPO" "$GFVBOT_NEXMARK_SRC" && break
-      [ "$attempt" -lt 3 ] && continue
-      err "$(t env_nexmark_clone_failed)"; return 1
-    done
+  if [ -z "$jar" ]; then
+    command -v mvn >/dev/null 2>&1 || { err "$(t env_nexmark_needs_mvn)"; return 1; }
+    jdk=$(find_jdk 17) || jdk=$(find_jdk 8) \
+      || { err "$(t env_nexmark_needs_jdk)"; return 1; }
+    if [ ! -d "$GFVBOT_NEXMARK_SRC/.git" ]; then
+      echo "  $(t env_nexmark_clone "$GFVBOT_NEXMARK_REPO")"
+      mkdir -p "$(dirname "$GFVBOT_NEXMARK_SRC")"
+      local attempt
+      for attempt in 1 2 3; do   # github TLS transients: same retry policy as clone
+        rm -rf "$GFVBOT_NEXMARK_SRC"
+        git clone --depth 1 "$GFVBOT_NEXMARK_REPO" "$GFVBOT_NEXMARK_SRC" && break
+        [ "$attempt" -lt 3 ] && continue
+        err "$(t env_nexmark_clone_failed)"; return 1
+      done
+    fi
+    echo "  $(t env_nexmark_build "$jdk")"
+    ( cd "$GFVBOT_NEXMARK_SRC" \
+      && JAVA_HOME="$jdk" mvn -pl nexmark-flink -am package -DskipTests ) \
+      > /tmp/gfvbot-nexmark-build.log 2>&1 \
+      || { err "$(t env_nexmark_failed)"; return 1; }
+    jar=$(ls "$GFVBOT_NEXMARK_SRC"/nexmark-flink/target/nexmark-flink-*.jar 2>/dev/null \
+          | grep -v sources | head -1)
+    [ -n "$jar" ] || { err "$(t env_nexmark_failed)"; return 1; }
+    cp "$jar" "$root/lib/"
   fi
-  echo "  $(t env_nexmark_build "$jdk")"
-  ( cd "$GFVBOT_NEXMARK_SRC" \
-    && JAVA_HOME="$jdk" mvn -pl nexmark-flink -am package -DskipTests ) \
-    > /tmp/gfvbot-nexmark-build.log 2>&1 \
-    || { err "$(t env_nexmark_failed)"; return 1; }
-  jar=$(ls "$GFVBOT_NEXMARK_SRC"/nexmark-flink/target/nexmark-flink-*.jar 2>/dev/null \
-        | grep -v sources | head -1)
-  [ -n "$jar" ] || { err "$(t env_nexmark_failed)"; return 1; }
-  cp "$jar" "$root/lib/"
-  ok "$(t env_nexmark_done "$root/lib/$(basename "$jar")")"
+  # runnable benchmark tree: the source resources ARE the runtime layout
+  # (bin/ conf/ queries/); lib/ holds the jar the scripts put on the classpath
+  res="$GFVBOT_NEXMARK_SRC/nexmark-flink/src/main/resources"
+  if [ ! -x "$GFVBOT_NEXMARK_HOME/bin/run_query.sh" ]; then
+    echo "  $(t env_nexmark_tree "$GFVBOT_NEXMARK_HOME")"
+    mkdir -p "$GFVBOT_NEXMARK_HOME"
+    cp -R "$res/bin" "$res/conf" "$res/queries" "$res/queries-cep" \
+          "$GFVBOT_NEXMARK_HOME/" \
+      || { err "$(t env_nexmark_failed)"; return 1; }
+    mkdir -p "$GFVBOT_NEXMARK_HOME/lib" "$GFVBOT_NEXMARK_HOME/log" \
+             "$GFVBOT_NEXMARK_HOME/data"
+    jar=$(stack_nexmark_jar) \
+      && cp "$jar" "$GFVBOT_NEXMARK_HOME/lib/"
+  fi
+  ok "$(t env_nexmark_done "$root/lib/$(basename "$jar")" "$GFVBOT_NEXMARK_HOME")"
   return 0
 }
 
@@ -271,6 +365,26 @@ repo_url() {
   local e; e=$(repo_entry "$1"); local r=${e#*|}; printf '%s' "${r%%|*}"
 }
 repo_branch() { local e; e=$(repo_entry "$1") || return 1; local r=${e#*|}; r=${r#*|}; printf '%s' "${r%%|*}"; }
+
+find_velox_checkout_dir() {  # <start-dir> → velox checkout path; the standard
+                             # repos/ layout walked upward first, the env.json
+                             # record second (custom layouts)
+  local d="$1" ENV_JSON="" s p
+  while [ "$d" != "/" ]; do
+    [ -d "$d/repos/velox/scripts" ] && { realpath "$d/repos/velox"; return 0; }
+    d="$(dirname "$d")"
+  done
+  command -v jq >/dev/null 2>&1 || return 1
+  s="$1"
+  while [ "$s" != "/" ]; do
+    [ -f "$s/.gfvbot/env.json" ] && { ENV_JSON="$s/.gfvbot/env.json"; break; }
+    s="$(dirname "$s")"
+  done
+  [ -n "$ENV_JSON" ] || return 1
+  p=$(jq -r '.repos["velox"].path // empty' "$ENV_JSON" 2>/dev/null)
+  [ -n "$p" ] && [ -d "$p/scripts" ] && { printf '%s' "$p"; return 0; }
+  return 1
+}
 
 # ---------------------------------------------------------------------------
 # CentOS 7 EOL recovery — upstream mirrors are gone, so yum sees zero packages.
@@ -472,7 +586,7 @@ idem_install() {
     else
       mkdir -p "$(dirname "$dst")"
       if [ -e "$dst" ] || [ -L "$dst" ]; then
-        local bak; bak="${dst}.gfvbot.bak.$(date +%Y%m%d%H%M%S)"
+        local bak; bak="${dst}.gfvbot.bak.$(date +%Y%m%d%H%M%S%N)"
         warn "$(t warn_diverged "$dst" "$bak")"
         mv "$dst" "$bak"
       fi
