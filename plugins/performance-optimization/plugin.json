@@ -1,0 +1,10 @@
+{
+  "name": "performance-optimization",
+  "description": "Performance optimization: benchmark comparison, profiling, bottleneck analysis, and the optimization loop",
+  "description_zh": "性能提升：基准对比、profiling、瓶颈定位与优化闭环",
+  "workflow": "workflow.md",
+  "agents": [],
+  "skills": [],
+  "docs": [],
+  "templates": []
+}

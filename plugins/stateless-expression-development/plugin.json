@@ -1,0 +1,10 @@
+{
+  "name": "stateless-expression-development",
+  "description": "Stateless expression development: end-to-end function integration across velox / velox4j / gluten-flink",
+  "description_zh": "无状态表达式开发：函数在 velox / velox4j / gluten-flink 三层的端到端接入",
+  "workflow": "workflow.md",
+  "agents": [],
+  "skills": [],
+  "docs": [],
+  "templates": []
+}

@@ -1,0 +1,501 @@
+#!/usr/bin/env bash
+# gfvbot — GFVBot CLI entry.
+#
+# Subcommands:
+#   install / uninstall  → forwarded to installer/*.sh engines
+#   list                 → show installed plugins (per target records) and
+#                          what the repo offers
+#   completion           → emit shell completion (bash / zsh)
+#
+# The repo root is resolved from this script's own location, so the CLI works
+# from any directory after installer/setup.sh put it on PATH (or via symlink).
+
+set -u
+
+ROOT="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../.." && pwd)"
+# shellcheck source=lib/common.sh
+. "$ROOT/installer/lib/common.sh"
+
+usage() {
+  if [ "$T_LANG" = zh ]; then
+    cat <<'EOF'
+gfvbot — GFVBot 插件安装器
+
+用法:
+  gfvbot install <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run] [--link]
+  gfvbot install --all [同上参数]
+  gfvbot uninstall <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run]
+                   （装载多个Agent时不带--tool会交互勾选要卸载哪些）
+  gfvbot prompt <插件名> [--task <任务描述>] [--tool <claude|opencode>] [--file <输出文件>]
+  gfvbot env [--target <dir>]
+  gfvbot env-init [--target <dir>]
+  gfvbot clone [<仓>...] [--target <dir>] [--shallow] [--fork <user>]
+  gfvbot list [--target <dir>]
+  gfvbot lang [en|zh] [--global]
+  gfvbot completion bash|zsh
+
+命令:
+  install      安装插件到目标项目。不带--tool时交互选择AI Agent；--target缺省为当前目录
+  uninstall    卸载已安装的插件。不带--tool时卸载该插件在全部AI Agent下的安装
+  prompt       打印插件的任务prompt模板；--task加--tool时调用AI Agent生成填好的完整prompt；--file把结果写入文件
+  env          检查构建依赖与AI Agent环境并归档到目标项目.gfvbot/env.json；有缺失时转交对应OS的安装脚本补齐
+  env-init     按当前OS直接调起对应的依赖安装脚本（交互勾选、安装、装完重扫归档）
+  clone        按GFV工作区布局克隆源码仓库到<目标>/repos/（velox、velox4j、gluten、flink）。
+               缺省从GFV基线上游仓克隆基线分支（velox/velox4j: bigo-sg的gluten-20260829、
+               gluten: apache的main、flink: apache的release-1.19）；--fork <user>改从
+               个人fork仓（github.com/<user>/<仓>）克隆同分支，flink仍走官方仓。
+               已存在的跳过，克隆后版本管理直接用git
+  list         查看目标项目已安装的插件与仓库可安装的插件
+  lang         查看或设置输出语言（en / zh），--global写入用户级配置
+  completion   输出bash或zsh的shell补全
+
+参数:
+  --tool <name>    指定AI Agent（claude、opencode）
+  --target <dir>   目标项目目录，缺省为当前目录
+  --task <text>    任务的一句话描述，生成prompt时必填
+  --file <path>    把任务prompt输出写入文件，缺省打印到stdout
+  --all            安装仓库内全部插件
+  --dry-run        只展示将执行的动作，不实际落盘
+  --link           以符号链接方式安装，仓库内容更新后安装即同步
+  --shallow        浅克隆源码仓库（--depth 1），下载量小但无完整历史
+  --fork <user>    源码仓库改从个人fork仓克隆（github.com/<user>/<仓>），分支不变
+EOF
+  else
+    cat <<'EOF'
+gfvbot — GFVBot plugin installer
+
+Usage:
+  gfvbot install <plugin>... [--tool <claude|opencode>] [--target <dir>] [--dry-run] [--link]
+  gfvbot install --all [same flags]
+  gfvbot uninstall <plugin>... [--tool <claude|opencode>] [--target <dir>] [--dry-run]
+                   (installs under several agents without --tool get an interactive tick-list)
+  gfvbot prompt <plugin> [--task <description>] [--tool <claude|opencode>] [--file <output-file>]
+  gfvbot env [--target <dir>]
+  gfvbot env-init [--target <dir>]
+  gfvbot clone [<repo>...] [--target <dir>] [--shallow] [--fork <user>]
+  gfvbot list [--target <dir>]
+  gfvbot lang [en|zh] [--global]
+  gfvbot completion bash|zsh
+
+Commands:
+  install      Install plugins into a target project. Prompts for the AI
+               agent when --tool is omitted; --target defaults to the
+               current directory.
+  uninstall    Remove installed plugins. Without --tool, the installs under
+               every AI agent are removed.
+  prompt       Print the plugin's task prompt template; with --task and
+               --tool, call the AI agent to generate the filled prompt;
+               --file writes the result to a file.
+  env          Check build dependencies and AI agent CLIs, archive them to
+               the target project's .gfvbot/env.json, and hand over to the
+               OS-specific installer for anything missing.
+  env-init     Jump straight to this OS's dependency installer (interactive
+               tick-list, install, then a re-scan that refreshes the archive).
+  clone        Clone the GFV source repos (velox, velox4j, gluten, flink) into
+               <target>/repos/ for a consistent workspace layout. Defaults to
+               the GFV baseline upstreams (velox/velox4j: bigo-sg at
+               gluten-20260829, gluten: apache at main, flink: apache at
+               release-1.19); --fork <user> clones your personal forks
+               (github.com/<user>/<repo>) at the same branches, flink always
+               from the official repo. Existing repos are skipped; after
+               cloning, version control is plain git.
+  list         Show what is installed in the target project and what the
+               repo offers.
+  lang         Show or set the output language (en / zh); --global writes
+               the user-level config.
+  completion   Emit shell completion for bash or zsh.
+
+Flags:
+  --tool <name>    AI agent to install for / uninstall from (claude, opencode)
+  --target <dir>   Target project directory; defaults to the current directory
+  --task <text>    One-line task description; required for generation
+  --file <path>    Write the task prompt to a file; defaults to stdout
+  --all            Install every plugin in the repo
+  --dry-run        Show what would happen without writing anything
+  --link           Install as symlinks; installs track repo updates
+  --shallow        Shallow-clone source repos (--depth 1); smaller download,
+                   no full history
+  --fork <user>    Clone source repos from personal forks
+                   (github.com/<user>/<repo>), same branches
+EOF
+  fi
+  exit 0
+}
+
+cmd_prompt() {
+  local p="" task="" out_file="" tool=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --task|--file|--tool)
+        [ $# -ge 2 ] || { echo "$(t err_needs_value "$1")" >&2; exit 1; }
+        case "$1" in
+          --task) task="$2" ;;
+          --file) out_file="$2" ;;
+          --tool) tool="$2" ;;
+        esac
+        shift 2 ;;
+      *)
+        if [ -z "$p" ]; then p="$1"; else echo "$(t err_unknown_arg "$1")" >&2; exit 1; fi
+        shift ;;
+    esac
+  done
+  if [ -z "$p" ]; then
+    echo "$(t err_unknown_arg "")" >&2
+    exit 1
+  fi
+  local dir="$ROOT/plugins/$p"
+  [ -d "$dir" ] || { echo "$(t err_unknown_arg "$p")" >&2; exit 1; }
+  local f="$dir/prompt.md"
+  [ "$T_LANG" = zh ] && [ -f "$dir/prompt.zh.md" ] && f="$dir/prompt.zh.md"
+  [ -f "$f" ] || { echo "$(t err_no_prompt "$p")" >&2; exit 1; }
+
+  local result
+  if [ -z "$task" ]; then
+    result="$(cat "$f")"
+  else
+    [ -n "$tool" ] || { echo "$(t err_task_tool_required)" >&2; exit 1; }
+    case "$tool" in
+      claude|opencode) ;;
+      *) echo "$(t err_unknown_arg "$tool")" >&2; exit 1 ;;
+    esac
+    command -v "$tool" > /dev/null 2>&1 || { echo "$(t err_agent_cli_missing "$tool")" >&2; exit 1; }
+
+    local instr
+    instr="$(t prompt_gen_intro "$dir" "$dir")
+
+$(t prompt_gen_template_label)
+$(cat "$f")
+
+$(t prompt_gen_task_label)
+$task
+
+$(t prompt_gen_rules)"
+    echo "$(t msg_generating "$tool")" >&2
+    if [ "$tool" = claude ]; then
+      # --disable-slash-commands: the generator must not see (and reference)
+      # skills installed on this machine — the generated prompt targets a
+      # project with only this plugin installed
+      result="$(claude -p "$instr" --max-turns 40 --disable-slash-commands)" || exit 1
+    else
+      result="$(opencode run "$instr")" || exit 1
+    fi
+  fi
+
+  if [ -n "$out_file" ]; then
+    printf '%s\n' "$result" > "$out_file" 2>/dev/null \
+      || { echo "$(t err_prompt_write "$out_file")" >&2; exit 1; }
+    echo "$(t msg_prompt_written "$out_file")" >&2
+  else
+    printf '%s\n' "$result"
+  fi
+}
+
+cmd_list() {
+  local target="$PWD"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  local records_dir="$target/.gfvbot/records"
+
+  # collect installed rows
+  local names=() tools=() counts=() states=() times=()
+  declare -A installed=()
+  if [ -d "$records_dir" ] && compgen -G "$records_dir/*.json" > /dev/null; then
+    local rec p tool nfiles missing
+    for rec in "$records_dir"/*.json; do
+      p=$(jq -r '.plugin' "$rec")
+      installed["$p"]=1
+      tool=$(jq -r '.tool' "$rec")
+      nfiles=$(jq -r '.files | length' "$rec")
+      missing=0
+      while IFS= read -r f; do
+        [ -n "$f" ] && { [ -e "$f" ] || missing=$((missing + 1)); }
+      done < <(jq -r '.files[]' "$rec")
+      names+=("$p")
+      tools+=("$tool")
+      counts+=("$nfiles")
+      if [ "$missing" = 0 ]; then states+=("ok"); else states+=("diverged($missing)"); fi
+      times+=("$(jq -r '.installed_at' "$rec" | cut -c1-16 | tr 'T' ' ')")
+    done
+  fi
+
+  # collect available rows; descriptions are bilingual in the manifest
+  local desc_key='.description'
+  [ "$T_LANG" = zh ] && desc_key='.description_zh // .description'
+  local avail=() descs=() d
+  for d in "$ROOT"/plugins/*/; do
+    d=$(basename "$d")
+    if [ -z "${installed[$d]:-}" ]; then
+      avail+=("$d")
+      descs+=("$(jq -r "$desc_key" "$ROOT/plugins/$d/plugin.json" 2>/dev/null)")
+    fi
+  done
+
+  # column width = longest name, at least the header
+  local w=6 n
+  for n in "${names[@]}" "${avail[@]}"; do
+    [ "${#n}" -gt "$w" ] && w="${#n}"
+  done
+
+  echo "$(t list_target "$target")"
+  echo
+  echo "$(t list_installed "${#names[@]}"):"
+  if [ "${#names[@]}" -gt 0 ]; then
+    printf '  %-*s  %-8s  %5s  %-13s  %s\n' "$w" "PLUGIN" "TOOL" "FILES" "STATE" "INSTALLED"
+    for i in "${!names[@]}"; do
+      printf '  %-*s  %-8s  %5s  %-13s  %s\n' "$w" "${names[$i]}" "${tools[$i]}" "${counts[$i]}" "${states[$i]}" "${times[$i]}"
+    done
+  else
+    echo "  $(t list_none)"
+  fi
+  echo
+  echo "$(t list_available "${#avail[@]}"):"
+  if [ "${#avail[@]}" -gt 0 ]; then
+    printf '  %-*s  %s\n' "$w" "PLUGIN" "SCENARIO"
+    for i in "${!avail[@]}"; do
+      printf '  %-*s  %s\n' "$w" "${avail[$i]}" "${descs[$i]}"
+    done
+  else
+    echo "  $(t list_none)"
+  fi
+}
+
+cmd_lang() {
+  local scope=project lang=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --global) scope=global; shift ;;
+      en|zh)    lang=$1; shift ;;
+      *)        echo "$(t err_bad_lang "$1")" >&2; exit 1 ;;
+    esac
+  done
+
+  # no argument → report the effective language and where it comes from
+  if [ -z "$lang" ]; then
+    local src
+    case "$T_LANG_SRC" in
+      env)       src="$(t lang_src_env)" ;;
+      project:*) src="$(t lang_src_project "${T_LANG_SRC#project:}")" ;;
+      global:*)  src="$(t lang_src_global "${T_LANG_SRC#global:}")" ;;
+      locale:*)  src="$(t lang_src_locale "${T_LANG_SRC#locale:}")" ;;
+      *)         src="$(t lang_src_default)" ;;
+    esac
+    echo "$(t lang_current "$T_LANG" "$src")"
+    return 0
+  fi
+
+  local cfg
+  [ "$scope" = global ] && cfg="$HOME/.gfvbot/config" || cfg="$PWD/.gfvbot/config"
+  mkdir -p "$(dirname "$cfg")"
+  if [ -f "$cfg" ] && grep -q '^lang=' "$cfg"; then
+    sed -i "s/^lang=.*/lang=$lang/" "$cfg"
+  else
+    echo "lang=$lang" >> "$cfg"
+  fi
+  # the confirmation is spoken in the newly selected language
+  T_LANG=$lang
+  if [ "$scope" = global ]; then
+    T_LANG_SRC="global:$cfg"
+    echo "$(t lang_set_global "$lang" "$cfg")"
+  else
+    T_LANG_SRC="project:$cfg"
+    echo "$(t lang_set_project "$lang" "$cfg")"
+  fi
+}
+
+cmd_completion() {
+  local shell="${1:-bash}"
+  local body
+  body=$(cat <<'EOF'
+_gfvbot() {
+  local cur prev cmd
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  cmd="${COMP_WORDS[1]}"
+  case "$prev" in
+    --tool)
+      COMPREPLY=($(compgen -W "claude opencode" -- "$cur"))
+      return ;;
+    --target)
+      COMPREPLY=($(compgen -d -- "$cur"))
+      return ;;
+    --plugin)
+      COMPREPLY=($(compgen -W "$(ls '__ROOT__/plugins' 2>/dev/null)" -- "$cur"))
+      return ;;
+  esac
+  if [[ "$cur" == -* ]]; then
+    COMPREPLY=($(compgen -W "--tool --target --plugin --all --dry-run --link --shallow --fork --help" -- "$cur"))
+    return
+  fi
+  case "$cmd" in
+    install|prompt)
+      COMPREPLY=($(compgen -W "$(ls '__ROOT__/plugins' 2>/dev/null)" -- "$cur")) ;;
+    clone)
+      COMPREPLY=($(compgen -W "__REPOS__" -- "$cur")) ;;
+    uninstall)
+      local recs=""
+      local r
+      for r in "$PWD"/.gfvbot/records/*.json; do
+        [ -f "$r" ] && recs="$recs $(jq -r '.plugin' "$r" 2>/dev/null)"
+      done
+      COMPREPLY=($(compgen -W "$(echo $recs | tr ' ' '\n' | sort -u)" -- "$cur")) ;;
+    completion)
+      COMPREPLY=($(compgen -W "bash zsh" -- "$cur")) ;;
+    lang)
+      COMPREPLY=($(compgen -W "en zh --global" -- "$cur")) ;;
+    *)
+      COMPREPLY=($(compgen -W "install uninstall prompt env env-init clone list lang completion help" -- "$cur")) ;;
+  esac
+}
+EOF
+  )
+  local names="" e
+  for e in "${GFVBOT_REPOS[@]}"; do names="$names ${e%%|*}"; done
+  body=${body//__ROOT__/$ROOT}
+  body=${body//__REPOS__/$names}
+  case "$shell" in
+    bash)
+      echo "$body"
+      echo 'complete -F _gfvbot gfvbot' ;;
+    zsh)
+      echo "#compdef gfvbot"
+      echo "autoload -U +X bashcompinit && bashcompinit"
+      echo "$body"
+      echo 'complete -F _gfvbot gfvbot' ;;
+    *)
+      echo "$(t err_unsupported_shell "$shell")" >&2
+      exit 1 ;;
+  esac
+}
+
+cmd_env_init() {
+  local target="$PWD" osid="" osver=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      *) echo "$(t err_unknown_arg "$1")" >&2; exit 1 ;;
+    esac
+  done
+  if [ -f /etc/os-release ]; then
+    osid=$(sed -n 's/^ID=//p' /etc/os-release | head -1 | tr -d '"')
+    osver=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | head -1 | tr -d '"' | cut -d. -f1)
+  fi
+  [ -n "$osid" ] || { echo "$(t err_envinit_no_os)" >&2; exit 1; }
+  local setup
+  setup=$(setup_script_for "$osid" "$osver")
+  if [ -z "$setup" ]; then
+    echo "$(t err_envinit_unsupported "$(sed -n 's/^PRETTY_NAME=//p' /etc/os-release | head -1 | tr -d '"')")" >&2
+    exit 1
+  fi
+  exec bash "$setup" --target "$target"
+}
+
+record_repo() {  # <name> <dir> <url> <env.json> — upsert one repos entry;
+                 # skills read these for tool invocation and code search.
+                 # url is the source actually cloned from (a personal fork
+                 # under --fork); upstream and main_branch are the stable GFV
+                 # baseline facts from the table, not volatile git state.
+  local name=$1 dir=$2 url=$3 f=$4 entry
+  dir=$(cd "$dir" 2>/dev/null && pwd) || return 0
+  entry=$(jq -cn --arg p "$dir" --arg u "$url" \
+    --arg up "$(repo_url "$name" "")" --arg b "$(repo_branch "$name")" \
+    '{path:$p, url:$u, upstream:$up, main_branch:$b, ok:true}')
+  mkdir -p "$(dirname "$f")"
+  if [ -f "$f" ]; then
+    jq --arg n "$name" --argjson e "$entry" '.repos[$n] = $e' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  else
+    jq -cn --arg n "$name" --argjson e "$entry" '{repos: {($n): $e}}' > "$f"
+  fi
+}
+
+cmd_clone() {
+  local target="$PWD" shallow="" fork="" repos=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --target) [ $# -ge 2 ] || { echo "$(t err_needs_value "$1")" >&2; exit 1; }
+                target="$2"; shift 2 ;;
+      --fork)   [ $# -ge 2 ] || { echo "$(t err_needs_value "$1")" >&2; exit 1; }
+                fork="$2"; shift 2 ;;
+      --shallow) shallow=1; shift ;;
+      *)
+        if ! repo_entry "$1" >/dev/null; then
+          echo "$(t err_unknown_repo "$1")" >&2; exit 1
+        fi
+        repos+=("$1"); shift ;;
+    esac
+  done
+  if [ ${#repos[@]} -eq 0 ]; then
+    local e
+    for e in "${GFVBOT_REPOS[@]}"; do repos+=("${e%%|*}"); done
+  fi
+  ensure_git || { echo "$(t err_no_git)" >&2; exit 1; }
+
+  local root="$target/repos" name url branch dest FAIL=0 failed="" recorded=0
+  local envjson="$target/.gfvbot/env.json"
+  local tries="${GFVBOT_CLONE_TRIES:-5}" pause="${GFVBOT_CLONE_RETRY_SLEEP:-3}"
+  step "$(t clone_title)"
+  for name in "${repos[@]}"; do
+    url=$(repo_url "$name" "$fork")
+    branch=$(repo_branch "$name")
+    dest="$root/$name"
+    if [ -e "$dest" ]; then
+      warn "$(t clone_skip "$name")"
+      record_repo "$name" "$dest" "$url" "$envjson"; recorded=1
+      continue
+    fi
+    local attempt=1 rc=1
+    while [ "$attempt" -le "$tries" ]; do
+      echo "  $(t clone_cloning "$name" "$url" "$branch")"
+      if [ -n "$shallow" ]; then
+        git clone --quiet --depth 1 --branch "$branch" "$url" "$dest" && { rc=0; break; }
+      else
+        git clone --quiet --branch "$branch" "$url" "$dest" && { rc=0; break; }
+      fi
+      rc=1
+      rm -rf "$dest"   # a failed clone may leave a partial dir behind; remove it
+                       # so the next run does not mistake it for a finished repo
+      if [ "$attempt" -lt "$tries" ]; then
+        warn "$(t clone_retry "$name" "$attempt" "$((tries - 1))" "$pause")"
+        sleep "$pause"
+      fi
+      attempt=$((attempt + 1))
+    done
+    if [ "$rc" -eq 0 ]; then
+      ok "$(t clone_done "$name" "$dest")"
+      record_repo "$name" "$dest" "$url" "$envjson"; recorded=1
+    else
+      err "$(t clone_failed "$name")"
+      failed="$failed $name"
+      FAIL=1
+    fi
+  done
+  [ "$recorded" = 1 ] && ok "$(t clone_env_recorded "$envjson")"
+  if [ "$FAIL" -eq 0 ]; then
+    ok "$(t clone_all_done "$root")"
+    echo
+    warn "$(t clone_source_deps_hint)"
+  else
+    err "$(t clone_failed_summary "${failed# }")"
+  fi
+  return "$FAIL"
+}
+
+cmd="${1:-help}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  install)    exec bash "$ROOT/installer/install.sh" "$@" ;;
+  uninstall)  exec bash "$ROOT/installer/uninstall.sh" "$@" ;;
+  prompt)     cmd_prompt "$@" ;;
+  env)        exec bash "$ROOT/installer/env.sh" "$@" ;;
+  env-init)   cmd_env_init "$@" ;;
+  clone)      cmd_clone "$@" ;;
+  list)       cmd_list "$@" ;;
+  lang)       cmd_lang "$@" ;;
+  completion) cmd_completion "$@" ;;
+  help|-h|--help) usage ;;
+  *)          usage ;;
+esac
