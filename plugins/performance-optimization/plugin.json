@@ -6,5 +6,21 @@
   "agents": [],
   "skills": [],
   "docs": [],
-  "templates": []
+  "templates": [],
+  "shared": {
+    "skills": [
+      "flink-velox-build",
+      "flink-velox-unit-test",
+      "flink-velox-docs-search",
+      "flink-velox-code-review"
+    ],
+    "docs": [
+      "nexmark-queries.md",
+      "nexmark-queries.zh.md",
+      "verification.md",
+      "verification.zh.md",
+      "architecture.md",
+      "architecture.zh.md"
+    ]
+  }
 }
