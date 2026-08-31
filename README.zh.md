@@ -117,7 +117,7 @@ gfvbot env-init
 
 ## 源码仓库
 
-`gfvbot clone`按GFV工作区布局把源码仓库克隆到`<目标>/repos/`，保证不同机器上的仓库布局一致。缺省从GFV基线上游仓克隆基线分支（velox/velox4j为bigo-sg的`gluten-0530`，gluten为apache的`main`，flink为apache的`release-1.19`）；`--fork <用户名>`改从个人fork仓（github.com/<用户名>/<仓>）克隆同分支，flink始终走官方仓：
+`gfvbot clone`按GFV工作区布局把源码仓库克隆到`<目标>/repos/`，保证不同机器上的仓库布局一致。缺省从GFV基线上游仓克隆基线分支（velox/velox4j为bigo-sg的`gluten-20260829`，gluten为apache的`main`，flink为apache的`release-1.19`）；`--fork <用户名>`改从个人fork仓（github.com/<用户名>/<仓>）克隆同分支，flink始终走官方仓：
 
 ```bash
 gfvbot clone                     # 全部四个：velox、velox4j、gluten、flink

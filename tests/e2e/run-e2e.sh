@@ -181,7 +181,7 @@ a "env-init: runs the OS setup and re-archives" jq -e . "$TC/.gfvbot/env.json"
 mkdir -p "$TC/repos/velox"
 out=$(bash "$COPY/installer/bin/gfvbot" clone velox --target "$TC" 2>&1)
 a "clone: existing repo skipped without network" bash -c "echo '$out' | grep -q 'skipping'"
-a "clone: skipped repo recorded in env.json" bash -c "jq -e '.repos.velox.ok==true and (.repos.velox.path|endswith(\"/repos/velox\")) and .repos.velox.main_branch==\"gluten-0530\" and .repos.velox.url==.repos.velox.upstream and (.repos.velox.url|endswith(\"velox.git\"))' '$TC/.gfvbot/env.json'"
+a "clone: skipped repo recorded in env.json" bash -c "jq -e '.repos.velox.ok==true and (.repos.velox.path|endswith(\"/repos/velox\")) and .repos.velox.main_branch==\"gluten-20260829\" and .repos.velox.url==.repos.velox.upstream and (.repos.velox.url|endswith(\"velox.git\"))' '$TC/.gfvbot/env.json'"
 a "clone: env rescan keeps repo records" bash -c "bash '$COPY/installer/env.sh' --target '$TC' >/dev/null 2>&1 && jq -e '.repos.velox.ok==true and .repos.gluten.ok==false' '$TC/.gfvbot/env.json'"
 a "clone: unknown repo rejected" bash -c "! bash '$COPY/installer/bin/gfvbot' clone no-such-repo 2>/dev/null"
 a "clone: --fork without a value fails" bash -c "! bash '$COPY/installer/bin/gfvbot' clone velox --fork"
@@ -189,7 +189,7 @@ a "clone: usage lists --fork" bash -c "bash '$COPY/installer/bin/gfvbot' help | 
 a "clone: usage lists the subcommand" bash "$COPY/installer/bin/gfvbot" help | grep -q "gfvbot clone"
 
 # --- clone failure path: retry, no partial dir, summary hint -------------------
-sed -i "s#velox|https://github.com/bigo-sg/velox.git|gluten-0530|yes#velox|file://$SANDBOX/no-such.git|gluten-0530|yes#" "$COPY/installer/lib/common.sh"
+sed -i "s#velox|https://github.com/bigo-sg/velox.git|gluten-20260829|yes#velox|file://$SANDBOX/no-such.git|gluten-20260829|yes#" "$COPY/installer/lib/common.sh"
 TF="$SANDBOX/target-clonefail"
 mkdir -p "$TF"
 a "clone: failed clone retries" bash -c "

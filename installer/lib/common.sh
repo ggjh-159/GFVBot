@@ -345,14 +345,14 @@ setup_script_for() {
 # job here: once a repo exists, all version control is plain git territory.
 # <name>|<baseline_url>|<branch>|<fork> — '|' as separator: the https URLs
 # contain colons. baseline_url is the GFV lineage upstream (bigo-sg carries
-# gluten-0530 for velox/velox4j, apache for gluten/flink). <fork> marks
+# gluten-20260829 for velox/velox4j, apache for gluten/flink). <fork> marks
 # whether --fork <user> may swap the owner to github.com/<user>/<repo> at the
 # same branch; empty = the repo is not forkable and always clones from the
 # baseline upstream (flink pins release-1.19).
 # ---------------------------------------------------------------------------
 GFVBOT_REPOS=(
-  "velox|https://github.com/bigo-sg/velox.git|gluten-0530|yes"
-  "velox4j|https://github.com/bigo-sg/velox4j.git|gluten-0530|yes"
+  "velox|https://github.com/bigo-sg/velox.git|gluten-20260829|yes"
+  "velox4j|https://github.com/bigo-sg/velox4j.git|gluten-20260829|yes"
   "gluten|https://github.com/apache/gluten.git|main|yes"
   "flink|https://github.com/apache/flink.git|release-1.19|"
 )

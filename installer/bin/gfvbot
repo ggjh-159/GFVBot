@@ -41,7 +41,7 @@ gfvbot — GFVBot 插件安装器
   env          检查构建依赖与AI Agent环境并归档到目标项目.gfvbot/env.json；有缺失时转交对应OS的安装脚本补齐
   env-init     按当前OS直接调起对应的依赖安装脚本（交互勾选、安装、装完重扫归档）
   clone        按GFV工作区布局克隆源码仓库到<目标>/repos/（velox、velox4j、gluten、flink）。
-               缺省从GFV基线上游仓克隆基线分支（velox/velox4j: bigo-sg的gluten-0530、
+               缺省从GFV基线上游仓克隆基线分支（velox/velox4j: bigo-sg的gluten-20260829、
                gluten: apache的main、flink: apache的release-1.19）；--fork <user>改从
                个人fork仓（github.com/<user>/<仓>）克隆同分支，flink仍走官方仓。
                已存在的跳过，克隆后版本管理直接用git
@@ -94,7 +94,7 @@ Commands:
   clone        Clone the GFV source repos (velox, velox4j, gluten, flink) into
                <target>/repos/ for a consistent workspace layout. Defaults to
                the GFV baseline upstreams (velox/velox4j: bigo-sg at
-               gluten-0530, gluten: apache at main, flink: apache at
+               gluten-20260829, gluten: apache at main, flink: apache at
                release-1.19); --fork <user> clones your personal forks
                (github.com/<user>/<repo>) at the same branches, flink always
                from the official repo. Existing repos are skipped; after

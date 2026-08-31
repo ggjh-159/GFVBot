@@ -117,7 +117,7 @@ gfvbot env-init
 
 ## Source repos
 
-`gfvbot clone` lays down the GFV source repos under `<target>/repos/` so every machine gets the same workspace layout. Defaults to the GFV baseline upstreams (velox/velox4j: bigo-sg at `gluten-0530`, gluten: apache at `main`, flink: apache at `release-1.19`); `--fork <user>` clones your personal forks (github.com/<user>/<repo>) at the same branches, with flink always from the official repo:
+`gfvbot clone` lays down the GFV source repos under `<target>/repos/` so every machine gets the same workspace layout. Defaults to the GFV baseline upstreams (velox/velox4j: bigo-sg at `gluten-20260829`, gluten: apache at `main`, flink: apache at `release-1.19`); `--fork <user>` clones your personal forks (github.com/<user>/<repo>) at the same branches, with flink always from the official repo:
 
 ```bash
 gfvbot clone                     # all four: velox, velox4j, gluten, flink
