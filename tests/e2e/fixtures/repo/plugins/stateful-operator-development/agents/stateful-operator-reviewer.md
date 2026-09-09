@@ -5,7 +5,7 @@ skills:
   - stateful-operator-codegen
   - flink-velox-build
 docs:
-  - stateful-arch.md
+  - en/stateful-arch.md
 ---
 
 E2E fixture agent body.

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # check_language.sh — L1: content language policy.
 #   AI-facing content (workflow.md, agents/, skills/) must be English-only.
-#   Docs and base templates are bilingual: the main file is English-only and
-#   Chinese lives in a <base>.zh.md sibling; templates pair through the
-#   manifest, docs pair through the filesystem.
+#   Docs and templates are bilingual through mirrored en/ and zh/ directory
+#   trees: every markdown unit under en/ has its zh/ counterpart (on disk and
+#   in the manifest), the en/ side is English-only, and nothing lives directly
+#   under docs/ or templates/ outside the two language trees. Single files
+#   outside those trees (quickstart, prompt) keep the <base>.zh.md suffix
+#   pair, like the repo README.
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -28,36 +31,57 @@ check_english_tree() {  # <dir> <what>
   done < <(find "$1" -type f ! -name .gitkeep | LC_ALL=C sort)
 }
 
-check_base_templates_english() {  # <templates-dir>
-  local f
-  [ -d "$1" ] || return 0
+check_bilingual_tree() {  # <dir> <what> — a docs/ or templates/ directory
+  local f rel base="$1" what="$2"
+  [ -d "$base" ] || return 0
+
+  # nothing outside the two language trees, and no suffix-pair leftovers
   while IFS= read -r f; do
-    case "$f" in *.zh.md) continue ;; esac
+    case "$f" in
+      "$base/en/"*|"$base/zh/"*) : ;;
+      *) fail "$what outside en/ zh/ trees: ${f#"$ROOT"/}" ;;
+    esac
+  done < <(find "$base" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
+  while IFS= read -r f; do
+    fail "suffix pair no longer used in $what (zh/ tree instead): ${f#"$ROOT"/}"
+  done < <(find "$base" -type f -name '*.zh.md' | LC_ALL=C sort)
+
+  # en side: English-only, and every unit mirrored on disk under zh/
+  [ -d "$base/en" ] || return 0
+  while IFS= read -r f; do
+    rel="${f#"$base/en/"}"
     if has_cjk "$f"; then
-      fail "CJK in base template (Chinese belongs in the .zh.md sibling): ${f#"$ROOT"/}"
+      fail "CJK in $what en tree: ${f#"$ROOT"/}"
     else
-      pass "english-only template: ${f#"$ROOT"/}"
+      pass "english-only $what en: ${f#"$ROOT"/}"
     fi
-  done < <(find "$1" -type f ! -name .gitkeep | LC_ALL=C sort)
+    [ -f "$base/zh/$rel" ] \
+      && pass "$what zh mirror exists: $rel" \
+      || fail "$what missing zh mirror: ${f#"$ROOT"/}"
+  done < <(find "$base/en" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
+
+  # zh side: no orphans
+  while IFS= read -r f; do
+    rel="${f#"$base/zh/"}"
+    [ -f "$base/en/$rel" ] \
+      || fail "$what zh unit without en mirror: ${f#"$ROOT"/}"
+  done < <(find "$base/zh" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
 }
 
-check_docs_english() {  # <dir> <what> — main doc files are English-only, the
-                        # Chinese lives in a .zh.md sibling, and the pair must
-                        # exist on disk
-  local f sib
-  [ -d "$1" ] || return 0
-  while IFS= read -r f; do
-    case "$f" in *.zh.md) continue ;; esac
-    if has_cjk "$f"; then
-      fail "CJK in $2 (Chinese belongs in the .zh.md sibling): ${f#"$ROOT"/}"
-    else
-      pass "english-only $2: ${f#"$ROOT"/}"
-    fi
-    sib="${f%.md}.zh.md"
-    [ -f "$sib" ] \
-      && pass "doc pair file exists: ${sib#"$ROOT"/}" \
-      || fail "doc missing .zh.md pair file: ${sib#"$ROOT"/}"
-  done < <(find "$1" -type f -name "*.md" ! -name .gitkeep | LC_ALL=C sort)
+check_manifest_lang_mirror() {  # <manifest> <jq-field> <src-dir> <what>
+  local m="$1" field="$2" dir="$3" what="$4" u twin
+  while IFS= read -r u; do
+    [ -z "$u" ] && continue
+    case "$u" in
+      en/*) twin="zh/${u#en/}" ;;
+      zh/*) twin="en/${u#zh/}" ;;
+      *) fail "$what unit not under en/ or zh/: $u" ; continue ;;
+    esac
+    [ -e "$dir/$twin" ] || fail "$what twin missing on disk: $twin"
+    jq -e --arg t "$twin" "($field // []) | index(\$t) != null" "$m" >/dev/null \
+      && pass "$what twin declared: $twin" \
+      || fail "$what twin not declared in manifest: $twin"
+  done < <(jq -r "($field // []) | .[]" "$m")
 }
 
 for d in "$PLUGINS_DIR"/*/; do
@@ -73,39 +97,14 @@ for d in "$PLUGINS_DIR"/*/; do
   fi
   check_english_tree "$d/agents" "agents"
   check_english_tree "$d/skills" "skills"
-  check_docs_english "$d/docs" "docs"
-  check_base_templates_english "$d/templates"
 
-  # bilingual pairing: every declared .md template unit has a <base>.zh.md
-  # sibling that exists and is declared as its own unit
-  while IFS= read -r u; do
-    [ -z "$u" ] && continue
-    case "$u" in *.zh.md) continue ;; esac
-    case "$u" in
-      *.md)
-        sib="${u%.md}.zh.md"
-        [ -f "$d/templates/$sib" ] \
-          && pass "template pair file exists: $p/$sib" \
-          || fail "template missing .zh.md pair file: $p/$sib"
-        jq -e --arg s "$sib" '(.templates // []) | index($s) != null' "$m" >/dev/null \
-          && pass "template pair declared: $p/$sib" \
-          || fail "template pair not declared in manifest: $p/$sib" ;;
-    esac
-  done < <(jq -r '.templates[]? // empty' "$m")
-  while IFS= read -r u; do
-    [ -z "$u" ] && continue
-    case "$u" in *.zh.md) continue ;; esac
-    case "$u" in
-      *.md)
-        sib="${u%.md}.zh.md"
-        [ -f "$SHARED_DIR/templates/$sib" ] \
-          && pass "shared template pair file exists: $sib" \
-          || fail "shared template missing .zh.md pair file: $sib"
-        jq -e --arg s "$sib" '(.shared.templates // []) | index($s) != null' "$m" >/dev/null \
-          && pass "shared template pair declared: $sib" \
-          || fail "shared template pair not declared in manifest: $sib" ;;
-    esac
-  done < <(jq -r '.shared.templates[]? // empty' "$m")
+  # bilingual trees: mirrored en/ zh/ directories, on disk and in the manifest
+  check_bilingual_tree "$d/docs" "docs"
+  check_bilingual_tree "$d/templates" "templates"
+  check_manifest_lang_mirror "$m" .docs "$d/docs" "plugin docs"
+  check_manifest_lang_mirror "$m" .templates "$d/templates" "plugin templates"
+  check_manifest_lang_mirror "$m" .shared.docs "$SHARED_DIR/docs" "shared docs"
+  check_manifest_lang_mirror "$m" .shared.templates "$SHARED_DIR/templates" "shared templates"
 
   # quickstart is human-facing: pair it when present
   if [ -f "$d/quickstart.md" ]; then
@@ -124,7 +123,7 @@ done
 
 # shared AI-facing content: English only
 check_english_tree "$SHARED_DIR/skills" "shared skills"
-check_docs_english "$SHARED_DIR/docs" "shared docs"
-check_base_templates_english "$SHARED_DIR/templates"
+check_bilingual_tree "$SHARED_DIR/docs" "shared docs"
+check_bilingual_tree "$SHARED_DIR/templates" "shared templates"
 
 finish

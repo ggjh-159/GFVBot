@@ -1,7 +1,7 @@
 {
   "name": "aggregate-function-development",
   "description": "Aggregate function development: velox Aggregate implementations, the accumulate/merge/finalize chain, and batch integration",
-  "description_zh": "聚合函数开发：velox Aggregate 实现、accumulate/merge/finalize 链路与批处理接入",
+  "description_zh": "聚合函数开发：velox Aggregate实现、accumulate/merge/finalize链路与批处理接入",
   "workflow": "workflow.md",
   "agents": [],
   "skills": [],

@@ -19,7 +19,7 @@ ROOT="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../.." && pwd)"
 usage() {
   if [ "$T_LANG" = zh ]; then
     cat <<'EOF'
-gfvbot — GFVBot 插件安装器
+gfvbot — GFVBot插件安装器
 
 用法:
   gfvbot install <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run] [--link]
