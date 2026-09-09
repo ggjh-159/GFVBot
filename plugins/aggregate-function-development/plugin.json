@@ -15,12 +15,12 @@
       "flink-velox-code-review"
     ],
     "docs": [
-      "nexmark-queries.md",
-      "nexmark-queries.zh.md",
-      "verification.md",
-      "verification.zh.md",
-      "architecture.md",
-      "architecture.zh.md"
+      "en/nexmark-queries.md",
+      "zh/nexmark-queries.md",
+      "en/verification.md",
+      "zh/verification.md",
+      "en/architecture.md",
+      "zh/architecture.md"
     ]
   }
 }

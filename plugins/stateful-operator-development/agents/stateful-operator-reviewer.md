@@ -2,7 +2,7 @@
 name: stateful-operator-reviewer
 description: Owns the four review gates of the stateful-operator workflow: SPEC review, design review, code review, and final acceptance.
 skills: [flink-velox-code-review, flink-velox-docs-search]
-docs: [architecture.md, architecture.zh.md]
+docs: [en/architecture.md]
 ---
 
 # stateful-operator-reviewer

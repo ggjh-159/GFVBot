@@ -2,7 +2,7 @@
 name: stateful-operator-orchestrator
 description: Schedules the five stages, runs gates, pauses at user gates, and arbitrates disputes; never implements or reviews technical content.
 skills: []
-docs: [architecture.md, architecture.zh.md]
+docs: [en/architecture.md]
 ---
 
 # stateful-operator-orchestrator

@@ -2,7 +2,7 @@
 name: stateful-operator-architect
 description: Owns the SPEC (with feasibility assessment), the design, and the final summary for stateful-operator tasks.
 skills: [flink-velox-docs-search]
-docs: [architecture.md, architecture.zh.md, nexmark-queries.md, nexmark-queries.zh.md]
+docs: [en/architecture.md, en/nexmark-queries.md]
 ---
 
 # stateful-operator-architect
