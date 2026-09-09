@@ -71,8 +71,10 @@ a "install A: anchor exact" anchor_ok
 a "install A: record exists" test -f "$T/.gfvbot/records/stateful-operator-development.claude.json"
 a "install A: shared skill landed" test -f "$T/.claude/skills/flink-velox-build/SKILL.md"
 a "install A: agent landed" test -f "$T/.claude/agents/stateful-operator-reviewer.md"
-a "install A: docs+templates landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/spec.md"
-a "install A: template zh pair landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/spec.zh.md"
+a "install A: docs en landed" test -f "$T/docs/gfvbot/stateful-operator-development/en/stateful-arch.md"
+a "install A: docs zh landed" test -f "$T/docs/gfvbot/stateful-operator-development/zh/stateful-arch.md"
+a "install A: templates en landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/en/spec.md"
+a "install A: templates zh landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/zh/spec.md"
 
 # --- second plugin: shared dedup, index sections, anchor stable -------------
 bash "$COPY/installer/install.sh" --plugin performance-optimization --tool claude --target "$T" >/dev/null 2>&1

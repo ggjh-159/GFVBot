@@ -84,7 +84,13 @@ for d in "$PLUGINS_DIR"/*/; do
   fi
   for kind in skills docs; do
     [ "$agent_count" -eq 0 ] && continue
-    mani=$(jq -r "[(.${kind}[]?), (.shared.${kind}[]?)] | unique | .[]" "$m")
+    # docs unions are matched against the en/ side only: zh/ units are the
+    # human-facing mirror and are not part of agent bindings
+    if [ "$kind" = docs ]; then
+      mani=$(jq -r '[(.docs[]?), (.shared.docs[]?)] | map(select(startswith("en/"))) | unique | .[]' "$m")
+    else
+      mani=$(jq -r "[(.${kind}[]?), (.shared.${kind}[]?)] | unique | .[]" "$m")
+    fi
     agent_union=""
     while IFS= read -r a; do
       [ -z "$a" ] && continue
@@ -99,20 +105,23 @@ for d in "$PLUGINS_DIR"/*/; do
     fi
   done
 
-  # --- agent-bound docs: two-level existence (unit or unit-internal path) ---
+  # --- agent-bound docs: unit or unit-internal path (units may themselves
+  #     contain slashes, e.g. en/<unit>.md, so match the longest declared
+  #     prefix rather than the first path segment) ---
   while IFS= read -r a; do
     [ -z "$a" ] && continue
     while IFS= read -r bind; do
       [ -z "$bind" ] && continue
-      unit=${bind%%/*}
       declared="no"
-      jq -e --arg u "$unit" '(.docs // []) + (.shared.docs // []) | index($u) != null' "$m" >/dev/null \
-        && declared="yes"
+      while IFS= read -r u2; do
+        [ -z "$u2" ] && continue
+        case "$bind" in
+          "$u2"|"$u2"/*) declared="yes"; break ;;
+        esac
+      done < <(jq -r '(.docs // []) + (.shared.docs // []) | .[]' "$m")
       [ "$declared" = "yes" ] || fail "agent $a binds undeclared doc unit: $bind"
-      if [ "$bind" != "$unit" ]; then
-        if [ -e "$d/docs/$bind" ]; then :; elif [ -e "$SHARED_DIR/docs/$bind" ]; then :; else
-          fail "agent $a binds non-existent doc path: $bind"
-        fi
+      if [ -e "$d/docs/$bind" ]; then :; elif [ -e "$SHARED_DIR/docs/$bind" ]; then :; else
+        fail "agent $a binds non-existent doc path: $bind"
       fi
     done < <(fm_list "$d/agents/$a.md" docs)
   done < <(jq -r '.agents[]? // empty' "$m")

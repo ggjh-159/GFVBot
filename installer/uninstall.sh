@@ -28,12 +28,12 @@ PLUGINS=()
 usage() {
   if [ "$T_LANG" = zh ]; then
     cat <<'EOF'
-uninstall.sh — 按安装记录逆操作 GFVBot 安装（gfvbot uninstall 的后端）
+uninstall.sh — 按安装记录逆操作GFVBot安装（gfvbot uninstall的后端）
 
 用法:
   uninstall.sh <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run]
-  不带 --tool 时删除该插件在所有 AI Agent 下的安装；
-  插件装在多个 AI Agent 下且终端可交互时会弹出勾选列表
+  不带--tool时删除该插件在所有AI Agent下的安装；
+  插件装在多个AI Agent下且终端可交互时会弹出勾选列表
 EOF
   else
     cat <<'EOF'
@@ -267,10 +267,11 @@ for rec in "${UNINSTALL[@]}"; do
     fi
   fi
 
-  # 4. per-plugin docs dir prune (rmdir is a no-op on non-empty dirs)
-  if [ -z "$DRY_RUN" ]; then
-    rmdir --ignore-fail-on-non-empty "$TARGET/docs/gfvbot/$p/templates" 2>/dev/null
-    rmdir --ignore-fail-on-non-empty "$TARGET/docs/gfvbot/$p" 2>/dev/null
+  # 4. per-plugin docs dir prune — units land at any depth under the plugin's
+  #    docs root (en/ zh/ language trees), so drop empty dirs bottom-up; a
+  #    non-empty dir (surviving content) stops the walk by definition
+  if [ -z "$DRY_RUN" ] && [ -d "$TARGET/docs/gfvbot/$p" ]; then
+    find "$TARGET/docs/gfvbot/$p" -depth -type d -empty -delete 2>/dev/null
   fi
 
   rm_path "$rec" "$(t lbl_record)"
@@ -320,10 +321,12 @@ for tool in "${!AFFECTED[@]}"; do
   ok "$(t msg_tool_reclaimed "$tool")"
 done
 if [ "${#SURVIVING[@]}" -eq 0 ]; then
-  for d in \
-    "$TARGET/docs/gfvbot/shared/templates" "$TARGET/docs/gfvbot/shared" "$TARGET/docs/gfvbot" "$TARGET/docs"; do
-    [ -n "$DRY_RUN" ] || rmdir --ignore-fail-on-non-empty "$d" 2>/dev/null
-  done
+  # shared docs/templates also land at depth (en/ zh/ trees): prune empty
+  # dirs bottom-up inside gfvbot territory, then try docs/ itself
+  if [ -z "$DRY_RUN" ] && [ -d "$TARGET/docs/gfvbot" ]; then
+    find "$TARGET/docs/gfvbot" -depth -type d -empty -delete 2>/dev/null
+  fi
+  [ -n "$DRY_RUN" ] || rmdir --ignore-fail-on-non-empty "$TARGET/docs" 2>/dev/null
   # user-set language config is user content, not installer territory: keep it
   if [ -f "$TARGET/.gfvbot/config" ]; then
     [ -n "$DRY_RUN" ] || rm -rf "$TARGET/.gfvbot/records"

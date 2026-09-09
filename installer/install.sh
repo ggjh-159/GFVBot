@@ -31,7 +31,7 @@ ALL=""
 usage() {
   if [ "$T_LANG" = zh ]; then
     cat <<'EOF'
-install.sh — GFVBot 安装引擎（gfvbot install 的后端）
+install.sh — GFVBot安装引擎（gfvbot install的后端）
 
 用法:
   install.sh [--plugin <name>]... [--all] [--tool <claude|opencode>]
