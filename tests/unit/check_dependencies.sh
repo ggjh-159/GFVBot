@@ -58,10 +58,17 @@ else
 fi
 
 # 4. shared units must be referenced by >= 2 plugins
+# skills are top-level directories; docs/templates units live one level below
+# the mirrored en/ zh/ language trees and carry the language segment in the
+# manifest entry (en/<name>, zh/<name>)
 for kind in skills docs templates; do
-  for unit_dir in "$SHARED_DIR/$kind"/*/; do
-    [ -d "$unit_dir" ] || continue
-    u=$(basename "$unit_dir")
+  if [ "$kind" = skills ]; then
+    units=$(find "$SHARED_DIR/$kind" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' 2>/dev/null | LC_ALL=C sort)
+  else
+    units=$(find "$SHARED_DIR/$kind" -mindepth 2 -maxdepth 2 ! -name .gitkeep -printf '%P\n' 2>/dev/null | LC_ALL=C sort -u)
+  fi
+  while IFS= read -r u; do
+    [ -n "$u" ] || continue
     refs=0
     for p in "${plugins[@]}"; do
       m="$PLUGINS_DIR/$p/plugin.json"
@@ -74,7 +81,7 @@ for kind in skills docs templates; do
     else
       pass "shared $kind '$u' referenced by $refs plugins"
     fi
-  done
+  done <<< "$units"
 done
 
 finish
