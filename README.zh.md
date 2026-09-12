@@ -70,38 +70,50 @@ bash <installed-skill>/bin/compile.sh     # velox4j+gluten-flink的jar落进/opt
 
 ## 使用
 
-`gfvbot prompt`打印插件的任务模板；`--task`加`--tool`交给AI Agent生成完整的任务prompt（在目标项目目录下执行，Agent会读插件文档与项目源文件来填充内容），`--file`把结果写入文件：
+`gfvbot prompt`打印插件的任务模板：
 
 ```bash
 gfvbot prompt stateful-operator-development
+```
+
+填好占位符，在目标项目根目录启动AI Agent粘贴发送。以TopN任务为例：
+
+```bash
+cd /path/to/gfv
+claude          # 或opencode
+```
+```text
+> 为gluten-flink开发`TopN`stateful算子。
+> - 目标：对流输出按price排序的Top-N
+> - 验证：在集群上运行nexmark query `q19`，与原生Flink对比输出
+> - 验收：q19输出与原生基线一致，q0-q18不回归
+> - 补充：无
+> 按已安装的stateful-operator-development工作流推进，从SPEC阶段开始。
+```
+
+也可以让AI Agent代填：`--task`加`--tool`在目标项目目录下执行，Agent读插件文档与项目源文件生成完整的任务prompt；`--file`把结果写入文件：
+
+```bash
 gfvbot prompt stateful-operator-development --task "开发TopN算子，用nexmark q19验证" --tool claude --file topn-prompt.md
-```
-
-Claude Code:
-
-```bash
-cd /path/to/gfv
-claude
-```
-```text
-> <粘贴填好占位符的任务模板>
-```
-
-opencode:
-
-```bash
-cd /path/to/gfv
-opencode
-```
-```text
-> <粘贴填好占位符的任务模板>
 ```
 
 `gfvbot list`查看已安装与可安装的插件。
 
 ## 环境检查
 
-`gfvbot env`扫描构建依赖（git、cmake、gcc/g++、OpenJDK 8/17、Maven、JAVA_HOME、构建工具组与Velox系统级C++库组）、本机可用的AI Agent CLI以及flink/nexmark安装情况，并归档到目标项目的`.gfvbot/env.json`。其中`repos`节记录四个源码仓的路径、克隆源地址、上游地址与主线分支：首次扫描只留占位并提醒，`gfvbot clone`克隆后自动回填，也可直接手工编辑。
+`gfvbot env`扫描以下内容并归档到目标项目的`.gfvbot/env.json`：
+
+- 构建依赖：git、cmake、gcc/g++、OpenJDK 8/17、Maven、JAVA_HOME
+- 构建工具组与Velox系统级C++库组（按组探测、按组安装）
+- 本机可用的AI Agent CLI
+- flink/nexmark安装情况
+- 机器信息：OS、内核、架构、CPU、内存、磁盘
+
+`repos`节记录四个源码仓的路径、克隆源地址、上游地址与主线分支：
+
+- 首次扫描只留占位并提醒
+- `gfvbot clone`克隆后自动回填
+- 也可直接手工编辑
 
 ```bash
 gfvbot env
@@ -117,16 +129,23 @@ env-init的勾选清单同时覆盖运行栈：flink与nexmark两项可选，不
 
 ## 源码仓库
 
-`gfvbot clone`按GFV工作区布局把源码仓库克隆到`<目标>/repos/`，保证不同机器上的仓库布局一致。缺省从GFV基线上游仓克隆基线分支（velox/velox4j为bigo-sg的`gluten-20260829`，gluten为apache的`main`，flink为apache的`release-1.19`）；`--fork <用户名>`改从个人fork仓（github.com/<用户名>/<仓>）克隆同分支，flink始终走官方仓：
+`gfvbot clone`按GFV工作区布局把源码仓库克隆到`<目标>/repos/`，保证不同机器上的仓库布局一致。缺省从基线上游仓克隆基线分支：
+
+| 仓库 | 上游 | 分支 |
+|---|---|---|
+| velox | bigo-sg | `gluten-20260829` |
+| velox4j | bigo-sg | `gluten-20260829` |
+| gluten | apache | `main` |
+| flink | apache | `release-1.19` |
 
 ```bash
-gfvbot clone                     # 全部四个：velox、velox4j、gluten、flink
+gfvbot clone                     # 全部四个仓
 gfvbot clone velox velox4j       # 只克隆子集
-gfvbot clone --fork <用户名>     # velox/velox4j/gluten改从个人fork仓的基线分支克隆
-gfvbot clone --shallow           # 浅克隆（--depth 1）：下载量小、无完整历史
+gfvbot clone --fork <用户名>     # velox/velox4j/gluten改从个人fork仓克隆同分支；flink始终走官方仓
+gfvbot clone --shallow           # 浅克隆（--depth 1）
 ```
 
-已存在的仓库跳过不动；克隆失败自动清理残缺目录并重试，重跑同一命令即续补。克隆或跳过的仓库会把路径、克隆源地址、上游地址与主线分支自动回填到`.gfvbot/env.json`的`repos`节；克隆完成后版本管理直接用git。
+完整参数见`gfvbot help`。已存在的仓库跳过不动，重跑同一命令即续补；克隆完成后版本管理直接用git。
 
 ## 源码级C++库
 

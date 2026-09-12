@@ -70,38 +70,50 @@ bash <installed-skill>/bin/compile.sh     # velox4j + gluten-flink jars land in 
 
 ## Using an installed plugin
 
-`gfvbot prompt` prints a plugin's task template; pass `--task` with `--tool` to have the AI agent generate the complete prompt (run it inside the target project — the agent reads the plugin docs and the project's source files to fill it in), and `--file` to write the result to a file:
+`gfvbot prompt` prints the plugin's task template:
 
 ```bash
 gfvbot prompt stateful-operator-development
+```
+
+Fill in the placeholders, start the AI agent at the target project root, paste, and send. Using a TopN task as the example:
+
+```bash
+cd /path/to/gfv
+claude          # or opencode
+```
+```text
+> Develop the `TopN` stateful operator for gluten-flink.
+> - Goal: emit the Top-N bids ranked by price
+> - Verification: run Nexmark query `q19` against the cluster and compare the output with native Flink
+> - Acceptance: q19 output matches the native baseline; q0-q18 must not regress
+> - Notes: none
+> Follow the installed stateful-operator-development workflow; start from the SPEC stage.
+```
+
+Or let the AI agent fill it in: pass `--task` with `--tool` (run inside the target project — the agent reads the plugin docs and the project's source files), and `--file` to write the result to a file:
+
+```bash
 gfvbot prompt stateful-operator-development --task "develop a TopN operator, verify with nexmark q19" --tool claude --file topn-prompt.md
-```
-
-Claude Code:
-
-```bash
-cd /path/to/gfv
-claude
-```
-```text
-> <paste the filled-in task template>
-```
-
-opencode:
-
-```bash
-cd /path/to/gfv
-opencode
-```
-```text
-> <paste the filled-in task template>
 ```
 
 Use `gfvbot list` to see what is installed and what the repo offers.
 
 ## Environment check
 
-`gfvbot env` scans build dependencies (git, cmake, gcc/g++, OpenJDK 8/17, Maven, JAVA_HOME, build tools like ninja/autoconf, and Velox's system-level C++ libraries), the locally available AI agent CLIs, and the flink/nexmark stack, then archives everything to the target project's `.gfvbot/env.json`. The `repos` section records each source repo's path, clone-source URL, upstream URL, and main branch: a fresh scan leaves placeholders with a hint, `gfvbot clone` back-fills them, and hand-editing works too.
+`gfvbot env` scans the following and archives the results to the target project's `.gfvbot/env.json`:
+
+- Build dependencies: git, cmake, gcc/g++, OpenJDK 8/17, Maven, JAVA_HOME
+- The build-tools group and Velox's system-level C++ library group (probed and installed as groups)
+- Locally available AI agent CLIs
+- The flink/nexmark stack
+- Machine facts: OS, kernel, arch, CPU, memory, disk
+
+The `repos` section records each source repo's path, clone-source URL, upstream URL, and main branch:
+
+- a fresh scan leaves placeholders with a hint
+- `gfvbot clone` back-fills them after cloning
+- hand-editing works too
 
 ```bash
 gfvbot env
@@ -117,16 +129,23 @@ The env-init tick-list also covers the runtime stack: flink and nexmark are both
 
 ## Source repos
 
-`gfvbot clone` lays down the GFV source repos under `<target>/repos/` so every machine gets the same workspace layout. Defaults to the GFV baseline upstreams (velox/velox4j: bigo-sg at `gluten-20260829`, gluten: apache at `main`, flink: apache at `release-1.19`); `--fork <user>` clones your personal forks (github.com/<user>/<repo>) at the same branches, with flink always from the official repo:
+`gfvbot clone` lays down the GFV source repos under `<target>/repos/` so every machine gets the same workspace layout. By default it clones the baseline branches from the baseline upstreams:
+
+| Repo | Upstream | Branch |
+|---|---|---|
+| velox | bigo-sg | `gluten-20260829` |
+| velox4j | bigo-sg | `gluten-20260829` |
+| gluten | apache | `main` |
+| flink | apache | `release-1.19` |
 
 ```bash
-gfvbot clone                     # all four: velox, velox4j, gluten, flink
+gfvbot clone                     # all four repos
 gfvbot clone velox velox4j       # a subset
-gfvbot clone --fork <user>       # velox/velox4j/gluten from your forks, baseline branches
-gfvbot clone --shallow           # --depth 1: smaller download, no full history
+gfvbot clone --fork <user>       # velox/velox4j/gluten from your forks (github.com/<user>/<repo>), same branches; flink always official
+gfvbot clone --shallow           # --depth 1 shallow clone
 ```
 
-Existing repos are skipped; a failed clone cleans up its partial directory and retries, and re-running the same command resumes what is left. Cloned (or skipped) repos have their path, clone-source URL, upstream URL, and main branch back-filled into the `repos` section of `.gfvbot/env.json`. After cloning, version control is plain git.
+See `gfvbot help` for the full flag reference. Existing repos are skipped and re-running the same command resumes what is left; after cloning, version control is plain git.
 
 ## Source-built C++ libraries
 

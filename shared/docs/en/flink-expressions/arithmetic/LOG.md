@@ -1,0 +1,34 @@
+# LOG
+
+Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
+
+## Role and scenarios
+
+Logarithm of x to the explicit base; invalid base or non-positive input yields NULL. When neither e nor 10 is the natural base for the domain.
+
+## Usage
+
+Input: `LOG(base, x)` — DOUBLE; base must be positive and not 1, x must be positive.
+
+```sql
+-- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
+SELECT auction, bidder, 0.908 * price + 10, LOG(2, 8) FROM bid;
+```
+
+Output: DOUBLE; `LOG(2, 8)` = 3.0 on every row.
+
+Example (input -> output):
+
+| Input | Output |
+|---|
+| LOG(2, 8) | 3.0 |
+
+## Pipeline
+
+The route of `LOG` from SQL text to the executing operator (Flink 1.19.2):
+
+1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.LOG` (FlinkSqlOperatorTable.java:250).
+2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1459, registered under the name "log", kind SCALAR; the planner binds the parsed call to this definition.
+3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
+4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
+5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
