@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-删除数组中所有出现的该值。对打标数据做黑名单过滤。
+删除数组中所有与指定值相等的元素，其余元素保持原顺序。用于对打标数据做黑名单过滤。
 
 ## 用法
 
-输入：`ARRAY_REMOVE(arr, v)`——arr为ARRAY，v为元素类型。
+签名：`ARRAY_REMOVE(arr, v)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| arr | ARRAY<T> | 原数组 |
+| v | T | 待删除的值，类型为数组元素类型 |
+
+返回：ARRAY<T>；命中值的所有出现一并删除。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +24,21 @@ SELECT auction, bidder, 0.908 * price + 10, ARRAY_REMOVE(ARRAY[1,2,1], 1) FROM b
 
 输出：ARRAY<INT>；每行均为[2]。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| ARRAY_REMOVE(ARRAY[1,2,1], 1) | [2] | 1的两次出现全部删除 |
+| ARRAY_REMOVE(ARRAY[1,2], 9) | [1, 2] | 值未出现时数组原样返回 |
 
-| 输入 | 输出 |
-|---|
-| ARRAY_REMOVE(ARRAY[1,2,1], 1) | [2] |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`ARRAY_REMOVE`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`ARRAY_REMOVE`条目（SCALAR） |
+| 求值逻辑 | `ArrayRemoveFunction`的`eval()`（flink-table-runtime，经`BridgingSqlFunctionCallGen`调用） |
 
-1. **解析**——函数形式，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:261处的注册条目，注册名`"ARRAY_REMOVE"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经BridgingSqlFunctionCallGen调用table-runtime类scalar/ArrayRemoveFunction的eval()（flink-table-runtime，新栈载体）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox已有内建`array_remove`（`velox/functions/prestosql/registration/ArrayFunctionsRegistration.cpp`）。

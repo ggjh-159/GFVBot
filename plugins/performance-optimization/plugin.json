@@ -20,7 +20,9 @@
       "en/verification.md",
       "zh/verification.md",
       "en/architecture.md",
-      "zh/architecture.md"
+      "zh/architecture.md",
+      "en/internals",
+      "zh/internals"
     ]
   }
 }

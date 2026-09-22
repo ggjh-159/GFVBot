@@ -4,31 +4,42 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Natural logarithm (base e); non-positive input yields NULL. Log-scaling skewed distributions before aggregation.
+Returns the natural logarithm (base e) of x; when the input is non-positive (x <= 0) the result is NULL. It is commonly used to apply logarithmic scaling to skewed distributions before aggregation.
 
 ## Usage
 
-Input: `LN(x)` — DOUBLE; x <= 0 returns NULL.
+Signature: `LN(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Logarithm argument; must be positive |
+
+Return: DOUBLE; NULL when x <= 0.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, LN(EXP(2)) FROM bid;
 ```
 
-Output: DOUBLE; `LN(EXP(2))` = 2.0 on every row.
+Output: DOUBLE; `LN(EXP(2))` is 2.0 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| LN(EXP(2)) | 2.0 |
+| Input | Output | Notes |
+|---|---|---|
+| LN(EXP(2)) | 2.0 | LN and EXP are inverse operations of each other |
+| LN(0) | NULL | Non-positive input returns NULL |
 
-## Pipeline
+## Source locations
 
-The route of `LN` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.LN` (FlinkSqlOperatorTable.java:1187).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1451, registered under the name "ln", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `LN` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `LN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `ln` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

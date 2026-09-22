@@ -4,11 +4,19 @@ Category: [String](../index.md#string) | Aliases: —
 
 ## Role and scenarios
 
-Extracts one part of a URL — PROTOCOL, HOST, PATH, QUERY, REF, AUTHORITY, or FILE; with a key argument it returns that single query parameter. Log and referer analysis.
+Extracts the specified part from a URL, where part is one of PROTOCOL, HOST, PATH, QUERY, REF, AUTHORITY, or FILE; when part is QUERY and a key is given, the value of that query parameter is returned, used for log and source analysis.
 
 ## Usage
 
-Input: `PARSE_URL(url, part[, key])` — url and part STRING, key STRING.
+Signature: `PARSE_URL(url, part[, key])`
+
+| Parameter | Type | Description |
+|---|---|---|
+| url | STRING | the URL to parse |
+| part | STRING | the part to extract, values as above |
+| key | STRING | optional, the query parameter name, used with part 'QUERY' |
+
+Return: STRING; the corresponding part of the URL or the value of the query parameter.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
@@ -17,18 +25,22 @@ SELECT auction, bidder, 0.908 * price + 10, PARSE_URL('http://h/p?a=1#f', 'QUERY
 
 Output: STRING; '1' on every row (the value of query parameter a).
 
-Example (input -> output):
+Examples (input → output):
 
-| Input | Output |
-|---|
-| PARSE_URL('http://h/p?a=1#f', 'QUERY', 'a') | 1 |
+| Input | Output | Notes |
+|---|---|---|
+| PARSE_URL('http://h/p?a=1#f', 'QUERY', 'a') | 1 | with part 'QUERY' and a key given, returns the value of query parameter a |
 
-## Pipeline
+## Source locations
 
-The route of `PARSE_URL` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.PARSE_URL` (FlinkSqlOperatorTable.java:611).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1094, registered under the name "parseUrl", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `PARSE_URL` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `PARSE_URL` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateParserUrl` (direct call to `SqlFunctionUtils`'s `parseUrl`) |
+
+## Velox implementation
+
+The velox repository has no corresponding implementation yet; the closest are the `url_extract_host` family (`velox/functions/prestosql/registration/URLFunctionsRegistration.cpp`).

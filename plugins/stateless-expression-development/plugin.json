@@ -22,7 +22,9 @@
       "en/architecture.md",
       "zh/architecture.md",
       "en/flink-expressions",
-      "zh/flink-expressions"
+      "zh/flink-expressions",
+      "en/internals",
+      "zh/internals"
     ]
   }
 }

@@ -8,7 +8,13 @@ IS NULL的补集，同样绝不返回UNKNOWN。在会对NULL敏感的算术或�
 
 ## 用法
 
-输入：`x IS NOT NULL`——任意可空类型；结果本身永不为NULL。
+签名：`x IS NOT NULL`（后缀谓词形式）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | 任意可空类型 | 待判空的值 |
+
+返回：BOOLEAN；x非NULL得TRUE；结果本身永不为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,25 +23,30 @@ SELECT auction, bidder, 0.908 * price + 10, (bid.auction IS NOT NULL) FROM bid;
 
 输出：BOOLEAN；本例每行皆为true——`auction`是非空列。
 
-示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
+示例（16行源的前8行，示意数据，末行补空值边界；前列为输入列，末两列为该行结果与说明）：
 
-| auction | auction IS NOT NULL |
+| auction | auction IS NOT NULL | 说明 |
+|---|---|---|
+| 3 | TRUE | 非NULL值 |
+| 19 | TRUE | 非NULL值 |
+| 8 | TRUE | 非NULL值 |
+| 1 | TRUE | 非NULL值 |
+| 14 | TRUE | 非NULL值 |
+| 7 | TRUE | 非NULL值 |
+| 11 | TRUE | 非NULL值 |
+| 20 | TRUE | 非NULL值 |
+| NULL | FALSE | 输入为NULL得FALSE，结果永不为NULL |
+
+## 源码位置
+
+GFV实现该表达式的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 3 | TRUE |
-| 19 | TRUE |
-| 8 | TRUE |
-| 1 | TRUE |
-| 14 | TRUE |
-| 7 | TRUE |
-| 11 | TRUE |
-| 20 | TRUE |
+| 解析识别 | `FlinkSqlOperatorTable`的`IS_NOT_NULL`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`IS_NOT_NULL`条目（SCALAR） |
+| 求值逻辑 | 经`ScalarOperatorGens`内联生成 |
 
-## 实现链路
+## velox实现
 
-`IS_NOT_NULL`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——后缀IS NOT NULL，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.IS_NOT_NULL`（FlinkSqlOperatorTable.java:1106）。
-2. **定义**——BuiltInFunctionDefinitions.java:519处的注册条目，注册名`"isNotNull"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator内联为普通Java运算代码（ScalarOperatorGens），无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有实现：sparksql套件的`isnotnull`（`velox/functions/sparksql/registration/RegisterComparison.cpp`）（prestosql侧仅注册了`is_null`）。

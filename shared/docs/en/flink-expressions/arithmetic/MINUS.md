@@ -4,38 +4,49 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: `-`
 
 ## Role and scenarios
 
-Numeric subtraction, temporal minus interval, and interval differences. NULL propagates. Deltas and centered values.
+Subtraction (infix `-`): supports numeric minus numeric, temporal minus interval, and interval minus interval. When either operand is NULL, the result is NULL. It is used for differences and centering values.
 
 ## Usage
 
-Input: `a - b` — numeric minus numeric, temporal minus interval, or interval minus interval.
+Signature: `a - b` (infix subtraction)
+
+| Parameter | Type | Description |
+|---|---|---|
+| Left operand | Numeric, temporal, or interval | Minuend; supports numeric, temporal minus interval, and interval minus interval |
+| Right operand | Numeric or interval | Subtrahend |
+
+Return: The difference; numeric, temporal, or interval, with the type derived from the operand combination. NULL when either operand is NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, bid.auction - bid.bidder FROM bid;
 ```
 
-Output: BIGINT; `auction - bidder` per row (data-dependent).
+Output: BIGINT; `auction - bidder` for each row (varies with the row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 of the 16 source rows, illustrative data; leading columns are input columns, the last column is the result for that row):
 
-| auction | bidder | auction - bidder |
-|---|---|---|
-| 3 | 15 | -12 |
-| 19 | 7 | 12 |
-| 8 | 8 | 0 |
-| 1 | 42 | -41 |
-| 14 | 23 | -9 |
-| 7 | 2 | 5 |
-| 11 | 11 | 0 |
-| 20 | 36 | -16 |
+| auction | bidder | auction - bidder | Notes |
+|---|---|---|---|
+| 3 | 15 | -12 | The minuend is smaller than the subtrahend; the difference is negative |
+| 19 | 7 | 12 | The difference is positive |
+| 8 | 8 | 0 | The two values are equal; the difference is 0 |
+| 1 | 42 | -41 | The minuend is smaller than the subtrahend; the difference is negative |
+| 14 | 23 | -9 | The minuend is smaller than the subtrahend; the difference is negative |
+| 7 | 2 | 5 | The difference is positive |
+| 11 | 11 | 0 | The two values are equal; the difference is 0 |
+| 20 | 36 | -16 | The minuend is smaller than the subtrahend; the difference is negative |
 
-## Pipeline
+## Source locations
 
-The route of `MINUS` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — infix syntax; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.MINUS` (FlinkSqlOperatorTable.java:1093).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1295, registered under the name "minus", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `MINUS` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `MINUS` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined by `ScalarOperatorGens` |
+
+## Velox implementation
+
+Velox already provides the builtin `minus` (`velox/functions/prestosql/registration/MathematicalOperatorsRegistration.cpp`).

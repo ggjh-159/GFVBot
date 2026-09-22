@@ -4,38 +4,49 @@ Category: [Logical](../index.md#logical) | Aliases: —
 
 ## Role and scenarios
 
-Logical negation: TRUE becomes FALSE and vice versa; UNKNOWN stays UNKNOWN. Parenthesize the operand — precedence surprises are the classic bug with NOT.
+Logical negation: TRUE becomes FALSE and FALSE becomes TRUE; UNKNOWN stays UNKNOWN. NOT binds lower than comparison predicates, so wrap compound conditions in parentheses as a whole to avoid ambiguity.
 
 ## Usage
 
-Input: `NOT a` — operand BOOLEAN; NULL remains NULL (unknown).
+Signature: `NOT x` (unary prefix form)
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | BOOLEAN | The boolean expression to negate; compound conditions should be parenthesized |
+
+Return: BOOLEAN; TRUE and FALSE are swapped; when the input is NULL (UNKNOWN) the result stays UNKNOWN.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, NOT (bid.auction > 5) FROM bid;
 ```
 
-Output: BOOLEAN; the negation of `auction > 5` per row (data-dependent).
+Output: BOOLEAN; each row negates `auction > 5` (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final NULL-boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | NOT (auction > 5) |
+| auction | NOT (auction > 5) | Notes |
+|---|---|---|
+| 3 | TRUE | Inner FALSE, negated to TRUE |
+| 19 | FALSE | Inner TRUE, negated to FALSE |
+| 8 | FALSE | Inner TRUE, negated to FALSE |
+| 1 | TRUE | Inner FALSE, negated to TRUE |
+| 14 | FALSE | Inner TRUE, negated to FALSE |
+| 7 | FALSE | Inner TRUE, negated to FALSE |
+| 11 | FALSE | Inner TRUE, negated to FALSE |
+| 20 | FALSE | Inner TRUE, negated to FALSE |
+| NULL | UNKNOWN | Inner UNKNOWN; negation stays UNKNOWN |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | TRUE |
-| 19 | FALSE |
-| 8 | FALSE |
-| 1 | TRUE |
-| 14 | FALSE |
-| 7 | FALSE |
-| 11 | FALSE |
-| 20 | FALSE |
+| Parser recognition | The `NOT` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `NOT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `NOT` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — prefix NOT; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.NOT` (FlinkSqlOperatorTable.java:1116).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:424, registered under the name "not", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `not` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

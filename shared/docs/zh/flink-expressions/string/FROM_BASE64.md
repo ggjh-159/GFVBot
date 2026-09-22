@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-把base64文本解码回原字符串。TO_BASE64的逆操作。
+将base64文本s解码还原为原字符串，是TO_BASE64的逆操作。
 
 ## 用法
 
-输入：`FROM_BASE64(s)`——s为STRING；返回STRING。
+签名：`FROM_BASE64(s)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| s | STRING | base64编码的文本 |
+
+返回：STRING；解码还原的原字符串。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +25,27 @@ SELECT auction, bidder, 0.908 * price + 10, FROM_BASE64(TO_BASE64(bid.extra)) FR
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| extra | FROM_BASE64(TO_BASE64(extra)) |
+| extra | FROM_BASE64(TO_BASE64(extra)) | 说明 |
+|---|---|---|
+| A3F19C27B4E0 | A3F19C27B4E0 | base64编解码往返后还原为原串 |
+| 8B2D4F90A1C3 | 8B2D4F90A1C3 | base64编解码往返后还原为原串 |
+| C7E5A0D39F16 | C7E5A0D39F16 | base64编解码往返后还原为原串 |
+| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5 | base64编解码往返后还原为原串 |
+| D4C8B1E6A2F7 | D4C8B1E6A2F7 | base64编解码往返后还原为原串 |
+| 5F0A9D3C7E8B | 5F0A9D3C7E8B | base64编解码往返后还原为原串 |
+| ZZYYXXWWVVUU | ZZYYXXWWVVUU | base64编解码往返后还原为原串 |
+| E2B7F5A9C3D0 | E2B7F5A9C3D0 | base64编解码往返后还原为原串 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| A3F19C27B4E0 | A3F19C27B4E0 |
-| 8B2D4F90A1C3 | 8B2D4F90A1C3 |
-| C7E5A0D39F16 | C7E5A0D39F16 |
-| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5 |
-| D4C8B1E6A2F7 | D4C8B1E6A2F7 |
-| 5F0A9D3C7E8B | 5F0A9D3C7E8B |
-| ZZYYXXWWVVUU | ZZYYXXWWVVUU |
-| E2B7F5A9C3D0 | E2B7F5A9C3D0 |
+| 解析识别 | `FlinkSqlOperatorTable`的`FROM_BASE64`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`FROM_BASE64`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateFromBase64`（直调`SqlFunctionUtils`的`fromBase64`） |
 
-## 实现链路
+## velox实现
 
-`FROM_BASE64`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.FROM_BASE64`（FlinkSqlOperatorTable.java:731）。
-2. **定义**——BuiltInFunctionDefinitions.java:991处的注册条目，注册名`"fromBase64"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有内建`from_base64`（`velox/functions/prestosql/registration/BinaryFunctionsRegistration.cpp`）。

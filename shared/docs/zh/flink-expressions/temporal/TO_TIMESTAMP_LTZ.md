@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-把按指定精度（0秒、3毫秒、6微秒、9纳秒）的原始epoch值转换为TIMESTAMP WITH LOCAL TIME ZONE。转换数值epoch列。
+把原始epoch值按指定精度——0秒、3毫秒、6微秒、9纳秒——转换为TIMESTAMP WITH LOCAL TIME ZONE，呈现随会话时区。适用于转换数值epoch列。
 
 ## 用法
 
-输入：`TO_TIMESTAMP_LTZ(numeric, precision)`——numeric为BIGINT，precision为INT。
+签名：`TO_TIMESTAMP_LTZ(numeric, precision)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| numeric | BIGINT | 原始epoch值 |
+| precision | INT | epoch值的精度：0秒、3毫秒、6微秒、9纳秒 |
+
+返回：TIMESTAMP_LTZ；由epoch值构造、按会话时区呈现的时间戳。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,17 +26,20 @@ SELECT auction, bidder, 0.908 * price + 10, TO_TIMESTAMP_LTZ(1760000000, 3) FROM
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| TO_TIMESTAMP_LTZ(1760000000, 3) | 2025-10-09 12:26:40.000 |
-注：此处按UTC会话时区渲染。
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| TO_TIMESTAMP_LTZ(1760000000, 3) | 2025-10-09 12:26:40.000 | precision=3按epoch毫秒解释；UTC会话时区呈现 |
 
-## 实现链路
+## 源码位置
 
-`TO_TIMESTAMP_LTZ`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.TO_TIMESTAMP_LTZ`（FlinkSqlOperatorTable.java:812）。
-2. **定义**——BuiltInFunctionDefinitions.java:1904处的注册条目，注册名`"toTimestampLtz"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`TO_TIMESTAMP_LTZ`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`TO_TIMESTAMP_LTZ`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`静态方法（经`MethodCallGen`直调） |
+
+## velox实现
+
+velox仓库暂无对应实现。

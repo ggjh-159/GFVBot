@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-不小于x的最小整数；CEILING为同义拼法。`CEIL(ts TO unit)`把时间戳向上取整到单位边界。容量向上取整——分页、批次、计费块。
+返回不小于x的最小整数，CEILING为同义拼法；时间形式`CEIL(ts TO unit)`把时间戳向上取整到指定单位的边界。用于容量、分页、批次等需要向上取整的场景。
 
 ## 用法
 
-输入：`CEIL(x)`或`CEILING(x)`——数值；`CEIL(ts TO unit)`——时间。
+签名：`CEIL(x)`或`CEILING(x)`；另有时间形式`CEIL(ts TO unit)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | 数值 | 待向上取整的数值 |
+| ts TO unit | TIMESTAMP与时间单位 | 时间形式：把时间戳向上取整到unit（如HOUR、DAY、MONTH）边界 |
+
+返回：不小于x的最小整数；时间形式返回取整到单位边界的时间戳。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +26,27 @@ SELECT auction, bidder, 0.908 * price + 10, CEIL(bid.price) FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| price | CEIL(price) |
+| price | CEIL(price) | 说明 |
+|---|---|---|
+| 55.67 | 56 | 小数部分非零，向上进一位 |
+| 12.50 | 13 | 小数部分非零，向上进一位 |
+| 99.99 | 100 | 进位使整数部分增一 |
+| 3.14 | 4 | 小数部分非零，向上进一位 |
+| 61.20 | 62 | 小数部分非零，向上进一位 |
+| 28.05 | 29 | 小数部分非零，向上进一位 |
+| 77.77 | 78 | 小数部分非零，向上进一位 |
+| 45.00 | 45 | 已是整数，值不变 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 55.67 | 56 |
-| 12.50 | 13 |
-| 99.99 | 100 |
-| 3.14 | 4 |
-| 61.20 | 62 |
-| 28.05 | 29 |
-| 77.77 | 78 |
-| 45.00 | 45 |
+| 解析识别 | `FlinkSqlOperatorTable`的`CEIL`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CEIL`条目（SCALAR） |
+| 求值逻辑 | 经`FloorCeilCallGen`生成：数值走`BuiltInMethods`的`FLOOR`/`CEIL`，时间截断走`UNIX_DATE`/`UNIX_TIMESTAMP`系列helper |
 
-## 实现链路
+## velox实现
 
-`CEIL`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式（CEILING为别名），解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.CEIL`（FlinkSqlOperatorTable.java:1193）。
-2. **定义**——BuiltInFunctionDefinitions.java:1418处的注册条目，注册名`"ceil"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——FloorCeilCallGen——数值走BuiltInMethods.FLOOR/CEIL，时间截断走UNIX_DATE/UNIX_TIMESTAMP系列helper。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有内建`ceil/ceiling`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

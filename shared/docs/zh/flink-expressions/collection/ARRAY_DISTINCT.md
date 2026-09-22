@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-去掉重复元素，按首次出现顺序保留。对标签与id列表去重。
+去除数组中的重复元素，各唯一元素按首次出现的顺序保留。用于对标签列表、id列表去重。
 
 ## 用法
 
-输入：`ARRAY_DISTINCT(arr)`——arr为ARRAY。
+签名：`ARRAY_DISTINCT(arr)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| arr | ARRAY<T> | 待去重的数组 |
+
+返回：ARRAY<T>；重复元素仅保留首次出现的一份。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +23,21 @@ SELECT auction, bidder, 0.908 * price + 10, ARRAY_DISTINCT(ARRAY[1,2,2,3]) FROM 
 
 输出：ARRAY<INT>；每行均为[1, 2, 3]。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| ARRAY_DISTINCT(ARRAY[1,2,2,3]) | [1, 2, 3] | 重复的2仅保留一次 |
+| ARRAY_DISTINCT(ARRAY[2,1,2]) | [2, 1] | 按首次出现顺序保留 |
 
-| 输入 | 输出 |
-|---|
-| ARRAY_DISTINCT(ARRAY[1,2,2,3]) | [1, 2, 3] |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`ARRAY_DISTINCT`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`ARRAY_DISTINCT`条目（SCALAR） |
+| 求值逻辑 | `ArrayDistinctFunction`的`eval()`（flink-table-runtime，经`BridgingSqlFunctionCallGen`调用） |
 
-1. **解析**——函数形式，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:234处的注册条目，注册名`"ARRAY_DISTINCT"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经BridgingSqlFunctionCallGen调用table-runtime类scalar/ArrayDistinctFunction的eval()（flink-table-runtime，新栈载体）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox已有内建`array_distinct`（`velox/functions/prestosql/registration/ArrayFunctionsRegistration.cpp`）。

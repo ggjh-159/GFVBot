@@ -4,20 +4,26 @@ Category: [Collection](../index.md#collection) | Aliases: —
 
 ## Role and scenarios
 
-Returns the sole element of a one-element array; an empty array yields NULL, and an array with more than one element is an error. Unwrapping known-single results such as subquery outputs.
+Returns the sole element of a single-element array; an empty array yields NULL, and more than one element raises an error. Used to unwrap results known to hold a single value (such as subquery output).
 
 ## Usage
 
-Input: `ELEMENT(arr)` — arr ARRAY.
+Signature: `ELEMENT(arr)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| arr | ARRAY<T> | The single-element array to unwrap |
+
+Return: T (the element type); an empty array yields NULL, multiple elements raise an error.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ELEMENT(ARRAY[bid.auction]) FROM bid;
 ```
 
-Output: BIGINT; the value of `auction` per row.
+Output: BIGINT; each row is the value of `auction`.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | ELEMENT(ARRAY[auction]) |
 |---|---|
@@ -30,12 +36,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | 11 |
 | 20 | 20 |
 
-## Pipeline
+## Source locations
 
-The route of `ELEMENT` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ELEMENT` (FlinkSqlOperatorTable.java:1145).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1972, registered under the name "element", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's ELEMENT case (sole-element read with cardinality check).
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ELEMENT` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | no `BuiltInFunctionDefinitions` entry (type inference rides on the ELEMENT operator via Calcite) |
+| Evaluation logic | inlined via the ELEMENT branch of `ExprCodeGenerator` (single-element read with cardinality check) |
+
+## Velox implementation
+
+The velox repository has no corresponding implementation yet.

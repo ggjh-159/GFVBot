@@ -4,11 +4,19 @@
 
 ## 定位与场景
 
-抽取URL的一个部分——PROTOCOL、HOST、PATH、QUERY、REF、AUTHORITY或FILE；带key参数时返回该查询参数。日志与来源分析。
+从URL中抽取指定部分，part取值为PROTOCOL、HOST、PATH、QUERY、REF、AUTHORITY或FILE；part为QUERY且给出key时返回该查询参数的值，用于日志与来源分析。
 
 ## 用法
 
-输入：`PARSE_URL(url, part[, key])`——url、part为STRING，key为STRING。
+签名：`PARSE_URL(url, part[, key])`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| url | STRING | 待解析的URL |
+| part | STRING | 要抽取的部分，取值见上 |
+| key | STRING | 可选，查询参数名，配合part为'QUERY'使用 |
+
+返回：STRING；URL的对应部分或查询参数的值。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +27,20 @@ SELECT auction, bidder, 0.908 * price + 10, PARSE_URL('http://h/p?a=1#f', 'QUERY
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| PARSE_URL('http://h/p?a=1#f', 'QUERY', 'a') | 1 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| PARSE_URL('http://h/p?a=1#f', 'QUERY', 'a') | 1 | part为'QUERY'并给出key时返回查询参数a的值 |
 
-## 实现链路
+## 源码位置
 
-`PARSE_URL`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.PARSE_URL`（FlinkSqlOperatorTable.java:611）。
-2. **定义**——BuiltInFunctionDefinitions.java:1094处的注册条目，注册名`"parseUrl"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`PARSE_URL`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`PARSE_URL`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateParserUrl`（直调`SqlFunctionUtils`的`parseUrl`） |
+
+## velox实现
+
+velox仓库暂无对应实现；相近的有`url_extract_host`等族（`velox/functions/prestosql/registration/URLFunctionsRegistration.cpp`）。

@@ -4,38 +4,49 @@ Category: [Logical](../index.md#logical) | Aliases: —
 
 ## Role and scenarios
 
-TRUE only when the input is exactly FALSE — UNKNOWN is kept distinct and yields FALSE here. When the difference between false and unknown matters (e.g. anti-joins, NOT semantics), this is the precise test.
+Returns TRUE only when the input is exactly FALSE — UNKNOWN differs from FALSE and also yields FALSE here. Wherever distinguishing false from unknown matters (for example anti-joins, NOT semantics), this is the precise test.
 
 ## Usage
 
-Input: `x IS FALSE` — x of BOOLEAN (possibly NULL); result is never NULL.
+Signature: `x IS FALSE` (postfix predicate form)
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | BOOLEAN | May be NULL |
+
+Return: BOOLEAN; TRUE only when x is exactly FALSE, and FALSE also when x is UNKNOWN; the result is never NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, (bid.auction > 10 IS FALSE) FROM bid;
 ```
 
-Output: BOOLEAN; true only where `auction > 10` is exactly false.
+Output: BOOLEAN; true only when `auction > 10` is exactly false.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final three-valued-logic boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | auction > 10 IS FALSE |
+| auction | auction > 10 IS FALSE | Notes |
+|---|---|---|
+| 3 | TRUE | Inner FALSE |
+| 19 | FALSE | Inner TRUE |
+| 8 | TRUE | Inner FALSE |
+| 1 | TRUE | Inner FALSE |
+| 14 | FALSE | Inner TRUE |
+| 7 | TRUE | Inner FALSE |
+| 11 | FALSE | Inner TRUE |
+| 20 | FALSE | Inner TRUE |
+| NULL | FALSE | Inner UNKNOWN, which is not FALSE |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | TRUE |
-| 19 | FALSE |
-| 8 | TRUE |
-| 1 | TRUE |
-| 14 | FALSE |
-| 7 | TRUE |
-| 11 | FALSE |
-| 20 | FALSE |
+| Parser recognition | The `IS_FALSE` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `IS_FALSE` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `IS_FALSE` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — postfix IS FALSE; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.IS_FALSE` (FlinkSqlOperatorTable.java:1111).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:537, registered under the name "isFalse", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+The velox repository has no corresponding implementation yet.

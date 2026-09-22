@@ -4,11 +4,15 @@
 
 ## 定位与场景
 
-把会话当前数据库名作为STRING返回。模板化SQL与环境感知的路由。
+把会话当前数据库名作为STRING返回。用于模板化SQL与环境感知的路由。
 
 ## 用法
 
-输入：`CURRENT_DATABASE()`——无参数；返回STRING。
+签名：`CURRENT_DATABASE()`
+
+无参数。
+
+返回：STRING；会话当前数据库名。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +23,20 @@ SELECT auction, bidder, 0.908 * price + 10, CURRENT_DATABASE() FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| — | default_database |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| — | default_database | 未切换数据库时的会话当前库 |
 
-## 实现链路
+## 源码位置
 
-`CURRENT_DATABASE`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——零参函数，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.CURRENT_DATABASE`（FlinkSqlOperatorTable.java:1283）。
-2. **定义**——BuiltInFunctionDefinitions.java:1720处的注册条目，注册名`"currentDatabase"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——StringCallGen的CURRENT_DATABASE分支经addReusableQueryLevelCurrentDatabase内联查询级库名。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`CURRENT_DATABASE`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CURRENT_DATABASE`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的CURRENT_DATABASE分支经`addReusableQueryLevelCurrentDatabase`内联查询级库名 |
+
+## velox实现
+
+velox仓库暂无对应实现（会话元数据，非求值函数）。

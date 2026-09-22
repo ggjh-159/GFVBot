@@ -4,31 +4,42 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Arc cosine in radians; input outside [-1, 1] yields NULL. Angular measures from similarity inputs.
+Returns the principal value of the arc cosine of x, expressed in radians, with range [0, π]. The input must lie within [-1, 1]; outside that domain (|x| > 1) the result is NULL. It is used to convert similarity or ratio inputs into angles.
 
 ## Usage
 
-Input: `ACOS(x)` — DOUBLE; |x| > 1 returns NULL.
+Signature: `ACOS(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Cosine value; the valid domain is [-1, 1] |
+
+Return: DOUBLE, radians within [0, π]; NULL when |x| > 1.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ACOS(0.5) FROM bid;
 ```
 
-Output: DOUBLE; `ACOS(0.5)` = 1.0471975511965979 on every row.
+Output: DOUBLE; `ACOS(0.5)` is 1.0471975511965979 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| ACOS(0.5) | 1.0471975511965979 |
+| Input | Output | Notes |
+|---|---|---|
+| ACOS(0.5) | 1.0471975511965979 | The cosine value 0.5 corresponds to the radian π/3 |
+| ACOS(2) | NULL | Input outside [-1, 1]; the result is NULL |
 
-## Pipeline
+## Source locations
 
-The route of `ACOS` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ACOS` (FlinkSqlOperatorTable.java:1202).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1573, registered under the name "acos", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ACOS` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ACOS` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `acos` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

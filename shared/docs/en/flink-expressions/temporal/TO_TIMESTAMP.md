@@ -4,31 +4,42 @@ Category: [Temporal](../index.md#temporal) | Aliases: —
 
 ## Role and scenarios
 
-Parses a timestamp string (default format yyyy-MM-dd HH:mm:ss) into TIMESTAMP, interpreting the text in the session time zone. Converting text timestamps for windowing.
+Parses a timestamp string into a TIMESTAMP, with default format yyyy-MM-dd HH:mm:ss, interpreting the text in the session time zone. Useful for turning text timestamps into values that can be windowed.
 
 ## Usage
 
-Input: `TO_TIMESTAMP(s[, format])` — s STRING; returns TIMESTAMP.
+Signature: `TO_TIMESTAMP(s[, format])`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING | Timestamp string in the default format yyyy-MM-dd HH:mm:ss |
+| format | STRING | Optional parsing format |
+
+Return: TIMESTAMP; the parsed timestamp value.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, TO_TIMESTAMP('2026-09-11 10:00:00') FROM bid;
 ```
 
-Output: TIMESTAMP; 2026-09-11 10:00:00 on every row.
+Output: TIMESTAMP; every row is 2026-09-11 10:00:00.
 
-Example (input -> output):
+Examples (input → output):
 
-| Input | Output |
-|---|
-| TO_TIMESTAMP('2026-09-11 10:00:00') | 2026-09-11 10:00:00 |
+| Input | Output | Notes |
+|---|---|---|
+| TO_TIMESTAMP('2026-09-11 10:00:00') | 2026-09-11 10:00:00 | Parsed with the default format yyyy-MM-dd HH:mm:ss |
 
-## Pipeline
+## Source locations
 
-The route of `TO_TIMESTAMP` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.TO_TIMESTAMP` (FlinkSqlOperatorTable.java:799).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1915, registered under the name "toTimestamp", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `TO_TIMESTAMP` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `TO_TIMESTAMP` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (direct call via `MethodCallGen`) |
+
+## Velox implementation
+
+The velox repository has no corresponding implementation yet.

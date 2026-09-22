@@ -20,17 +20,17 @@ An expression is not an operator: it never runs on its own, it is compiled *into
 
 | Stage | Carrier | What happens to the expression |
 |---|---|---|
-| 1 Parse | `CalciteParser` | SQL text becomes a SqlNode; the operator is anchored in `FlinkSqlOperatorTable` (or adapted by `FunctionDefinitionOperatorTable`) |
+| 1 Parse | `CalciteParser` | SQL text becomes a SqlNode; the operator is anchored in `FlinkSqlOperatorTable` (or resolved from the FunctionCatalog via `FunctionCatalogOperatorTable`) |
 | 2 Validate | `FlinkCalciteSqlValidator` | operand type checks and result type derivation against the operator table |
 | 3 Convert | `SqlNodeToOperationConversion` -> `FlinkPlannerImpl` (`SqlToRelConverter` + `SqlNodeToRexConverter`) | the SqlNode becomes a RexNode inside a projection/filter; IN and BETWEEN are rewritten into SEARCH (SARG) RexCalls, OVERLAPS is expanded by `TemporalOverlapsConverter` |
 | 4 Optimize | `FlinkLogicalRules` / `FlinkStreamPhysicalRules` | generic moves only: filter/project push-down, `CalcMergeRule`, constant folding of fully literal subtrees by `ExpressionReducer` |
 | 5 ExecNode | `StreamExecCalc` (extends `CommonExecCalc`) | the Calc carrying the expression enters the physical plan as an ExecNode |
-| 6 Codegen | `CalcCodeGenerator` -> `ExprCodeGenerator` | every leaf call is turned into Java source through one of three carrier families: inlined operator code (`ScalarOperatorGens`), helper calls (`StringCallGen` / `FunctionGenerator` -> `BuiltInMethods`), or `BridgingSqlFunctionCallGen` into a `flink-table-runtime` `eval()` class |
+| 6 Codegen | `CalcCodeGenerator` -> `ExprCodeGenerator` | every leaf call is turned into Java source through one of three carrier families: inlined operator code (`ScalarOperatorGens`), helper calls (`MethodCallGen` -> `BuiltInMethods`, `StringCallGen` -> `SqlFunctionUtils` / `BinaryStringDataUtil`), or `ScalarFunctionCallGen` invoking a `flink-table-runtime` `eval()` implementation class |
 | 7 Execute | `CodeGenOperatorFactory` | Janino compiles a `TableStreamOperator` subclass; the expression is evaluated per row in `processElement` |
 
 Where expressions end up: projection and filter columns run inside the Calc operator; the same expression in a join condition runs inside the StreamExecJoin operator, and in an aggregate argument inside the StreamExecGroupAggregate operator. Non-deterministic functions (RAND, RAND_INTEGER, UUID, CURRENT_ROW_TIMESTAMP) are neither constant-folded nor moved across operators during planning.
 
-Each expression's doc lists its own five steps under "Pipeline".
+Each expression's doc ends with two sections: "Source locations" gives the Flink 1.19.2 source anchors for that function at each of the stages above (symbol-level, no line numbers), and "Velox implementation" states whether the velox repository already provides an implementation of the function and where (a builtin registration, an expression special form, or a GFV-provided implementation), for reference when implementing the velox side in GFV.
 
 ## Comparison
 

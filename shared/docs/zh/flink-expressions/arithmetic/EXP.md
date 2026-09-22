@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-e的x次幂。指数增长/衰减模型、softmax类权重。
+返回e的x次幂；用于指数增长/衰减模型与softmax类权重计算。
 
 ## 用法
 
-输入：`EXP(x)`——DOUBLE。
+签名：`EXP(x)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | DOUBLE | 指数 |
+
+返回：DOUBLE。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +25,20 @@ SELECT auction, bidder, 0.908 * price + 10, EXP(2) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| EXP(2) | 7.38905609893065 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| EXP(2) | 7.38905609893065 | e的2次幂 |
 
-## 实现链路
+## 源码位置
 
-`EXP`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.EXP`（FlinkSqlOperatorTable.java:1190）。
-2. **定义**——BuiltInFunctionDefinitions.java:1393处的注册条目，注册名`"exp"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`EXP`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`EXP`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`的静态方法（经`MethodCallGen`调用） |
+
+## velox实现
+
+velox已有内建`exp`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

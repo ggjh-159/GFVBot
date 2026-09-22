@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-以显式指定底取对数；非法底数或非正输入得NULL。当领域里e与10都不是自然底数时使用。
+以显式指定的底base取x的对数；base须为正且不等于1，x须为正，任一条件不满足返回NULL。适用于e与10都不是自然底数的领域。
 
 ## 用法
 
-输入：`LOG(base, x)`——DOUBLE；底须为正且不等于1，x须为正。
+签名：`LOG(base, x)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| base | DOUBLE | 对数的底，须为正且不等于1 |
+| x | DOUBLE | 真数，须为正 |
+
+返回：DOUBLE；非法底数或非正真数时为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +26,22 @@ SELECT auction, bidder, 0.908 * price + 10, LOG(2, 8) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| LOG(2, 8) | 3.0 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| LOG(2, 8) | 3.0 | 2的3次幂为8 |
+| LOG(1, 8) | NULL | 底数等于1，非法 |
+| LOG(2, -8) | NULL | 真数非正，非法 |
 
-## 实现链路
+## 源码位置
 
-`LOG`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.LOG`（FlinkSqlOperatorTable.java:250）。
-2. **定义**——BuiltInFunctionDefinitions.java:1459处的注册条目，注册名`"log"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`LOG`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`LOG`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`的静态方法（经`MethodCallGen`调用） |
+
+## velox实现
+
+velox已有实现：sparksql套件的`log`（`velox/functions/sparksql/registration/RegisterMath.cpp`）。

@@ -4,20 +4,26 @@ Category: [Collection](../index.md#collection) | Aliases: —
 
 ## Role and scenarios
 
-Element count of an array or map; NULL input yields NULL. Size guards and per-element loop conditions.
+Returns the number of elements in an array or the number of key-value pairs in a map; a NULL input yields NULL. Used for length-guard conditions and loop-by-element-count decisions.
 
 ## Usage
 
-Input: `CARDINALITY(arr_or_map)` — ARRAY or MAP; returns INT.
+Signature: `CARDINALITY(arr_or_map)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| arr_or_map | ARRAY<T> or MAP<K, V> | The array or map to count |
+
+Return: INT; the number of array elements or map key-value pairs.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, CARDINALITY(ARRAY[bid.auction, bid.bidder]) FROM bid;
 ```
 
-Output: INT; 2 on every row.
+Output: INT; every row is 2.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | bidder | CARDINALITY(ARRAY[auction, bidder]) |
 |---|---|---|
@@ -30,12 +36,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | 11 | 2 |
 | 20 | 36 | 2 |
 
-## Pipeline
+## Source locations
 
-The route of `CARDINALITY` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.CARDINALITY` (FlinkSqlOperatorTable.java:1152).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1951, registered under the name "cardinality", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's CARDINALITY case (array/map size read).
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `CARDINALITY` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `CARDINALITY` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined via the CARDINALITY branch of `ExprCodeGenerator` (reading the array/map size) |
+
+## Velox implementation
+
+Velox already provides the builtin `cardinality` (`velox/functions/prestosql/registration/GeneralFunctionsRegistration.cpp`).

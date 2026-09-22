@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-双参数反正切：点(y, x)的辐角，借助两个符号选定象限——与ATAN不同，能区分对角。由坐标差计算方位角。
+双参数反正切：返回点(y, x)的辐角，以弧度表示，值域为[-π, π]。与ATAN不同，ATAN2依据两个操作数的符号选定象限，能区分对角方向的角；用于由坐标差计算方位角。
 
 ## 用法
 
-输入：`ATAN2(y, x)`——DOUBLE。
+签名：`ATAN2(y, x)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| y | DOUBLE | 点的纵坐标 |
+| x | DOUBLE | 点的横坐标 |
+
+返回：DOUBLE，[-π, π]内的弧度。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +26,21 @@ SELECT auction, bidder, 0.908 * price + 10, ATAN2(1, 1) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| ATAN2(1, 1) | 0.7853981633974483 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| ATAN2(1, 1) | 0.7853981633974483 | 点(1, 1)在第一象限，辐角为π/4 |
+| ATAN2(1, -1) | 2.356194490192345 | x为负、y为正，辐角落在第二象限（3π/4） |
 
-## 实现链路
+## 源码位置
 
-`ATAN2`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.ATAN2`（FlinkSqlOperatorTable.java:1204）。
-2. **定义**——BuiltInFunctionDefinitions.java:1589处的注册条目，注册名`"atan2"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`ATAN2`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`ATAN2`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`的静态方法（经`MethodCallGen`调用） |
+
+## velox实现
+
+velox已有内建`atan2`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

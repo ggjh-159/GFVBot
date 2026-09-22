@@ -4,31 +4,41 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Arc tangent in radians. Converting a ratio back to an angle.
+Returns the principal value of the arc tangent of x, expressed in radians, with range (-π/2, π/2). It is used to convert a ratio back into an angle.
 
 ## Usage
 
-Input: `ATAN(x)` — DOUBLE.
+Signature: `ATAN(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Tangent value; any value is accepted |
+
+Return: DOUBLE, radians within (-π/2, π/2).
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ATAN(1) FROM bid;
 ```
 
-Output: DOUBLE; `ATAN(1)` = 0.7853981633974483 on every row.
+Output: DOUBLE; `ATAN(1)` is 0.7853981633974483 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| ATAN(1) | 0.7853981633974483 |
+| Input | Output | Notes |
+|---|---|---|
+| ATAN(1) | 0.7853981633974483 | The tangent value 1 corresponds to the radian π/4 |
 
-## Pipeline
+## Source locations
 
-The route of `ATAN` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ATAN` (FlinkSqlOperatorTable.java:1203).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1581, registered under the name "atan", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ATAN` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ATAN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `atan` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

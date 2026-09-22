@@ -4,31 +4,42 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Square root; negative input yields NULL. Euclidean distances and variance back to deviation.
+Returns the square root of x; negative input (x < 0) yields NULL. It is used for Euclidean distance computation and for recovering the standard deviation from the variance.
 
 ## Usage
 
-Input: `SQRT(x)` — DOUBLE; x < 0 returns NULL.
+Signature: `SQRT(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Radicand; a negative value yields NULL |
+
+Return: DOUBLE; NULL when x < 0.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, SQRT(16) FROM bid;
 ```
 
-Output: DOUBLE; `SQRT(16)` = 4.0 on every row.
+Output: DOUBLE; `SQRT(16)` is 4.0 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| SQRT(16) | 4.0 |
+| Input | Output | Notes |
+|---|---|---|
+| SQRT(16) | 4.0 | The square of 4 is 16 |
+| SQRT(-1) | NULL | Negative input returns NULL |
 
-## Pipeline
+## Source locations
 
-The route of `SQRT` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.SQRT` (FlinkSqlOperatorTable.java:1185).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1496, registered under the name "sqrt", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `SQRT` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `SQRT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `sqrt` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

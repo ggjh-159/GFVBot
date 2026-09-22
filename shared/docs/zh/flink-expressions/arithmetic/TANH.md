@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-双曲正切；输出总在(-1, 1)内。把特征压到有界区间——经典的预归一化手段。
+返回x的双曲正切，输出始终落在(-1, 1)内；用于把特征压缩到有界区间，是常用的预归一化手段。
 
 ## 用法
 
-输入：`TANH(x)`——DOUBLE。
+签名：`TANH(x)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | DOUBLE | 任意实数 |
+
+返回：DOUBLE，落在(-1, 1)内。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +25,20 @@ SELECT auction, bidder, 0.908 * price + 10, TANH(1) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| TANH(1) | 0.7615941559557649 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| TANH(1) | 0.7615941559557649 | 输出严格介于-1与1之间 |
 
-## 实现链路
+## 源码位置
 
-`TANH`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.TANH`（FlinkSqlOperatorTable.java:371）。
-2. **定义**——BuiltInFunctionDefinitions.java:1549处的注册条目，注册名`"tanh"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`TANH`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`TANH`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`的静态方法（经`MethodCallGen`调用） |
+
+## velox实现
+
+velox已有内建`tanh`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

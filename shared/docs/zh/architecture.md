@@ -1,14 +1,48 @@
 # GFV三层架构总览
 
-GFV把Flink作业的一部分放到Velox C++引擎上执行：Flink继续负责解析、规划、调度与checkpoint，合适的子计划则被翻译成Velox计划原生执行。三个部分协作——gluten-flink（gluten仓内的planner、loader、runtime三模块）、velox4j（Java/JNI桥）、velox（引擎本身）。
+GFV把Flink作业的一部分放到Velox C++引擎上执行：Flink继续负责解析、规划、调度与checkpoint，合适子计划的可执行内核则被翻译成Velox计划原生执行。三个部分协作——gluten-flink（gluten仓内的planner、loader、runtime三模块）、velox4j（Java/JNI桥）、velox（引擎本身）。
 
 ## 一次查询的路径
 
-Flink SQL或DataStream作业先按常规方式构建stream graph。gluten-flink planner遍历该图，挑出可翻译的子计划——受支持数据源上的投影、过滤、聚合、join、窗口与排名算子——把每个子计划转成Velox计划：算子、类型、表达式一一映射到Velox侧。翻译不了的子计划留在Flink runtime上，所以作业通常以Velox与原生Flink阶段混合的方式运行。
+```text
+        SQL / DataStream作业
+                  |
+                  v
+          Flink编译线             Calcite解析+优化：
+                  |               RelNode树 -> ExecNode树
+                  v
+        gluten-flink planner      影子ExecNode类把每个可翻译子计划
+                  |               改写成Velox计划（velox4j的
+                  v               PlanNode+TypedExpr）；其余留在Flink
+        StreamGraph -> JobGraph
+                  |
+                  v
+        TaskManager: open()       每个gluten算子独占一个链切片
+                  |
+                  v
+        velox4j serde + JNI       计划序列化成JSON，只过一次JNI；
+                  |                之后跨JNI的只有句柄
+                  v
+        velox stateful内核        反序列化 -> StatefulPlanner把算子链
+                  |               组装进单线程、拉取式的StatefulTask
+                  v
+        数据循环（每条记录）        Flink RowData -> Arrow -> BlockingQueue
+                  |               -> velox算子链；结果以Arrow向量返回、
+                  v               逐行桥接回Flink
+        Flink sink + checkpoint   常规sink输出；barrier触发的快照
+                                  同时覆盖velox侧状态
+```
 
-翻译出的计划经velox4j进入原生世界：它把Velox计划、表达式、数据包装成Java对象并经JNI序列化传入。原生侧由velox执行——批式执行走原生`exec`机制（HashTable、RowContainer、向量化聚合），带状态的流式算子跑在`experimental/stateful`扩展里（keyed执行、state backend、watermark处理）。
+| 阶段 | 发生什么 | 所属层 |
+|---|---|---|
+| 1 编译 | SQL经Flink常规Calcite管线变成物理ExecNode计划 | Flink table planner |
+| 2 改写 | 影子ExecNode类把每个可翻译子计划变成Velox计划；其余保留Flink算子 | gluten-flink planner |
+| 3 运输 | 翻译出的计划随gluten算子走过StreamGraph与JobGraph；`open()`时计划序列化成JSON、只过一次JNI | gluten-flink runtime+velox4j |
+| 4 建链 | C++侧反序列化计划，在拉取式`StatefulTask`里组装算子链 | velox `experimental/stateful` |
+| 5 执行 | 每条记录桥接成Arrow、压入共享队列、被velox链拉走；输出以Arrow向量返回 | 全栈 |
+| 6 输出与checkpoint | 结果经常规Flink sink离开；checkpoint barrier同时快照velox状态与Flink状态 | Flink runtime |
 
-数据以Arrow向量经C Data Interface流回，由gluten-flink runtime桥接进Flink的数据交换，结果经常规Flink sink输出。gluten-flink loader负责整套栈的引导：jar放进flink的`lib/`后，loader在session启动时发现并接好planner、runtime与原生库，集群无需额外配置。
+翻译按子计划挑选而不是整作业，所以作业通常以Velox与原生Flink阶段混合的方式运行。
 
 ## 层边界
 
@@ -29,3 +63,14 @@ Flink SQL或DataStream作业先按常规方式构建stream graph。gluten-flink 
 - 有状态算子开发：主要是planner翻译加velox `experimental/stateful`（算子、状态、timer），配合runtime桥接。
 - 聚合函数开发：velox聚合内核与accumulate/merge/finalize链，经planner翻译与runtime批处理暴露。
 - 性能优化：全栈profile——用查询对照表与本页地图定位瓶颈层，再按验证工作流核实。
+
+## 深入阅读
+
+[internals](internals/index.md)系列把上图的每个阶段走到源码级：
+
+- [计划改写](internals/plan-rewrite.md)——影子planner类怎么把Flink算子替换成Velox计划（阶段2）
+- [表达式映射](internals/expression-mapping.md)——RexNode表达式怎么变成velox的TypedExpr（阶段2）
+- [计划序列化](internals/plan-serde.md)——计划怎么跨JNI、变成C++对象（阶段3-4）
+- [运行时执行](internals/runtime-execution.md)——每条记录的数据环、水位线、checkpoint、关闭（阶段5-6）
+- [stateful算子](internals/stateful-operator.md)——StatefulOperator框架：状态、timer、窗口flush（阶段4-5）
+- [单元测试](internals/unit-testing.md)——三个仓里测试怎么写、怎么跑

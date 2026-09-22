@@ -4,31 +4,41 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Cosine of an angle in radians. Phase-shifted periodic encodings.
+Returns the cosine of x; the operand is in radians rather than degrees. It is used for periodic encoding and phase-related computations.
 
 ## Usage
 
-Input: `COS(x)` — DOUBLE, x in radians.
+Signature: `COS(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Angle in radians |
+
+Return: DOUBLE.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, COS(0) FROM bid;
 ```
 
-Output: DOUBLE; `COS(0)` = 1.0 on every row.
+Output: DOUBLE; `COS(0)` is 1.0 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| COS(0) | 1.0 |
+| Input | Output | Notes |
+|---|---|---|
+| COS(0) | 1.0 | The cosine reaches its maximum 1 at 0 radians |
 
-## Pipeline
+## Source locations
 
-The route of `COS` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.COS` (FlinkSqlOperatorTable.java:1198).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1525, registered under the name "cos", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `COS` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `COS` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `cos` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

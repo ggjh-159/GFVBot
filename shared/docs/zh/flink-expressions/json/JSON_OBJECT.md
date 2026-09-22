@@ -4,11 +4,20 @@
 
 ## 定位与场景
 
-由KEY VALUE对构造JSON对象；NULL ON NULL保留NULL值，ABSENT ON NULL将其省略。把列数据组装成事件载荷。
+由KEY VALUE对构造JSON对象并序列化为文本；NULL ON NULL把NULL值保留为JSON null，ABSENT ON NULL把该键值对整体省略。用于把列数据组装成事件载荷。
 
 ## 用法
 
-输入：`JSON_OBJECT([k VALUE v, ...] [NULL ON NULL | ABSENT ON NULL])`——键为STRING字面量。
+签名：`JSON_OBJECT([k VALUE v, ...] [NULL ON NULL | ABSENT ON NULL])`——键为STRING字面量。
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| k | STRING字面量 | JSON对象的键 |
+| v | 任意类型 | 键对应的值，按JSON编码 |
+
+NULL ON NULL保留NULL值为JSON null，ABSENT ON NULL省略该键值对。
+
+返回：STRING；JSON对象的序列化文本。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +26,22 @@ SELECT auction, bidder, 0.908 * price + 10, JSON_OBJECT('k' VALUE 42) FROM bid;
 
 输出：STRING；每行均为'{"k":42}'。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| JSON_OBJECT('k' VALUE 42) | {"k":42} | 单键值对 |
+| JSON_OBJECT('k' VALUE NULL NULL ON NULL) | {"k":null} | NULL ON NULL：NULL值保留为JSON null |
+| JSON_OBJECT('k' VALUE NULL ABSENT ON NULL) | {} | ABSENT ON NULL：该键值对被省略 |
 
-| 输入 | 输出 |
-|---|
-| JSON_OBJECT('k' VALUE 42) | {"k":42} |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`JSON_OBJECT`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`JSON_OBJECT`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`JSON_OBJECT`条目（SCALAR） |
+| 求值逻辑 | 专属`JsonObjectCallGen` |
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.JSON_OBJECT`（FlinkSqlOperatorTable.java:1249）。
-2. **定义**——BuiltInFunctionDefinitions.java:2305处的注册条目，注册名`"JSON_OBJECT"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——专属JsonObjectCallGen。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox仓库暂无对应实现；相近的`json_extract`等族（`velox/functions/prestosql/registration/JsonFunctionsRegistration.cpp`）走自有路径语法，与SQL/JSON标准不同。

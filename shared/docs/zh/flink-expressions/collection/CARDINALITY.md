@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-数组或map的元素个数；输入为NULL得NULL。长度保护与按元素循环的条件。
+返回数组元素的个数或map键值对的个数；输入为NULL得NULL。用于长度保护条件与按元素个数组织循环的判断。
 
 ## 用法
 
-输入：`CARDINALITY(arr_or_map)`——ARRAY或MAP；返回INT。
+签名：`CARDINALITY(arr_or_map)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| arr_or_map | ARRAY<T>或MAP<K, V> | 待计数的数组或map |
+
+返回：INT；数组元素个数或map键值对个数。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -30,12 +36,16 @@ SELECT auction, bidder, 0.908 * price + 10, CARDINALITY(ARRAY[bid.auction, bid.b
 | 11 | 11 | 2 |
 | 20 | 36 | 2 |
 
-## 实现链路
+## 源码位置
 
-`CARDINALITY`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.CARDINALITY`（FlinkSqlOperatorTable.java:1152）。
-2. **定义**——BuiltInFunctionDefinitions.java:1951处的注册条目，注册名`"cardinality"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator的CARDINALITY分支内联（读数组/map大小）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`CARDINALITY`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CARDINALITY`条目（SCALAR） |
+| 求值逻辑 | 经`ExprCodeGenerator`的CARDINALITY分支内联生成（读数组/map大小） |
+
+## velox实现
+
+velox已有内建`cardinality`（`velox/functions/prestosql/registration/GeneralFunctionsRegistration.cpp`）。

@@ -4,20 +4,29 @@ Category: [Collection](../index.md#collection) | Aliases: `[]`, ITEM
 
 ## Role and scenarios
 
-Element access with the [] operator: `arr[i]` reads the i-th array element (1-based), `map[k]` looks up by key. Registered internally as ITEM — that is the name error messages will show.
+Subscript access operator: `arr[i]` reads the i-th element of an array (indices are 1-based), and `map[k]` looks up the value in a map by key. The internal registration name is ITEM — that is the name shown in error messages.
 
 ## Usage
 
-Input: `arr[i]` / `map[k]` — array index 1-based; key of the map's key type.
+Signature: `arr[i]`/`map[k]` — infix operator form, not a function call.
+
+| Parameter | Type | Description |
+|---|---|---|
+| arr | ARRAY<T> | The array being subscripted |
+| i | INT | The array index, 1-based — the first element has index 1 |
+| map | MAP<K, V> | The map being looked up by key |
+| k | K | The lookup key, of the map's key type |
+
+Return: the array element type or the map value type.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ARRAY[bid.auction, bid.bidder, 99][3] FROM bid;
 ```
 
-Output: BIGINT; 99 on every row — the third element of the literal array.
+Output: BIGINT; every row is 99 — the third element of the literal array.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | bidder | ARRAY[auction, bidder, 99][3] |
 |---|---|---|
@@ -30,12 +39,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | 11 | 99 |
 | 20 | 36 | 99 |
 
-## Pipeline
+## Source locations
 
-The route of `AT` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — bracket access arr[i] / map[k]; no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1932, registered under the name "at", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's ITEM case (array index / map lookup on the internal data structures).
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `AT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined by the ITEM branch of `ExprCodeGenerator` (array subscript / map lookup) |
+
+## Velox implementation
+
+Velox already provides the builtin `subscript/element_at` (`velox/functions/prestosql/registration/GeneralFunctionsRegistration.cpp`).

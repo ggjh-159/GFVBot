@@ -4,38 +4,50 @@ Category: [Comparison](../index.md#comparison) | Aliases: `<>`, `!=`
 
 ## Role and scenarios
 
-Negated equality: TRUE when the operands differ; NULL on either side yields UNKNOWN. Used to exclude specific values and to detect changes when comparing two columns or a column against a literal.
+Negation of equals: returns TRUE when the two operands are unequal; UNKNOWN when either side is NULL. Used to exclude specific values and to detect differences by comparing two columns, or a column against a constant.
 
 ## Usage
 
-Input: `a <> b` (also writable `a != b`) — same comparability rules as `=`; NULL propagates to UNKNOWN.
+Signature: `a <> b` (infix form; may also be written `a != b`)
+
+| Parameter | Type | Description |
+|---|---|---|
+| Left operand | Comparable type | Numeric, string, boolean, temporal, etc. |
+| Right operand | Comparable type | Mutually comparable with the left operand |
+
+Return: BOOLEAN; TRUE when unequal, FALSE when equal; UNKNOWN when either side is NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, bid.auction <> bid.bidder FROM bid;
 ```
 
-Output: BOOLEAN; true where `auction` differs from `bidder` (data-dependent).
+Output: BOOLEAN; true when `auction` is not equal to `bidder` (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final NULL-boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | bidder | auction <> bidder |
-|---|---|---|
-| 3 | 15 | TRUE |
-| 19 | 7 | TRUE |
-| 8 | 8 | FALSE |
-| 1 | 42 | TRUE |
-| 14 | 23 | TRUE |
-| 7 | 2 | TRUE |
-| 11 | 11 | FALSE |
-| 20 | 36 | TRUE |
+| auction | bidder | auction <> bidder | Notes |
+|---|---|---|---|
+| 3 | 15 | TRUE | Not equal |
+| 19 | 7 | TRUE | Not equal |
+| 8 | 8 | FALSE | Equal |
+| 1 | 42 | TRUE | Not equal |
+| 14 | 23 | TRUE | Not equal |
+| 7 | 2 | TRUE | Not equal |
+| 11 | 11 | FALSE | Equal |
+| 20 | 36 | TRUE | Not equal |
+| NULL | 8 | UNKNOWN | Either side NULL yields UNKNOWN |
 
-## Pipeline
+## Source locations
 
-The route of `NEQ` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — infix syntax; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.NOT_EQUALS` (FlinkSqlOperatorTable.java:1096).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:501, registered under the name "notEquals", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | The `NOT_EQUALS` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `NOT_EQUALS` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
+
+## Velox implementation
+
+Velox already provides the builtin `neq` (`velox/functions/prestosql/registration/ComparisonFunctionsRegistration.cpp`).

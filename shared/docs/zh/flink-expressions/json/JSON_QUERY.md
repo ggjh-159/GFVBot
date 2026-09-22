@@ -4,11 +4,20 @@
 
 ## 定位与场景
 
-抽取路径处的JSON对象或数组并按JSON文本返回；WRAPPER子句控制结果是否包一层数组。取子文档而非标量。
+抽取SQL/JSON路径定位到的JSON对象或数组，并按JSON文本返回；WRAPPER子句控制结果是否再包一层JSON数组。用于取子文档而非标量。
 
 ## 用法
 
-输入：`JSON_QUERY(json, path [RETURNING t] [wrapper] [on empty/error])`——json为STRING。
+签名：`JSON_QUERY(json, path [RETURNING t] [wrapper] [on empty/error])`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| json | STRING | JSON文档文本 |
+| path | STRING | SQL/JSON路径，指向对象或数组 |
+
+RETURNING子句指定返回类型；WRAPPER子句控制结果是否再包一层JSON数组；ON EMPTY/ON ERROR子句决定路径结果为空与求值出错时的行为。
+
+返回：STRING；JSON子文档的序列化文本。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +26,20 @@ SELECT auction, bidder, 0.908 * price + 10, JSON_QUERY('{"a": {"b": 1}}', '$.a')
 
 输出：STRING；每行均为子对象'{"b": 1}'。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| JSON_QUERY('{"a": {"b": 1}}', '$.a') | {"b": 1} | 抽取路径$.a处的子对象并按JSON文本返回 |
 
-| 输入 | 输出 |
-|---|
-| JSON_QUERY('{"a": {"b": 1}}', '$.a') | {"b": 1} |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`JSON_QUERY`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`JSON_QUERY`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`JSON_QUERY`条目（SCALAR） |
+| 求值逻辑 | 经`MethodCallGen`调用`FunctionGenerator`注册的`BuiltInMethods`静态方法，无独立运行时类 |
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.JSON_QUERY`（FlinkSqlOperatorTable.java:1248）。
-2. **定义**——BuiltInFunctionDefinitions.java:2280处的注册条目，注册名`"JSON_QUERY"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox仓库暂无对应实现；相近的`json_extract`等族（`velox/functions/prestosql/registration/JsonFunctionsRegistration.cpp`）走自有路径语法，与SQL/JSON标准不同。

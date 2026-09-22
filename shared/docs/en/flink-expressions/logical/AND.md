@@ -4,38 +4,51 @@ Category: [Logical](../index.md#logical) | Aliases: —
 
 ## Role and scenarios
 
-Logical conjunction under three-valued logic: TRUE only when both operands are TRUE; FALSE as soon as either is FALSE; otherwise UNKNOWN. The basic building block for compound WHERE, JOIN, and HAVING predicates.
+Logical conjunction under three-valued logic: TRUE only when both operands are TRUE; FALSE as soon as either is FALSE; UNKNOWN otherwise. The basic building block of compound WHERE, JOIN, and HAVING predicates.
 
 ## Usage
 
-Input: `a AND b` — both operands BOOLEAN; NULL combines per three-valued logic (`NULL AND FALSE` is FALSE).
+Signature: `a AND b` (infix form)
+
+| Parameter | Type | Description |
+|---|---|---|
+| Left operand | BOOLEAN | May be NULL; participates under three-valued logic |
+| Right operand | BOOLEAN | May be NULL; participates under three-valued logic |
+
+Return: BOOLEAN; TRUE when both operands are TRUE, FALSE when either is FALSE, UNKNOWN otherwise (`NULL AND FALSE` is FALSE, `NULL AND TRUE` is UNKNOWN).
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, (bid.auction > 5) AND (bid.bidder < 40) FROM bid;
 ```
 
-Output: BOOLEAN; true where `auction > 5` and `bidder < 40` both hold (data-dependent).
+Output: BOOLEAN; true when `auction > 5` and `bidder < 40` both hold (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with two final three-valued-logic boundary rows appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | bidder | (auction > 5) AND (bidder < 40) |
-|---|---|---|
-| 3 | 15 | FALSE |
-| 19 | 7 | TRUE |
-| 8 | 8 | TRUE |
-| 1 | 42 | FALSE |
-| 14 | 23 | TRUE |
-| 7 | 2 | TRUE |
-| 11 | 11 | TRUE |
-| 20 | 36 | TRUE |
+| auction | bidder | (auction > 5) AND (bidder < 40) | Notes |
+|---|---|---|---|
+| 3 | 15 | FALSE | Left side FALSE, so directly FALSE |
+| 19 | 7 | TRUE | Both sides TRUE |
+| 8 | 8 | TRUE | Both sides TRUE |
+| 1 | 42 | FALSE | Both sides FALSE |
+| 14 | 23 | TRUE | Both sides TRUE |
+| 7 | 2 | TRUE | Both sides TRUE |
+| 11 | 11 | TRUE | Both sides TRUE |
+| 20 | 36 | TRUE | Both sides TRUE |
+| NULL | 15 | UNKNOWN | Left side UNKNOWN and right side TRUE, so UNKNOWN |
+| NULL | 42 | FALSE | Right side FALSE; FALSE prevails over UNKNOWN, so FALSE |
 
-## Pipeline
+## Source locations
 
-The route of `AND` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — infix syntax; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.AND` (FlinkSqlOperatorTable.java:1079).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:398, registered under the name "and", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | The `AND` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `AND` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
+
+## Velox implementation
+
+The velox expression kernel handles it as the special form `and` (`velox/expression/RegisterSpecialForm.cpp`), with no standalone function registration.

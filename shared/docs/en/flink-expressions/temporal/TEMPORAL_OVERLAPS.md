@@ -4,38 +4,49 @@ Category: [Temporal](../index.md#temporal) | Aliases: `OVERLAPS`
 
 ## Role and scenarios
 
-Tests whether two time intervals share at least one instant: `(s1, e1) OVERLAPS (s2, e2)`; each side is a (start, end) pair or a (start, interval). Schedule-conflict detection and window-overlap checks.
+Tests whether two time intervals share a common instant: `(s1, e1) OVERLAPS (s2, e2)`; each side may be a (start, end) pair or a (start, duration) pair. Commonly used for schedule-conflict detection and window-overlap checks.
 
 ## Usage
 
-Input: `(s1, e1 | iv1) OVERLAPS (s2, e2 | iv2)` — endpoints temporal or start plus INTERVAL.
+Signature: `(s1, e1 | iv1) OVERLAPS (s2, e2 | iv2)` — infix predicate form.
+
+| Parameter | Type | Description |
+|---|---|---|
+| s1, s2 | Temporal types | The start points of the two intervals |
+| e1, e2 | Temporal type or INTERVAL | The interval end points, or durations added to the start points |
+
+Return: BOOLEAN; TRUE when the two intervals share a common instant.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, (bid.dateTime, INTERVAL '1' HOUR) OVERLAPS (bid.dateTime, INTERVAL '1' DAY) FROM bid;
 ```
 
-Output: BOOLEAN; always true here — both windows start at `dateTime`, so the 1-hour one is contained in the 1-day one.
+Output: BOOLEAN; constantly true in this example — both windows start at `dateTime`, and the 1-hour window is fully contained by the 1-day window.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data):
 
-| dateTime | (dateTime, 1h) OVERLAPS (dateTime, 1d) |
+| dateTime | (dateTime, 1h) OVERLAPS (dateTime, 1d) | Notes |
+|---|---|---|
+| 2026-07-03 09:15:22.480 | TRUE | Both windows start at that row's `dateTime`; the 1-hour window is fully contained by the 1-day window |
+| 2026-07-05 10:41:07.123 | TRUE | Same as above |
+| 2026-07-09 11:02:59.640 | TRUE | Same as above |
+| 2026-07-03 13:27:44.005 | TRUE | Same as above |
+| 2026-07-12 14:50:18.872 | TRUE | Same as above |
+| 2026-07-07 15:33:51.309 | TRUE | Same as above |
+| 2026-07-09 16:19:36.551 | TRUE | Same as above |
+| 2026-07-11 17:44:29.918 | TRUE | Same as above |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this expression in GFV:
+
+| Stage | Location |
 |---|---|
-| 2026-07-03 09:15:22.480 | TRUE |
-| 2026-07-05 10:41:07.123 | TRUE |
-| 2026-07-09 11:02:59.640 | TRUE |
-| 2026-07-03 13:27:44.005 | TRUE |
-| 2026-07-12 14:50:18.872 | TRUE |
-| 2026-07-07 15:33:51.309 | TRUE |
-| 2026-07-09 16:19:36.551 | TRUE |
-| 2026-07-11 17:44:29.918 | TRUE |
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `TEMPORAL_OVERLAPS` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `TemporalOverlapsConverter` expands OVERLAPS into an AND/OR comparison tree over the interval boundaries, inlined via `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `TEMPORAL_OVERLAPS` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — infix (s1, e1) OVERLAPS (s2, e2); no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1801, registered under the name "temporalOverlaps", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — SqlNode-to-Rex conversion expands OVERLAPS via TemporalOverlapsConverter (planner/expressions/converter/converters) into an AND/OR comparison tree over the interval bounds.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+The velox repository has no corresponding implementation yet.

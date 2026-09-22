@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-把三值逻辑归一为二值：仅输入恰为TRUE时返回TRUE，FALSE与UNKNOWN都映射为FALSE。等价于把unknown当作false处理的显式写法。
+把三值逻辑归一为二值：仅输入恰为TRUE时返回TRUE，FALSE与UNKNOWN都映射为FALSE。等价于将UNKNOWN按FALSE处理的显式写法。
 
 ## 用法
 
-输入：`x IS TRUE`——x为BOOLEAN（可为NULL）；结果永不为NULL。
+签名：`x IS TRUE`（后缀谓词形式）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | BOOLEAN | 可为NULL |
+
+返回：BOOLEAN；仅x恰为TRUE得TRUE；结果永不为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,25 +23,30 @@ SELECT auction, bidder, 0.908 * price + 10, (bid.auction > 10 IS TRUE) FROM bid;
 
 输出：BOOLEAN；即`auction > 10`每行的真值（随行数据变化）。
 
-示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
+示例（16行源的前8行，示意数据，末行补三值边界；前列为输入列，末两列为该行结果与说明）：
 
-| auction | auction > 10 IS TRUE |
+| auction | auction > 10 IS TRUE | 说明 |
+|---|---|---|
+| 3 | FALSE | 内层为FALSE |
+| 19 | TRUE | 内层为TRUE |
+| 8 | FALSE | 内层为FALSE |
+| 1 | FALSE | 内层为FALSE |
+| 14 | TRUE | 内层为TRUE |
+| 7 | FALSE | 内层为FALSE |
+| 11 | TRUE | 内层为TRUE |
+| 20 | TRUE | 内层为TRUE |
+| NULL | FALSE | 内层为UNKNOWN，映射为FALSE |
+
+## 源码位置
+
+GFV实现该表达式的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 3 | FALSE |
-| 19 | TRUE |
-| 8 | FALSE |
-| 1 | FALSE |
-| 14 | TRUE |
-| 7 | FALSE |
-| 11 | TRUE |
-| 20 | TRUE |
+| 解析识别 | `FlinkSqlOperatorTable`的`IS_TRUE`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`IS_TRUE`条目（SCALAR） |
+| 求值逻辑 | 经`ScalarOperatorGens`内联生成 |
 
-## 实现链路
+## velox实现
 
-`IS_TRUE`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——后缀IS TRUE，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.IS_TRUE`（FlinkSqlOperatorTable.java:1109）。
-2. **定义**——BuiltInFunctionDefinitions.java:528处的注册条目，注册名`"isTrue"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator内联为普通Java运算代码（ScalarOperatorGens），无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox仓库暂无对应实现。

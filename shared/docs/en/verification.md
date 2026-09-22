@@ -6,21 +6,44 @@ Prerequisites: a workspace initialized per the README walkthrough (repos cloned,
 
 ## The loop
 
-- Build: run the flink-velox-build skill's `bin/compile.sh`. It builds velox4j (native .so included) and gluten-flink, then copies the four GFV jars plus their runtime dependencies into the flink installation's `lib/` and pins the cluster JDK (`env.java.home`) to the build JDK.
-- Restart: stop and start the cluster from the flink installation's `bin/`. TaskManager daemons load everything from `lib/` at startup; a running daemon keeps the old jars and the already-loaded native library, so results collected without a restart reflect stale code.
-- Submit: run nexmark's `run_query.sh` with the flink home exported. The first argument is the query category (`oa` is the default streaming set; `cep` is a separate set), the second the query id or `all`.
-- Observe: the submitting terminal streams job progress and, once the job reaches `FINISHED`, prints the benchmark metrics (events processed, elapsed time, throughput). The flink web UI (port 8081) shows per-operator state and backpressure while the job runs.
-- Compare: for performance work, rerun the same query on the baseline build and diff the metrics; keep events-per-run fixed so the numbers are comparable.
-
-```bash
-bash <skill-dir>/bin/compile.sh
-<flink-home>/bin/stop-cluster.sh && <flink-home>/bin/start-cluster.sh
-FLINK_HOME=<flink-home> <nexmark-home>/bin/run_query.sh oa q0
+```text
+        +--------+
+        | build  |  compile.sh -> fresh jars land in the flink lib/
+        +--------+
+            v
+        +---------+
+        | restart |  stop/start cluster -> daemons load the new jars
+        +---------+
+            v
+        +--------+
+        | submit |  run_query.sh oa qN -> nexmark job on the cluster
+        +--------+
+            v
+        +--------+
+        | watch  |  terminal streams progress; web UI shows operators
+        +--------+
+            v
+        +---------+
+        | compare |  same query, fixed events: baseline vs change
+        +---------+
+            --- repeat after every change ---
 ```
 
-## Failure modes worth knowing
+| Step | Command | Confirm |
+|---|---|---|
+| Build | `bash <skill-dir>/bin/compile.sh` | jars in the flink `lib/` carry fresh timestamps; the GFV jars plus runtime dependencies landed |
+| Restart | `<flink-home>/bin/stop-cluster.sh && <flink-home>/bin/start-cluster.sh` | TaskManagers restarted after the jars landed, not before |
+| Submit | `FLINK_HOME=<flink-home> <nexmark-home>/bin/run_query.sh oa q0` | job reaches RUNNING, then FINISHED |
+| Watch | submitting terminal; web UI on port 8081 | benchmark metrics print after FINISHED (events processed, elapsed, throughput); operator state and backpressure visible while running |
+| Compare | rerun the same query on the baseline build | events-per-run kept fixed so the numbers are comparable |
 
-- Stale jar: after the build, check the jars in `lib/` carry fresh timestamps before starting the cluster; a stale jar is indistinguishable from a code bug at runtime.
-- Native library drift: any C++ change requires the full native build (never skip it) and a cluster restart; JNI libraries already loaded in a running daemon are not swapped by jar replacement.
-- UnsupportedClassVersionError in the cluster log: the daemon is running an older JDK than the build; the compile step pins `env.java.home` for exactly this, so starting the cluster through the installation's own scripts picks the right JDK.
-- Blackhole sinks: nexmark queries write to blackhole connectors, so correctness signals are row counts and job metrics, not output tables; pick the query per the nexmark query reference.
+The first query argument is the category (`oa` is the default streaming set; `cep` is a separate set), the second the query id or `all`. Query selection goes through the nexmark query reference.
+
+## Failure modes
+
+| Symptom | Cause | Action |
+|---|---|---|
+| Results do not reflect the code change | running daemons keep the old jars — a stale jar is indistinguishable from a code bug | check jar timestamps in `lib/` before starting; restart; resubmit |
+| A C++ change had no effect | the native build was skipped, or the already-loaded JNI library was never swapped | never skip the native build; restart the cluster after every rebuild |
+| `UnsupportedClassVersionError` in the cluster log | the daemon runs an older JDK than the build | the compile step pins `env.java.home`; start the cluster through the installation's own scripts |
+| No output table to compare against | nexmark queries write to blackhole connectors | verify via row counts and job metrics; pick queries per the nexmark query reference |

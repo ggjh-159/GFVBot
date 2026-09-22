@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-整数的二进制（base-2）文本。检查标志位与id的位级形态。
+将整数n转换为二进制（base-2）表示的字符串，不含前导零与前缀；用于检查标志位与id的位级形态。输入须为整数类型。
 
 ## 用法
 
-输入：`BIN(n)`——n为整数；返回STRING。
+签名：`BIN(n)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| n | 整数类型 | 待转换为二进制文本的整数 |
+
+返回：STRING；二进制数字文本。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +25,27 @@ SELECT auction, bidder, 0.908 * price + 10, BIN(bid.auction) FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| auction | BIN(auction) |
+| auction | BIN(auction) | 说明 |
+|---|---|---|
+| 3 | 11 | 十进制3的二进制表示 |
+| 19 | 10011 | 16+2+1 |
+| 8 | 1000 | 2的3次幂，1后跟3个0 |
+| 1 | 1 | 不补前导零 |
+| 14 | 1110 | 8+4+2 |
+| 7 | 111 | 三个低位均为1 |
+| 11 | 1011 | 8+2+1 |
+| 20 | 10100 | 16+4 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 3 | 11 |
-| 19 | 10011 |
-| 8 | 1000 |
-| 1 | 1 |
-| 14 | 1110 |
-| 7 | 111 |
-| 11 | 1011 |
-| 20 | 10100 |
+| 解析识别 | `FlinkSqlOperatorTable`的`BIN`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`BIN`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateBin`（内联`Long`的`toBinaryString`） |
 
-## 实现链路
+## velox实现
 
-`BIN`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.BIN`（FlinkSqlOperatorTable.java:288）。
-2. **定义**——BuiltInFunctionDefinitions.java:1684处的注册条目，注册名`"bin"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有实现：sparksql套件的`bin`（`velox/functions/sparksql/registration/RegisterMath.cpp`）。

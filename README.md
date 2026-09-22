@@ -2,86 +2,107 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-GFVBot is the AI foundation for GFV (the gluten-flink-velox integration track). Everything is organized as plugins: one plugin per development scenario, self-contained with that scenario's full development workflow, agent definitions, skills, and reference docs. Once installed into a target project, a plugin runs in that project's AI agent environment.
+GFVBot is the AI foundation for GFV (the gluten-flink-velox integration track). Content is organized as plugins: one plugin per development scenario, carrying that scenario's workflow, agents, skills, and reference docs. Installed into a target project, a plugin runs in that project's AI agent environment.
 
 > Status: the framework (installer, adapters, tests) is complete; plugin content (skills / agents / docs) is still being filled in.
 
 ## Repository layout
 
-| Directory | Responsibility |
+| Path | Responsibility |
 |---|---|
-| `plugins/` | Scenario plugins, one directory per scenario |
-| `shared/` | Knowledge assets shared across plugins (skills / docs / templates) |
-| `installer/` | Installer engine and AI agent adapters (claude / opencode / codex / dsh) |
-| `tests/` | Tests and guardrails for the content assets |
+| `plugins/` | Scenario plugins, one directory per scenario: each carries its development workflow (workflow.md) and agent definitions, and declares the shared skills and docs it needs |
+| `shared/` | Knowledge assets shared across plugins: skills (build, unit testing, doc retrieval, code review), docs (architecture, verification, nexmark queries, expression reference, internals deep-dives), templates |
+| `installer/` | Installer engine and AI agent adapters (claude / opencode / codex / dsh): installs plugins and shared content into a target project |
+| `tests/` | Tests and guardrails for the content assets: L1 static validation (manifest consistency, en/zh mirroring, dependency rules) and installer e2e smoke tests |
 
 ## Plugins
 
-| Plugin | Scenario |
-|---|---|
-| `stateless-expression-development` | Stateless expression development: end-to-end function integration across velox / velox4j / gluten-flink |
-| `stateful-operator-development` | Operator development: planning, execution, state, and data structures of stateful operators |
-| `aggregate-function-development` | Aggregate function development: velox Aggregate implementations, the accumulate/merge/finalize chain, and batch integration |
-| `performance-optimization` | Performance: benchmark comparison, profiling, bottleneck analysis, and the optimization loop |
+Each plugin targets one development scenario; install the one matching the goal at hand:
 
-## Installation
+### `stateless-expression-development` — stateless expression development
 
-Option 1 (CLI, recommended):
+For scalar functions and expressions in SQL: string, datetime, numeric, and other functions that are **computed row by row, depend on no other rows, and keep no intermediate state** (e.g. `SPLIT_INDEX`, `EXTRACT`). Developing a function in this scenario covers three parts: implementing the C++ vectorized version in velox, mapping the Flink function name to the velox function name, and wiring the three layers so the SQL function call is pushed down to velox.
+
+### `stateful-operator-development` — stateful operator development
+
+For window aggregation, streaming joins, TopN, deduplication, and other operators that **maintain state across rows**. Development here involves rewriting the Flink ExecNode into a velox plan node on the planner side, implementing the operator lifecycle on the velox side — state access, watermarks and timers, checkpoint alignment — and configuring nexmark queries for behavior verification.
+
+### `aggregate-function-development` — aggregate function development
+
+For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into a single value. The core of this scenario is implementing velox's Aggregate interface, completing the accumulate (accumulation) / merge (shard merge) / finalize (final output) chain, and integrating with batch and window aggregation execution.
+
+### `performance-optimization` — performance optimization
+
+For cases where the feature is correct but performance falls short. The workflow is a loop: run the nexmark benchmark against native Flink to quantify the gap, profile to locate hotspots (on both the C++ and JVM sides), apply the fix, regression-verify, and iterate until the target is met.
+
+## Six steps from a bare machine to AI-assisted coding
+
+Supported OSes: openEuler, CentOS 7/9, Ubuntu/Debian. Run the steps in order — each one builds on the previous, and together they take you from an empty machine to a working GFV workspace where the AI agent does the coding with you. Every step resumes: detected dependencies are skipped, existing repos and configuration are left untouched, so after an interruption just rerun the same command.
+
+### Step 1: install the gfvbot CLI
 
 ```bash
 bash installer/setup.sh
-cd /path/to/gfv
-gfvbot install stateful-operator-development                # pick the AI agent interactively
-gfvbot install stateful-operator-development --tool claude  # or specify it directly
 ```
 
-For all other commands and flags, run `gfvbot help`.
+Installs the `gfvbot` command-line tool. Done when `gfvbot help` prints the command list.
 
-Option 2 (directly from a clone of this repo):
+### Step 2: install a scenario plugin
 
 ```bash
-cd /path/to/gfv
-bash /path/to/gfvbot/plugins/stateful-operator-development/install.sh claude   # installs into the current directory
+cd /path/to/gfv      # the target project root; run all further commands from here
+gfvbot install stateful-operator-development
 ```
 
-Two AI agents are currently selectable: `claude` (Claude Code) and `opencode`. The `codex` and `dsh` (DeepSeek Harness) adapters are ready and will be enabled once verification environments are available.
+Installs the plugin into the current project — its skills, its docs, and its development workflow. Without `--tool` it asks for the AI agent interactively; add `--tool claude` to skip the question. Selectable today: `claude` (Claude Code) and `opencode`; the `codex` and `dsh` (DeepSeek Harness) adapters are ready and open once verification environments are available.
 
-## Initialization walkthrough
+Done when `gfvbot list` shows the plugin as installed.
 
-Bringing a bare machine to a ready-to-build GFV workspace (openEuler, CentOS 7/9, and Ubuntu/Debian are supported):
+### Step 3: clone the GFV source repos
 
 ```bash
-bash installer/setup.sh      # 1. install the gfvbot CLI
-cd /path/to/gfv              #    the target project root; run everything below from here
-gfvbot install <plugin>      # 2. install a scenario plugin (interactive AI-agent picker)
-gfvbot clone                 # 3. velox / velox4j / gluten / flink under repos/ (installs git when missing)
-gfvbot env                   # 4. scan dependencies into .gfvbot/env.json
-gfvbot env-init              # 5. tick-list install: build deps, flink / nexmark, source-deps
+gfvbot clone
 ```
 
-Every step resumes: detected dependencies are skipped, existing repos and configuration are left untouched — rerun the same command after an interruption to continue.
+Clones the four source repos under `repos/`, giving every machine the same workspace layout (installs git when missing). Defaults:
 
-With the workspace in place, the flink-velox-build skill builds the stack and the cluster starts directly:
+| Repo | Upstream | Branch |
+|---|---|---|
+| velox | bigo-sg | `gluten-20260829` |
+| velox4j | bigo-sg | `gluten-20260829` |
+| gluten | apache | `main` |
+| flink | apache | `release-1.19` |
+
+Useful flags: `--fork <user>` clones velox/velox4j/gluten from your forks (same branches; flink always official), `--shallow` = `--depth 1`, or name repos to clone a subset (`gfvbot clone velox velox4j`). Existing repos are skipped; after cloning, version control is plain git.
+
+### Step 4: scan the environment and fill the gaps
+
+```bash
+gfvbot env          # scan dependencies, archive to .gfvbot/env.json
+gfvbot env-init     # tick-list install of whatever is missing
+```
+
+`env` probes build tools, JDK, Maven, the flink/nexmark stack, locally available AI agent CLIs, and machine facts. `env-init` opens the OS-specific tick-list installer: build dependencies, flink / nexmark (both optional — untick to skip), and source-deps (Velox's source-built C++ libraries linked from `/usr/local`; the entry appears once the velox checkout exists).
+
+Done when a rerun of `gfvbot env` reports no gaps.
+
+### Step 5: build the GFV stack and start the cluster
 
 ```bash
 bash <installed-skill>/bin/compile.sh     # velox4j + gluten-flink jars land in /opt/flink/lib/
 /opt/flink/bin/start-cluster.sh
 ```
 
-## Using an installed plugin
+`compile.sh` is the build entry installed with the plugin's flink-velox-build skill. With the jars in `/opt/flink/lib/` and the cluster up, the environment is ready.
 
-`gfvbot prompt` prints the plugin's task template:
+### Step 6: start your first AI-assisted task
 
 ```bash
 gfvbot prompt stateful-operator-development
 ```
 
-Fill in the placeholders, start the AI agent at the target project root, paste, and send. Using a TopN task as the example:
+Prints the plugin's task template. Fill in the placeholders, start the AI agent at the project root (`claude` or `opencode`), paste, and send — a TopN task for example:
 
-```bash
-cd /path/to/gfv
-claude          # or opencode
-```
 ```text
 > Develop the `TopN` stateful operator for gluten-flink.
 > - Goal: emit the Top-N bids ranked by price
@@ -91,79 +112,22 @@ claude          # or opencode
 > Follow the installed stateful-operator-development workflow; start from the SPEC stage.
 ```
 
-Or let the AI agent fill it in: pass `--task` with `--tool` (run inside the target project — the agent reads the plugin docs and the project's source files), and `--file` to write the result to a file:
+Or let the AI agent fill the template for you (run inside the target project — it reads the plugin docs and the project's source files):
 
 ```bash
 gfvbot prompt stateful-operator-development --task "develop a TopN operator, verify with nexmark q19" --tool claude --file topn-prompt.md
 ```
 
-Use `gfvbot list` to see what is installed and what the repo offers.
+From here on, coding is AI-assisted: the plugin's workflow carries the task from SPEC to verification, its skills build the stack and run the tests, and its docs explain the internals along the way.
 
-## Environment check
+## Other commands
 
-`gfvbot env` scans the following and archives the results to the target project's `.gfvbot/env.json`:
-
-- Build dependencies: git, cmake, gcc/g++, OpenJDK 8/17, Maven, JAVA_HOME
-- The build-tools group and Velox's system-level C++ library group (probed and installed as groups)
-- Locally available AI agent CLIs
-- The flink/nexmark stack
-- Machine facts: OS, kernel, arch, CPU, memory, disk
-
-The `repos` section records each source repo's path, clone-source URL, upstream URL, and main branch:
-
-- a fresh scan leaves placeholders with a hint
-- `gfvbot clone` back-fills them after cloning
-- hand-editing works too
-
-```bash
-gfvbot env
-```
-
-When the scan finds gaps, `env` hands over to the OS-specific installer. To open that installer directly (interactive tick-list, install, then a re-scan that refreshes the archive):
-
-```bash
-gfvbot env-init
-```
-
-The env-init tick-list also covers the runtime stack: flink and nexmark are both optional entries — leave them unticked to skip.
-
-## Source repos
-
-`gfvbot clone` lays down the GFV source repos under `<target>/repos/` so every machine gets the same workspace layout. By default it clones the baseline branches from the baseline upstreams:
-
-| Repo | Upstream | Branch |
-|---|---|---|
-| velox | bigo-sg | `gluten-20260829` |
-| velox4j | bigo-sg | `gluten-20260829` |
-| gluten | apache | `main` |
-| flink | apache | `release-1.19` |
-
-```bash
-gfvbot clone                     # all four repos
-gfvbot clone velox velox4j       # a subset
-gfvbot clone --fork <user>       # velox/velox4j/gluten from your forks (github.com/<user>/<repo>), same branches; flink always official
-gfvbot clone --shallow           # --depth 1 shallow clone
-```
-
-See `gfvbot help` for the full flag reference. Existing repos are skipped and re-running the same command resumes what is left; after cloning, version control is plain git.
-
-## Source-built C++ libraries
-
-Beyond the package-manager dependencies, the GFV build links Velox's source-built C++ libraries (boost, the folly chain, protobuf, arrow, ...) from `/usr/local`. They are installed through the env-init tick-list: run `gfvbot env-init` after `gfvbot clone` and tick `source-deps` — the entry only appears once the velox checkout exists, and `gfvbot clone` prints a reminder at the end.
-
-Libraries already detectable under `/usr/local` are skipped, so reruns only build what is missing.
-
-## Uninstall
-
-```bash
-gfvbot uninstall stateful-operator-development            # interactive tick-list when installed under several agents
-gfvbot uninstall stateful-operator-development --tool claude
-```
-
-## Testing
-
-```bash
-bash tests/run-tests.sh --fast         # L1 static checks: manifests, naming, dependency rules, dry-run
-bash tests/run-tests.sh --e2e          # installer lifecycle smoke test in a disposable sandbox
-bash tests/run-tests.sh --incremental  # full checks only when plugins/ or shared/ changed
-```
+| Command | Effect |
+|---|---|
+| `gfvbot uninstall <plugin> [--tool <agent>]` | remove a plugin (interactive picker when installed under several agents) |
+| `gfvbot list` | show what is installed and what the repo offers |
+| `gfvbot help` | full command and flag reference |
+| `bash plugins/<plugin>/install.sh <agent>` | install a plugin without the CLI, directly from a clone of this repo |
+| `bash tests/run-tests.sh --fast` | L1 static checks: manifests, naming, dependency rules, dry-run |
+| `bash tests/run-tests.sh --e2e` | installer lifecycle smoke test in a disposable sandbox |
+| `bash tests/run-tests.sh --incremental` | full checks only when `plugins/` or `shared/` changed |

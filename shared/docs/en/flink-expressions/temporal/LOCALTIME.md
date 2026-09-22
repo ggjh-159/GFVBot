@@ -4,33 +4,39 @@ Category: [Temporal](../index.md#temporal) | Aliases: —
 
 ## Role and scenarios
 
-The current local time of day without time zone, per query, no parentheses. Display-oriented local times.
+Returns the current local time of day, of type TIME (without time zone); evaluated once per query, so all rows within the same query take the same value; written without parentheses. Local time intended for presentation.
 
 ## Usage
 
-Input: `LOCALTIME` — no parentheses.
+Signature: `LOCALTIME` — a time constant written without parentheses; type TIME (without time zone).
+
+No parameters.
+
+Return: TIME; the local time of day at query start, constant within the same query.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, LOCALTIME FROM bid;
 ```
 
-Output: TIME; the local time of day at query start, identical on all 16 rows.
+Output: TIME; the local time of day at query start, identical across all 16 rows.
 
-Example (input -> output):
+Examples (input → output):
 
-| Input | Output |
-|---|
-| — | 10:23:41 |
+| Input | Output | Notes |
+|---|---|---|
+| — | 10:23:41 | Evaluated once per query; the 16 rows share one value |
 
-One value per query — identical on all 16 rows.
+## Source locations
 
-## Pipeline
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-The route of `LOCALTIME` from SQL text to the executing operator (Flink 1.19.2):
+| Stage | Location |
+|---|---|
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `LOCAL_TIME` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | via `CurrentTimePointCallGen` — in streaming mode injected as a reusable member holding a query-level constant; in batch mode folded at planning time |
 
-1. **Parse** — keyword, no parentheses; no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1765, registered under the name "localTime", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — CurrentTimePointCallGen — a query-level constant injected as a reusable member (streaming); folded at plan time in batch.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+## Velox implementation
+
+The velox repository has no corresponding implementation yet.

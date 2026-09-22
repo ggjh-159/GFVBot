@@ -4,33 +4,41 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Generates a fresh RFC 4122 type-4 (random) UUID string per call; non-deterministic. Synthetic keys and request ids.
+Generates a new RFC 4122 type-4 (random) UUID string on each call; it is a nondeterministic function. It is used for synthetic keys and request ids.
 
 ## Usage
 
-Input: `UUID()` — no arguments; 36-character STRING.
+Signature: `UUID()`
+
+No parameters.
+
+Return: STRING; a 36-character UUID text, nondeterministic.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, UUID() FROM bid;
 ```
 
-Output: STRING; a fresh 36-character UUID per row (non-deterministic).
+Output: STRING; a new 36-character UUID on every row (nondeterministic).
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| — | 3f8a2c1e-9b4d-4c6a-8e2f-1a5b9d0c7e3a |
+| Input | Output | Notes |
+|---|---|---|
+| — | 3f8a2c1e-9b4d-4c6a-8e2f-1a5b9d0c7e3a | An example value from one call; not reproducible |
 
-The output is re-drawn per row (non-deterministic); one draw shown.
+The output is regenerated on every row (nondeterministic); the value shown here is from a single draw.
 
-## Pipeline
+## Source locations
 
-The route of `UUID` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — zero-arg function UUID(); the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.UUID` (FlinkSqlOperatorTable.java:742).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1110, registered under the name "uuid", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — Marked non-deterministic, so the planner neither folds it nor moves it across operators.
-4. **Codegen** — StringCallGen's UUID case inlines a java.util.UUID.randomUUID() call.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `UUID` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `UUID` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | the UUID branch of `StringCallGen` inlines the `java.util.UUID.randomUUID()` call |
+
+## Velox implementation
+
+Velox already provides the builtin `uuid` (`velox/functions/prestosql/UuidFunctions.h`; it returns a UUID type rather than a string).

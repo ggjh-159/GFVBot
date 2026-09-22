@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-反余弦（弧度）；输入超出[-1, 1]得NULL。由相似度输入换算角度。
+返回x的反余弦主值，以弧度表示，值域为[0, π]。输入须落在[-1, 1]内，超出该域（|x| > 1）返回NULL；用于由相似度或比率输入换算角度。
 
 ## 用法
 
-输入：`ACOS(x)`——DOUBLE；|x| > 1返回NULL。
+签名：`ACOS(x)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | DOUBLE | 余弦值，有效域为[-1, 1] |
+
+返回：DOUBLE，[0, π]内的弧度；|x| > 1时为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +25,21 @@ SELECT auction, bidder, 0.908 * price + 10, ACOS(0.5) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| ACOS(0.5) | 1.0471975511965979 |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| ACOS(0.5) | 1.0471975511965979 | 余弦值0.5对应弧度π/3 |
+| ACOS(2) | NULL | 输入超出[-1, 1]，返回NULL |
 
-## 实现链路
+## 源码位置
 
-`ACOS`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.ACOS`（FlinkSqlOperatorTable.java:1202）。
-2. **定义**——BuiltInFunctionDefinitions.java:1573处的注册条目，注册名`"acos"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经MethodCallGen调用FunctionGenerator注册的BuiltInMethods静态方法，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`ACOS`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`ACOS`条目（SCALAR） |
+| 求值逻辑 | `BuiltInMethods`的静态方法（经`MethodCallGen`调用） |
+
+## velox实现
+
+velox已有内建`acos`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

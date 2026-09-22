@@ -4,38 +4,48 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Binary (base-2) text of an integer. Bit-level inspection of flags and ids.
+Converts the integer n into a string holding its binary (base-2) representation, without leading zeros or a prefix. It is used to inspect flag bits and the bit-level shape of ids. The input must be of an integer type.
 
 ## Usage
 
-Input: `BIN(n)` — n integer; returns STRING.
+Signature: `BIN(n)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| n | Integer type | Integer to convert into binary text |
+
+Return: STRING; the binary digit text.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, BIN(bid.auction) FROM bid;
 ```
 
-Output: STRING; binary digits of `auction` (data-dependent).
+Output: STRING; the binary digits of `auction` (varies with the row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 of the 16 source rows, illustrative data; leading columns are input columns, the last column is the result for that row):
 
-| auction | BIN(auction) |
+| auction | BIN(auction) | Notes |
+|---|---|---|
+| 3 | 11 | Binary representation of decimal 3 |
+| 19 | 10011 | 16+2+1 |
+| 8 | 1000 | 2 to the 3rd power: a 1 followed by three 0s |
+| 1 | 1 | No leading zeros are padded |
+| 14 | 1110 | 8+4+2 |
+| 7 | 111 | All three low bits are 1 |
+| 11 | 1011 | 8+2+1 |
+| 20 | 10100 | 16+4 |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | 11 |
-| 19 | 10011 |
-| 8 | 1000 |
-| 1 | 1 |
-| 14 | 1110 |
-| 7 | 111 |
-| 11 | 1011 |
-| 20 | 10100 |
+| Parser recognition | the `BIN` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `BIN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `generateBin` in `StringCallGen` (inlines the `toBinaryString` of `Long`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `BIN` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.BIN` (FlinkSqlOperatorTable.java:288).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1684, registered under the name "bin", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides an implementation: the sparksql suite's `bin` (`velox/functions/sparksql/registration/RegisterMath.cpp`).

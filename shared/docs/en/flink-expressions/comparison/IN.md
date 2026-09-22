@@ -4,38 +4,45 @@ Category: [Comparison](../index.md#comparison) | Aliases: —
 
 ## Role and scenarios
 
-TRUE when the left operand equals any element of the value list; when nothing matches but any element (or the operand) is NULL, the result is UNKNOWN. Handy for small allow-lists and deny-lists; the planner may rewrite it into a SEARCH/SARG lookup.
+Returns TRUE as soon as the left operand equals any element of the list; when there is no match and any element (or the operand) is NULL, the result is UNKNOWN. Suited to small whitelist/blacklist filtering; the planner may rewrite it into a SEARCH/SARG lookup.
 
 ## Usage
 
-Input: `x IN (v1, v2, ...)` — x and the literals of a common comparable type; empty-match plus NULL yields UNKNOWN.
+Signature: `x IN (v1, v2, ...)` — x is the expression under test; v1, v2, ... are list elements of the same comparable type as x.
+
+Return: BOOLEAN; TRUE when x equals any element; UNKNOWN when there is no match and a NULL appears anywhere.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, bid.auction IN (1, 5, 9, 13) FROM bid;
 ```
 
-Output: BOOLEAN; true when `auction` is 1, 5, 9, or 13 (data-dependent).
+Output: BOOLEAN; true when `auction` is 1, 5, 9, or 13 (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final NULL-boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | auction IN (1, 5, 9, 13) |
+| auction | auction IN (1, 5, 9, 13) | Notes |
+|---|---|---|
+| 3 | FALSE | No match and no NULL in the list, so FALSE |
+| 19 | FALSE | No match |
+| 8 | FALSE | No match |
+| 1 | TRUE | Matches list element 1 |
+| 14 | FALSE | No match |
+| 7 | FALSE | No match |
+| 11 | FALSE | No match |
+| 20 | FALSE | No match |
+| NULL | UNKNOWN | No match and the operand is NULL, so UNKNOWN |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | FALSE |
-| 19 | FALSE |
-| 8 | FALSE |
-| 1 | TRUE |
-| 14 | FALSE |
-| 7 | FALSE |
-| 11 | FALSE |
-| 20 | FALSE |
+| Parser recognition | The `IN` entry in `FlinkSqlOperatorTable`; rewritten to a SEARCH RexCall (SARG range) during Sql-to-Rex conversion |
+| Definition and type inference | The `IN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | After the rewrite to SEARCH, expanded into interval comparisons by `SearchOperatorGen` |
 
-## Pipeline
+## Velox implementation
 
-The route of `IN` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — keyword IN (..); the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.IN` (FlinkSqlOperatorTable.java:1171).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:2381, registered under the name "in", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — Rewritten during Sql-to-Rex conversion into a SEARCH RexCall (SARG range); at codegen SearchOperatorGen expands it back into interval comparisons.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `in` (`velox/functions/prestosql/registration/GeneralFunctionsRegistration.cpp`).

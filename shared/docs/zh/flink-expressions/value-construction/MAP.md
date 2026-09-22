@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-map构造器`MAP[k1, v1, k2, v2, ...]`——键值交替书写；键与值各自统一类型。小型内联查找表。
+map构造器：`MAP[k1, v1, k2, v2, ...]`按键值交替书写，键与值各自统一类型。用于构造小型内联查找表。
 
 ## 用法
 
-输入：`MAP[k1, v1, k2, v2, ...]`——键同型，值同型。
+签名：`MAP[k1, v1, k2, v2, ...]`——构造器语法，键值交替，非普通函数调用。
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| k1, k2, ... | 任意类型 | 键，位于交替序列的奇数位，须互相同型 |
+| v1, v2, ... | 任意类型 | 值，位于交替序列的偶数位，须互相同型 |
+
+返回：MAP<K, V>；K、V分别为键与值的公共类型。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -30,12 +37,16 @@ SELECT auction, bidder, 0.908 * price + 10, MAP['k1', bid.auction, 'k2', bid.bid
 | 11 | 11 | {k1=11, k2=11} |
 | 20 | 36 | {k1=20, k2=36} |
 
-## 实现链路
+## 源码位置
 
-`MAP`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——MAP[k, v, ..]构造器，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:1980处的注册条目，注册名`"map"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator的MAP_VALUE_CONSTRUCTOR分支内联为GenericMapData构造。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`MAP`条目（SCALAR） |
+| 求值逻辑 | 经`ExprCodeGenerator`的MAP_VALUE_CONSTRUCTOR分支内联为`GenericMapData`构造 |
+
+## velox实现
+
+velox已有内建`map`（`velox/functions/prestosql/registration/MapFunctionsRegistration.cpp`）。

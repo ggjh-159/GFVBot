@@ -4,38 +4,49 @@ Category: [Logical](../index.md#logical) | Aliases: —
 
 ## Role and scenarios
 
-TRUE when the input is TRUE or UNKNOWN — anything but exactly FALSE. The mirror of IS NOT TRUE for treating unknown as not-false.
+Returns TRUE when the input is TRUE or UNKNOWN — that is, every value other than exactly FALSE. The mirror of IS NOT TRUE, used to treat UNKNOWN as not false.
 
 ## Usage
 
-Input: `x IS NOT FALSE` — x of BOOLEAN (possibly NULL); result is never NULL.
+Signature: `x IS NOT FALSE` (postfix predicate form)
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | BOOLEAN | May be NULL |
+
+Return: BOOLEAN; TRUE when x is TRUE or UNKNOWN; the result is never NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, (bid.auction > 10 IS NOT FALSE) FROM bid;
 ```
 
-Output: BOOLEAN; true wherever `auction > 10` is true or unknown.
+Output: BOOLEAN; true when `auction > 10` is true or unknown.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final three-valued-logic boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | auction > 10 IS NOT FALSE |
+| auction | auction > 10 IS NOT FALSE | Notes |
+|---|---|---|
+| 3 | FALSE | Inner FALSE |
+| 19 | TRUE | Inner TRUE, which is not FALSE |
+| 8 | FALSE | Inner FALSE |
+| 1 | FALSE | Inner FALSE |
+| 14 | TRUE | Inner TRUE, which is not FALSE |
+| 7 | FALSE | Inner FALSE |
+| 11 | TRUE | Inner TRUE, which is not FALSE |
+| 20 | TRUE | Inner TRUE, which is not FALSE |
+| NULL | TRUE | Inner UNKNOWN, which is not FALSE |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | FALSE |
-| 19 | TRUE |
-| 8 | FALSE |
-| 1 | FALSE |
-| 14 | TRUE |
-| 7 | FALSE |
-| 11 | TRUE |
-| 20 | TRUE |
+| Parser recognition | The `IS_NOT_FALSE` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `IS_NOT_FALSE` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `IS_NOT_FALSE` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — postfix IS NOT FALSE; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.IS_NOT_FALSE` (FlinkSqlOperatorTable.java:1110).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:555, registered under the name "isNotFalse", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+The velox repository has no corresponding implementation yet.

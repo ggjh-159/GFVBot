@@ -4,31 +4,42 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Arc sine in radians; input outside [-1, 1] yields NULL. Inverting sine-based features.
+Returns the principal value of the arc sine of x, expressed in radians, with range [-π/2, π/2]. The input must lie within [-1, 1]; outside that domain (|x| > 1) the result is NULL. It is used to invert sine-type features.
 
 ## Usage
 
-Input: `ASIN(x)` — DOUBLE; |x| > 1 returns NULL.
+Signature: `ASIN(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Sine value; the valid domain is [-1, 1] |
+
+Return: DOUBLE, radians within [-π/2, π/2]; NULL when |x| > 1.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ASIN(0.5) FROM bid;
 ```
 
-Output: DOUBLE; `ASIN(0.5)` = 0.5235987755982989 on every row.
+Output: DOUBLE; `ASIN(0.5)` is 0.5235987755982989 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| ASIN(0.5) | 0.5235987755982989 |
+| Input | Output | Notes |
+|---|---|---|
+| ASIN(0.5) | 0.5235987755982989 | The sine value 0.5 corresponds to the radian π/6 |
+| ASIN(2) | NULL | Input outside [-1, 1]; the result is NULL |
 
-## Pipeline
+## Source locations
 
-The route of `ASIN` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ASIN` (FlinkSqlOperatorTable.java:1201).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1565, registered under the name "asin", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ASIN` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ASIN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `asin` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

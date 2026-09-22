@@ -4,38 +4,51 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: `%`
 
 ## Role and scenarios
 
-Remainder of integer division; the sign follows the dividend. Bucketing rows (`MOD(id, n)` for sharding or sampling), cycling over periods, and parity checks.
+Returns the remainder of division, supporting both the function form `MOD(a, b)` and the infix `a % b`; the sign of the remainder follows the dividend, and a zero divisor raises an error. It is commonly used for bucketing (e.g. `MOD(id, n)` for sharding or sampling), periodic cycling, and parity checks.
 
 ## Usage
 
-Input: `MOD(a, b)` or `a % b` — integer (or decimal) operands; division by zero raises an error.
+Signature: `MOD(a, b)` or `a % b`
+
+| Parameter | Type | Description |
+|---|---|---|
+| a | Integer or DECIMAL | Dividend |
+| b | Integer or DECIMAL | Divisor; a value of 0 raises an error |
+
+Return: The remainder, with its sign following the dividend; the type follows the operands.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, MOD(bid.auction, 7) FROM bid;
 ```
 
-Output: BIGINT; remainder of `auction / 7`, i.e. 0-6 per row (data-dependent).
+Output: BIGINT; the remainder of `auction / 7`, 0-6 per row (varies with the row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 of the 16 source rows, illustrative data; leading columns are input columns, the last column is the result for that row):
 
-| auction | MOD(auction, 7) |
+| auction | MOD(auction, 7) | Notes |
+|---|---|---|
+| 3 | 3 | 3=0×7+3 |
+| 19 | 5 | 19=2×7+5 |
+| 8 | 1 | 8=1×7+1 |
+| 1 | 1 | 1=0×7+1 |
+| 14 | 0 | Evenly divisible; the remainder is 0 |
+| 7 | 0 | Evenly divisible; the remainder is 0 |
+| 11 | 4 | 11=1×7+4 |
+| 20 | 6 | 20=2×7+6 |
+| MOD(-19, 7) | -5 | The sign of the remainder follows the dividend |
+| MOD(7, 0) | Error | The divisor is 0 |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | 3 |
-| 19 | 5 |
-| 8 | 1 |
-| 1 | 1 |
-| 14 | 0 |
-| 7 | 0 |
-| 11 | 4 |
-| 20 | 6 |
+| Parser recognition | the `MOD` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `MOD` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined by `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `MOD` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form or infix %; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.MOD` (FlinkSqlOperatorTable.java:1186).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1483, registered under the name "mod", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `mod` (`velox/functions/prestosql/registration/MathematicalOperatorsRegistration.cpp`).

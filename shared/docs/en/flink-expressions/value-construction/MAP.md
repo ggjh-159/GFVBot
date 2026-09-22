@@ -4,20 +4,27 @@ Category: [Value Construction](../index.md#value-construction) | Aliases: —
 
 ## Role and scenarios
 
-Map constructor `MAP[k1, v1, k2, v2, ...]` — keys and values interleaved; keys and values each unify to their own common type. Small inline lookup tables.
+Map constructor: `MAP[k1, v1, k2, v2, ...]` writes keys and values alternately, with keys and values each unifying to their own type. Used to build small inline lookup tables.
 
 ## Usage
 
-Input: `MAP[k1, v1, k2, v2, ...]` — keys of one type, values of one type.
+Signature: `MAP[k1, v1, k2, v2, ...]` — constructor syntax with alternating keys and values, not an ordinary function call.
+
+| Parameter | Type | Description |
+|---|---|---|
+| k1, k2, ... | Any type | Keys, at the odd positions of the alternating sequence; must share one type |
+| v1, v2, ... | Any type | Values, at the even positions of the alternating sequence; must share one type |
+
+Return: MAP<K, V>; K and V are the common types of the keys and values.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, MAP['k1', bid.auction, 'k2', bid.bidder] FROM bid;
 ```
 
-Output: MAP<STRING, BIGINT>; `{k1=auction, k2=bidder}` per row.
+Output: MAP<STRING, BIGINT>; each row is `{k1=auction, k2=bidder}`.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | bidder | MAP['k1', auction, 'k2', bidder] |
 |---|---|---|
@@ -30,12 +37,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | 11 | {k1=11, k2=11} |
 | 20 | 36 | {k1=20, k2=36} |
 
-## Pipeline
+## Source locations
 
-The route of `MAP` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — MAP[k, v, ..] constructor; no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1980, registered under the name "map", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's MAP_VALUE_CONSTRUCTOR case into a GenericMapData build.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `MAP` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined via the MAP_VALUE_CONSTRUCTOR branch of `ExprCodeGenerator` as `GenericMapData` construction |
+
+## Velox implementation
+
+Velox already provides the builtin `map` (`velox/functions/prestosql/registration/MapFunctionsRegistration.cpp`).

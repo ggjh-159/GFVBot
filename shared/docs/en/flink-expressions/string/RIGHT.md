@@ -4,38 +4,49 @@ Category: [String](../index.md#string) | Aliases: —
 
 ## Role and scenarios
 
-The last n characters of s. Suffix extraction (file extensions, tail markers).
+Returns the last n characters of the string s, used to extract suffixes such as file extensions and trailing markers.
 
 ## Usage
 
-Input: `RIGHT(s, n)` — n INT.
+Signature: `RIGHT(s, n)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING | the string to extract from |
+| n | INT | the number of characters to take |
+
+Return: STRING; the last n characters of s.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, RIGHT(bid.extra, 4) FROM bid;
 ```
 
-Output: STRING; the last 4 characters of `extra` per row.
+Output: STRING; the last 4 characters of `extra` on every row.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last column is the result for that row):
 
-| extra | RIGHT(extra, 4) |
+| extra | RIGHT(extra, 4) | Notes |
+|---|---|---|
+| A3F19C27B4E0 | B4E0 | the last 4 characters are taken |
+| 8B2D4F90A1C3 | A1C3 | the last 4 characters are taken |
+| C7E5A0D39F16 | 9F16 | the last 4 characters are taken |
+| ZK9M2Q7XVBT5 | VBT5 | the last 4 characters are taken |
+| D4C8B1E6A2F7 | A2F7 | the last 4 characters are taken |
+| 5F0A9D3C7E8B | 7E8B | the last 4 characters are taken |
+| ZZYYXXWWVVUU | VVUU | the last 4 characters are taken |
+| E2B7F5A9C3D0 | C3D0 | the last 4 characters are taken |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| A3F19C27B4E0 | B4E0 |
-| 8B2D4F90A1C3 | A1C3 |
-| C7E5A0D39F16 | 9F16 |
-| ZK9M2Q7XVBT5 | VBT5 |
-| D4C8B1E6A2F7 | A2F7 |
-| 5F0A9D3C7E8B | 7E8B |
-| ZZYYXXWWVVUU | VVUU |
-| E2B7F5A9C3D0 | C3D0 |
+| Parser recognition | the `RIGHT` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `RIGHT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateRight` (inline substring extraction) |
 
-## Pipeline
+## Velox implementation
 
-The route of `RIGHT` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.RIGHT` (FlinkSqlOperatorTable.java:787).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1056, registered under the name "right", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+The velox repository has no corresponding implementation yet.

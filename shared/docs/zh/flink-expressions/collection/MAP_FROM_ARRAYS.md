@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-由两个等长数组构造MAP——先键数组后值数组。MAP_KEYS/MAP_VALUES的逆方向。把并列的列组装成map。
+由键数组与值数组（先键后值）构造MAP，两数组须等长，键值按位置配对。是MAP_KEYS/MAP_VALUES的逆方向，用于把并列的列组装成map。
 
 ## 用法
 
-输入：`MAP_FROM_ARRAYS(keys, values)`——两个等长数组。
+签名：`MAP_FROM_ARRAYS(keys, values)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| keys | ARRAY<K> | 键数组，参数位在前 |
+| values | ARRAY<V> | 值数组，参数位在后，须与keys等长 |
+
+返回：MAP<K, V>；键值按两数组的位置一一配对。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +24,20 @@ SELECT auction, bidder, 0.908 * price + 10, MAP_FROM_ARRAYS(ARRAY['k'], ARRAY[1]
 
 输出：MAP<STRING, INT>；每行均为{k=1}。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| MAP_FROM_ARRAYS(ARRAY['k'], ARRAY[1]) | {k=1} | 键数组与值数组按位置配对 |
 
-| 输入 | 输出 |
-|---|
-| MAP_FROM_ARRAYS(ARRAY['k'], ARRAY[1]) | {k=1} |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`MAP_FROM_ARRAYS`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`MAP_FROM_ARRAYS`条目（SCALAR） |
+| 求值逻辑 | `MapFromArraysFunction`的`eval()`（flink-table-runtime，经`BridgingSqlFunctionCallGen`调用） |
 
-1. **解析**——函数形式，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:182处的注册条目，注册名`"MAP_FROM_ARRAYS"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经BridgingSqlFunctionCallGen调用table-runtime类scalar/MapFromArraysFunction的eval()（flink-table-runtime，新栈载体）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox已有实现：sparksql套件的`map_from_arrays`（`velox/functions/sparksql/registration/RegisterMap.cpp`）。

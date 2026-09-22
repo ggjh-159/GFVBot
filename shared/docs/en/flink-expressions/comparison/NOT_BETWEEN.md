@@ -4,38 +4,45 @@ Category: [Comparison](../index.md#comparison) | Aliases: —
 
 ## Role and scenarios
 
-`x NOT BETWEEN lo AND hi` is the negation of BETWEEN: TRUE when x lies outside the closed range; NULL operands still yield UNKNOWN (outside-or-unknown is not simply the inverse). Used to exclude a band of values.
+`x NOT BETWEEN lo AND hi` is the negation of BETWEEN: TRUE when x lies outside the closed interval; any NULL operand still yields UNKNOWN, so it is not a plain inversion of BETWEEN. Used to exclude a range of values.
 
 ## Usage
 
-Input: `x NOT BETWEEN lo AND hi` — same typing as BETWEEN; NULL input yields UNKNOWN.
+Signature: `x NOT BETWEEN lo AND hi` — each part has the same meaning as in BETWEEN: x is the expression under test, and lo and hi are the lower and upper bounds of the same comparable type.
+
+Return: BOOLEAN; TRUE when x lies outside the closed interval `[lo, hi]`; UNKNOWN when any operand is NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, bid.price NOT BETWEEN 10.00 AND 60.00 FROM bid;
 ```
 
-Output: BOOLEAN; true for rows with `price` below 10.00 or above 60.00 (data-dependent).
+Output: BOOLEAN; true when `price` is below 10.00 or above 60.00 (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final NULL-boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| price | price NOT BETWEEN 10.00 AND 60.00 |
+| price | price NOT BETWEEN 10.00 AND 60.00 | Notes |
+|---|---|---|
+| 55.67 | FALSE | Inside the closed interval |
+| 12.50 | FALSE | Inside the closed interval |
+| 99.99 | TRUE | Above the upper bound |
+| 3.14 | TRUE | Below the lower bound |
+| 61.20 | TRUE | Above the upper bound |
+| 28.05 | FALSE | Inside the closed interval |
+| 77.77 | TRUE | Above the upper bound |
+| 45.00 | FALSE | Inside the closed interval |
+| NULL | UNKNOWN | NULL input still yields UNKNOWN, not TRUE |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 55.67 | FALSE |
-| 12.50 | FALSE |
-| 99.99 | TRUE |
-| 3.14 | TRUE |
-| 61.20 | TRUE |
-| 28.05 | FALSE |
-| 77.77 | TRUE |
-| 45.00 | FALSE |
+| Parser recognition | The `NOT_BETWEEN` entry in `FlinkSqlOperatorTable`; rewritten to a SEARCH RexCall (SARG range) during Sql-to-Rex conversion |
+| Definition and type inference | The `NOT_BETWEEN` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | After the rewrite to SEARCH, expanded into interval comparisons by `SearchOperatorGen` |
 
-## Pipeline
+## Velox implementation
 
-The route of `NOT_BETWEEN` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — keyword NOT BETWEEN..AND; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.NOT_BETWEEN` (FlinkSqlOperatorTable.java:1161).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:580, registered under the name "notBetween", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — Rewritten during Sql-to-Rex conversion into a SEARCH RexCall (SARG range); at codegen SearchOperatorGen expands it back into interval comparisons.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `between` (`velox/functions/prestosql/registration/ComparisonFunctionsRegistration.cpp`) (the negation must be done at the expression level).

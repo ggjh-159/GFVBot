@@ -4,38 +4,49 @@ Category: [Type Conversion](../index.md#type-conversion) | Aliases: —
 
 ## Role and scenarios
 
-Explicit type conversion across the wide matrix — numeric widenings and narrowings, string to and from numeric, string to and from temporal, and composite re-labels. An impossible conversion raises a runtime error.
+Explicit type conversion; the conversion matrix covers numeric widening and narrowing, string-to-numeric and numeric-to-string, string-to-temporal and temporal-to-string, and relabeling of composite types. Throws a runtime error when the value cannot be converted; use TRY_CAST instead when a silent failure-to-NULL semantics is required.
 
 ## Usage
 
-Input: `CAST(x AS t)` — t a concrete SQL type.
+Signature: `CAST(x AS t)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | Any | The value to convert |
+| t | SQL type | The target type |
+
+Return: a value of the target type t; throws a runtime error when the conversion is impossible.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, CAST(bid.auction AS VARCHAR) FROM bid;
 ```
 
-Output: VARCHAR; the decimal digits of `auction` per row (data-dependent).
+Output: VARCHAR; each row's `auction` in decimal digits (varies with row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last two are each row's result and notes):
 
-| auction | CAST(auction AS VARCHAR) |
+| auction | CAST(auction AS VARCHAR) | Notes |
+|---|---|---|
+| 3 | 3 | Integer converted to a decimal string |
+| 19 | 19 | Integer converted to a decimal string |
+| 8 | 8 | Integer converted to a decimal string |
+| 1 | 1 | Integer converted to a decimal string |
+| 14 | 14 | Integer converted to a decimal string |
+| 7 | 7 | Integer converted to a decimal string |
+| 11 | 11 | Integer converted to a decimal string |
+| 20 | 20 | Integer converted to a decimal string |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | 3 |
-| 19 | 19 |
-| 8 | 8 |
-| 1 | 1 |
-| 14 | 14 |
-| 7 | 7 |
-| 11 | 11 |
-| 20 | 20 |
+| Parser recognition | the `CAST` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `CAST` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | the CAST branch of `ExprCodeGenerator` generates dedicated conversion code per source/target type pair (numeric/string/temporal matrix) |
 
-## Pipeline
+## Velox implementation
 
-The route of `CAST` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — CAST(x AS t); the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.CAST` (FlinkSqlOperatorTable.java:1194).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:2390, registered under the name "cast", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — ExprCodeGenerator's CAST case generates type-pair-specific conversion code (numeric/string/temporal matrix).
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+The velox expression kernel handles it as the special form `cast` (`velox/expression/RegisterSpecialForm.cpp`), with no standalone function registration.

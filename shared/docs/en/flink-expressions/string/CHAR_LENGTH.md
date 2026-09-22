@@ -4,38 +4,49 @@ Category: [String](../index.md#string) | Aliases: `CHARACTER_LENGTH`
 
 ## Role and scenarios
 
-Number of characters (not bytes) in a string. Length validation, truncation logic, width checks.
+Counts the number of characters contained in the string s (in characters, not bytes), used for length validation, truncation logic, and width checks. Returns 0 for an empty string.
 
 ## Usage
 
-Input: `CHAR_LENGTH(s)` — s of STRING/CHAR; returns INT.
+Signature: `CHAR_LENGTH(s)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING/CHAR | the string whose length is counted |
+
+Return: INT; the number of characters; an empty string yields 0.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, CHAR_LENGTH(bid.extra) FROM bid;
 ```
 
-Output: INT; 12 on every row (`extra` is generated at length 12).
+Output: INT; 12 on every row (`extra` is generated with length 12).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last column is the result for that row):
 
-| extra | CHAR_LENGTH(extra) |
+| extra | CHAR_LENGTH(extra) | Notes |
+|---|---|---|
+| A3F19C27B4E0 | 12 | 12 characters |
+| 8B2D4F90A1C3 | 12 | 12 characters |
+| C7E5A0D39F16 | 12 | 12 characters |
+| ZK9M2Q7XVBT5 | 12 | 12 characters |
+| D4C8B1E6A2F7 | 12 | 12 characters |
+| 5F0A9D3C7E8B | 12 | 12 characters |
+| ZZYYXXWWVVUU | 12 | 12 characters |
+| E2B7F5A9C3D0 | 12 | 12 characters |
+| '' (empty string) | 0 | an empty string returns 0 |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| A3F19C27B4E0 | 12 |
-| 8B2D4F90A1C3 | 12 |
-| C7E5A0D39F16 | 12 |
-| ZK9M2Q7XVBT5 | 12 |
-| D4C8B1E6A2F7 | 12 |
-| 5F0A9D3C7E8B | 12 |
-| ZZYYXXWWVVUU | 12 |
-| E2B7F5A9C3D0 | 12 |
+| Parser recognition | the `CHAR_LENGTH` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `CHAR_LENGTH` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateCharLength` (inlines `BinaryStringData`'s `numChars`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `CHAR_LENGTH` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.CHAR_LENGTH` (FlinkSqlOperatorTable.java:1179).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:752, registered under the name "charLength", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `length` (`velox/functions/prestosql/registration/StringFunctionsRegistration.cpp`) (counts characters for varchar).

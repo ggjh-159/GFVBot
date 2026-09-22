@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-不大于x的最大整数。时间形式`FLOOR(ts TO unit)`把时间戳向下截断到指定单位边界（HOUR、DAY、MONTH等）。用于对齐到桶边界。
+返回不大于x的最大整数；时间形式`FLOOR(ts TO unit)`把时间戳向下截断到指定单位（HOUR、DAY、MONTH等）的边界。用于把时间或数值对齐到桶边界。
 
 ## 用法
 
-输入：`FLOOR(x)`——数值；`FLOOR(ts TO unit)`——时间。
+签名：`FLOOR(x)`；另有时间形式`FLOOR(ts TO unit)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | 数值 | 待向下取整的数值 |
+| ts TO unit | TIMESTAMP与时间单位 | 时间形式：把时间戳向下截断到unit（如HOUR、DAY、MONTH）边界 |
+
+返回：不大于x的最大整数；时间形式返回截断到单位边界的时间戳。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +26,27 @@ SELECT auction, bidder, 0.908 * price + 10, FLOOR(bid.price) FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| price | FLOOR(price) |
+| price | FLOOR(price) | 说明 |
+|---|---|---|
+| 55.67 | 55 | 舍去小数部分0.67 |
+| 12.50 | 12 | 舍去小数部分 |
+| 99.99 | 99 | 舍去小数部分 |
+| 3.14 | 3 | 舍去小数部分 |
+| 61.20 | 61 | 舍去小数部分 |
+| 28.05 | 28 | 舍去小数部分 |
+| 77.77 | 77 | 舍去小数部分 |
+| 45.00 | 45 | 已是整数，值不变 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 55.67 | 55 |
-| 12.50 | 12 |
-| 99.99 | 99 |
-| 3.14 | 3 |
-| 61.20 | 61 |
-| 28.05 | 28 |
-| 77.77 | 77 |
-| 45.00 | 45 |
+| 解析识别 | `FlinkSqlOperatorTable`的`FLOOR`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`FLOOR`条目（SCALAR） |
+| 求值逻辑 | 经`FloorCeilCallGen`生成：数值走`BuiltInMethods`的`FLOOR`/`CEIL`，时间截断走`UNIX_DATE`/`UNIX_TIMESTAMP`系列helper |
 
-## 实现链路
+## velox实现
 
-`FLOOR`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.FLOOR`（FlinkSqlOperatorTable.java:1192）。
-2. **定义**——BuiltInFunctionDefinitions.java:1401处的注册条目，注册名`"floor"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——FloorCeilCallGen——数值走BuiltInMethods.FLOOR/CEIL，时间截断走UNIX_DATE/UNIX_TIMESTAMP系列helper。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有内建`floor`（`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`）。

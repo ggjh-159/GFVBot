@@ -20,17 +20,17 @@
 
 | 阶段 | 载体 | 表达式发生什么 |
 |---|---|---|
-| 1 解析 | `CalciteParser` | SQL文本变SqlNode；算子锚定在`FlinkSqlOperatorTable`（或由`FunctionDefinitionOperatorTable`适配） |
+| 1 解析 | `CalciteParser` | SQL文本变SqlNode；算子锚定在`FlinkSqlOperatorTable`（或由`FunctionCatalogOperatorTable`从FunctionCatalog解析） |
 | 2 校验 | `FlinkCalciteSqlValidator` | 对照算子表做操作数类型检查与结果类型推导 |
 | 3 转换 | `SqlNodeToOperationConversion` -> `FlinkPlannerImpl`（`SqlToRelConverter`+`SqlNodeToRexConverter`） | SqlNode变RexNode进入投影/过滤；IN与BETWEEN被改写为SEARCH（SARG）RexCall，OVERLAPS经`TemporalOverlapsConverter`展开 |
 | 4 优化 | `FlinkLogicalRules`/`FlinkStreamPhysicalRules` | 只有通用移动：过滤/投影下推、`CalcMergeRule`、`ExpressionReducer`对全字面量子树常量折叠 |
 | 5 ExecNode | `StreamExecCalc`（继承`CommonExecCalc`） | 携带表达式的Calc以ExecNode身份进入物理计划 |
-| 6 代码生成 | `CalcCodeGenerator` -> `ExprCodeGenerator` | 每个叶调用生成Java源码，载体分三类：内联运算代码（`ScalarOperatorGens`）、助手直调（`StringCallGen`/`FunctionGenerator`->`BuiltInMethods`）、`BridgingSqlFunctionCallGen`进`flink-table-runtime`的`eval()`类 |
+| 6 代码生成 | `CalcCodeGenerator` -> `ExprCodeGenerator` | 每个叶调用生成Java源码，载体分三类：内联运算代码（`ScalarOperatorGens`）、助手直调（`MethodCallGen`->`BuiltInMethods`、`StringCallGen`->`SqlFunctionUtils`/`BinaryStringDataUtil`）、`ScalarFunctionCallGen`直调`flink-table-runtime`的`eval()`实现类 |
 | 7 执行 | `CodeGenOperatorFactory` | Janino编译出`TableStreamOperator`子类，表达式在`processElement`逐行求值 |
 
 表达式落点：投影与过滤列在Calc算子内执行；同一表达式出现在JOIN条件里在StreamExecJoin算子内执行，出现在聚合参数里在StreamExecGroupAggregate算子内执行。非确定函数（RAND、RAND_INTEGER、UUID、CURRENT_ROW_TIMESTAMP）规划期既不常量折叠也不跨算子移动。
 
-每个表达式文档的“实现链路”一节列出它自己的五步。
+每个表达式文档末尾有“源码位置”与“velox实现”两节：前者给出该函数在上述各环节的源码锚点（符号定位，不标行号）；后者标注velox仓库当前是否已有该函数的实现及其位置（内建函数注册、表达式特型或GFV自有实现），供实现velox侧逻辑时参考。
 
 ## 比较函数
 

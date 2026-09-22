@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-数值乘法。NULL传播。数量缩放——汇率、单价乘数量、加权特征。
+数值乘法（中缀`*`）。DECIMAL操作数参与时，结果的精度与小数位由操作数推导；任一操作数为NULL时结果为NULL。用于数量缩放，如汇率换算、单价乘数量与加权特征。
 
 ## 用法
 
-输入：`a * b`——数值乘数值；DECIMAL的精度与小数位由操作数推导。
+签名：`a * b`（中缀乘法）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| 左操作数 | 数值 | 乘数 |
+| 右操作数 | 数值 | 被乘数；DECIMAL参与时结果的精度与小数位由两操作数推导 |
+
+返回：乘积；类型按操作数推导。任一操作数为NULL时为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +26,27 @@ SELECT auction, bidder, 0.908 * price + 10, bid.auction * 3 FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| auction | auction * 3 |
+| auction | auction * 3 | 说明 |
+|---|---|---|
+| 3 | 9 | 3×3=9 |
+| 19 | 57 | 19×3=57 |
+| 8 | 24 | 8×3=24 |
+| 1 | 3 | 1×3=3 |
+| 14 | 42 | 14×3=42 |
+| 7 | 21 | 7×3=21 |
+| 11 | 33 | 11×3=33 |
+| 20 | 60 | 20×3=60 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| 3 | 9 |
-| 19 | 57 |
-| 8 | 24 |
-| 1 | 3 |
-| 14 | 42 |
-| 7 | 21 |
-| 11 | 33 |
-| 20 | 60 |
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`TIMES`条目（SCALAR） |
+| 求值逻辑 | 经`ScalarOperatorGens`内联生成 |
 
-## 实现链路
+## velox实现
 
-`MULTIPLY`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——中缀语法，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:1358处的注册条目，注册名`"times"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator内联为普通Java运算代码（ScalarOperatorGens），无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有内建`multiply`（`velox/functions/prestosql/registration/MathematicalOperatorsRegistration.cpp`）。

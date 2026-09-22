@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-返回参数中的最大值；任一参数为NULL则结果为NULL。常用于跨列归一化与钳制（如给计算结果兜一个下限）。
+返回参数中的最大值；任一参数为NULL则结果为NULL。常用于跨列归一化与钳制（如为计算结果设置下限）。
 
 ## 用法
 
-输入：`GREATEST(v1, v2, ...)`——两个及以上同类型可比较的值。
+签名：`GREATEST(v1, v2, ...)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| v1, v2, ... | 可比较类型 | 两个及以上同类型的值 |
+
+返回：与参数同类型；全部参数中的最大值；任一参数为NULL则结果为NULL。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,25 +23,30 @@ SELECT auction, bidder, 0.908 * price + 10, GREATEST(bid.auction, bid.bidder, 7)
 
 输出：BIGINT；每行取`auction`、`bidder`与常量7三者中的最大值。
 
-示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
+示例（16行源的前8行，示意数据，末行补空值边界；前列为输入列，末两列为该行结果与说明）：
 
-| auction | bidder | GREATEST(auction, bidder, 7) |
-|---|---|---|
-| 3 | 15 | 15 |
-| 19 | 7 | 19 |
-| 8 | 8 | 8 |
-| 1 | 42 | 42 |
-| 14 | 23 | 23 |
-| 7 | 2 | 7 |
-| 11 | 11 | 11 |
-| 20 | 36 | 36 |
+| auction | bidder | GREATEST(auction, bidder, 7) | 说明 |
+|---|---|---|---|
+| 3 | 15 | 15 | 最大值来自bidder |
+| 19 | 7 | 19 | 最大值来自auction |
+| 8 | 8 | 8 | 最大值来自auction与bidder |
+| 1 | 42 | 42 | 最大值来自bidder |
+| 14 | 23 | 23 | 最大值来自bidder |
+| 7 | 2 | 7 | 最大值来自auction与常量7 |
+| 11 | 11 | 11 | 最大值来自auction与bidder |
+| 20 | 36 | 36 | 最大值来自bidder |
+| NULL | 8 | NULL | 任一参数为NULL得NULL |
 
-## 实现链路
+## 源码位置
 
-`GREATEST`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:596处的注册条目，注册名`"GREATEST"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——ExprCodeGenerator的BridgingSqlFunction分支经generateGreatestLeast内联为逐参数比较链，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配`BuiltInFunctionDefinitions`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`GREATEST`条目（SCALAR） |
+| 求值逻辑 | `ExprCodeGenerator`经`generateGreatestLeast`内联为逐参数比较链 |
+
+## velox实现
+
+velox已有内建`greatest`（`velox/functions/prestosql/registration/GeneralFunctionsRegistration.cpp`）（NULL语义不同：velox版跳过NULL，Flink版任一参数为NULL即返回NULL）。

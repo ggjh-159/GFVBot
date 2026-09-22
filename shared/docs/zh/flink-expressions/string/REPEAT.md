@@ -4,11 +4,18 @@
 
 ## 定位与场景
 
-把s重复n次。构造分隔串与测试中的期望模式。
+将字符串s重复n次后返回，用于构造分隔串与测试中的期望模式。
 
 ## 用法
 
-输入：`REPEAT(s, n)`——n为INT。
+签名：`REPEAT(s, n)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| s | STRING | 待重复的字符串 |
+| n | INT | 重复次数 |
+
+返回：STRING；s重复n次的结果。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +26,27 @@ SELECT auction, bidder, 0.908 * price + 10, REPEAT(bid.extra, 2) FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| extra | REPEAT(extra, 2) |
+| extra | REPEAT(extra, 2) | 说明 |
+|---|---|---|
+| A3F19C27B4E0 | A3F19C27B4E0A3F19C27B4E0 | extra重复两遍，共24个字符 |
+| 8B2D4F90A1C3 | 8B2D4F90A1C38B2D4F90A1C3 | extra重复两遍，共24个字符 |
+| C7E5A0D39F16 | C7E5A0D39F16C7E5A0D39F16 | extra重复两遍，共24个字符 |
+| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5ZK9M2Q7XVBT5 | extra重复两遍，共24个字符 |
+| D4C8B1E6A2F7 | D4C8B1E6A2F7D4C8B1E6A2F7 | extra重复两遍，共24个字符 |
+| 5F0A9D3C7E8B | 5F0A9D3C7E8B5F0A9D3C7E8B | extra重复两遍，共24个字符 |
+| ZZYYXXWWVVUU | ZZYYXXWWVVUUZZYYXXWWVVUU | extra重复两遍，共24个字符 |
+| E2B7F5A9C3D0 | E2B7F5A9C3D0E2B7F5A9C3D0 | extra重复两遍，共24个字符 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| A3F19C27B4E0 | A3F19C27B4E0A3F19C27B4E0 |
-| 8B2D4F90A1C3 | 8B2D4F90A1C38B2D4F90A1C3 |
-| C7E5A0D39F16 | C7E5A0D39F16C7E5A0D39F16 |
-| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5ZK9M2Q7XVBT5 |
-| D4C8B1E6A2F7 | D4C8B1E6A2F7D4C8B1E6A2F7 |
-| 5F0A9D3C7E8B | 5F0A9D3C7E8B5F0A9D3C7E8B |
-| ZZYYXXWWVVUU | ZZYYXXWWVVUUZZYYXXWWVVUU |
-| E2B7F5A9C3D0 | E2B7F5A9C3D0E2B7F5A9C3D0 |
+| 解析识别 | `FlinkSqlOperatorTable`的`REPEAT`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`REPEAT`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateRepeat`（直调`SqlFunctionUtils`的`repeat`） |
 
-## 实现链路
+## velox实现
 
-`REPEAT`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.REPEAT`（FlinkSqlOperatorTable.java:417）。
-2. **定义**——BuiltInFunctionDefinitions.java:1145处的注册条目，注册名`"repeat"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有实现：sparksql套件的`repeat`（`velox/functions/sparksql/registration/RegisterString.cpp`）。

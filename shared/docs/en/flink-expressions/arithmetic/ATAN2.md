@@ -4,31 +4,43 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Two-argument arc tangent: the angle of the point (y, x), using both signs to pick the quadrant — unlike ATAN it distinguishes opposite corners. Bearing from coordinate deltas.
+Two-argument arc tangent: returns the argument of the point (y, x), expressed in radians, with range [-π, π]. Unlike ATAN, ATAN2 selects the quadrant from the signs of the two operands and can distinguish diagonally opposite angles. It is used to compute bearings from coordinate differences.
 
 ## Usage
 
-Input: `ATAN2(y, x)` — DOUBLE.
+Signature: `ATAN2(y, x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| y | DOUBLE | Ordinate of the point |
+| x | DOUBLE | Abscissa of the point |
+
+Return: DOUBLE, radians within [-π, π].
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ATAN2(1, 1) FROM bid;
 ```
 
-Output: DOUBLE; `ATAN2(1, 1)` = 0.7853981633974483 on every row.
+Output: DOUBLE; `ATAN2(1, 1)` is 0.7853981633974483 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| ATAN2(1, 1) | 0.7853981633974483 |
+| Input | Output | Notes |
+|---|---|---|
+| ATAN2(1, 1) | 0.7853981633974483 | The point (1, 1) lies in the first quadrant; its argument is π/4 |
+| ATAN2(1, -1) | 2.356194490192345 | x is negative and y is positive, so the argument falls in the second quadrant (3π/4) |
 
-## Pipeline
+## Source locations
 
-The route of `ATAN2` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ATAN2` (FlinkSqlOperatorTable.java:1204).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1589, registered under the name "atan2", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ATAN2` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ATAN2` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `atan2` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

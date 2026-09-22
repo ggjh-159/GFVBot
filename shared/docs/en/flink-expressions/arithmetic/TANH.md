@@ -4,31 +4,41 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Hyperbolic tangent; output always within (-1, 1). Squashing features to a bounded range — a classic pre-normalization step.
+Returns the hyperbolic tangent of x; the output always falls within (-1, 1). It is used to squeeze features into a bounded interval and is a common pre-normalization technique.
 
 ## Usage
 
-Input: `TANH(x)` — DOUBLE.
+Signature: `TANH(x)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | DOUBLE | Any real number |
+
+Return: DOUBLE, falling within (-1, 1).
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, TANH(1) FROM bid;
 ```
 
-Output: DOUBLE; `TANH(1)` = 0.7615941559557649 on every row.
+Output: DOUBLE; `TANH(1)` is 0.7615941559557649 on every row.
 
-Example (input -> output):
+Example (input → output):
 
-| Input | Output |
-|---|
-| TANH(1) | 0.7615941559557649 |
+| Input | Output | Notes |
+|---|---|---|
+| TANH(1) | 0.7615941559557649 | The output lies strictly between -1 and 1 |
 
-## Pipeline
+## Source locations
 
-The route of `TANH` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.TANH` (FlinkSqlOperatorTable.java:371).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1549, registered under the name "tanh", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `TANH` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `TANH` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+
+## Velox implementation
+
+Velox already provides the builtin `tanh` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

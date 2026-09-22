@@ -4,38 +4,49 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: —
 
 ## Role and scenarios
 
-Rounds x to d decimal places (default 0) using half-up rounding for the common numeric types. Money display values and fixed-granularity statistics.
+Rounds x to d decimal places (0 when d is omitted), with half-up handling for the common numeric types; it is used for monetary display and statistics at a fixed granularity.
 
 ## Usage
 
-Input: `ROUND(x, d)` or `ROUND(x)` — x numeric, d integer literal >= 0.
+Signature: `ROUND(x)` or `ROUND(x, d)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | Numeric | Value to round |
+| d | Non-negative integer literal | Number of decimal places to keep; 0 when omitted |
+
+Return: The value rounded to d decimal places; the type follows the input.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ROUND(bid.price, 1) FROM bid;
 ```
 
-Output: Decimal with 1 fractional digit per row, e.g. 55.67 becomes 55.7.
+Output: The decimal value of each row kept to 1 decimal place, e.g. 55.67 becomes 55.7.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 of the 16 source rows, illustrative data; leading columns are input columns, the last column is the result for that row):
 
-| price | ROUND(price, 1) |
+| price | ROUND(price, 1) | Notes |
+|---|---|---|
+| 55.67 | 55.7 | The 2nd decimal digit 7 carries up |
+| 12.50 | 12.5 | The 2nd decimal digit 0 is dropped |
+| 99.99 | 100.0 | Chained carries increase the integer part by one |
+| 3.14 | 3.1 | The 2nd decimal digit 4 is dropped |
+| 61.20 | 61.2 | The 2nd decimal digit 0 is dropped |
+| 28.05 | 28.1 | Half-up: the 2nd decimal digit 5 carries up |
+| 77.77 | 77.8 | The 2nd decimal digit 7 carries up |
+| 45.00 | 45.0 | No lower decimal digits remain; the value is unchanged |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 55.67 | 55.7 |
-| 12.50 | 12.5 |
-| 99.99 | 100.0 |
-| 3.14 | 3.1 |
-| 61.20 | 61.2 |
-| 28.05 | 28.1 |
-| 77.77 | 77.8 |
-| 45.00 | 45.0 |
+| Parser recognition | the `ROUND` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ROUND` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `ROUND` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ROUND` (FlinkSqlOperatorTable.java:270).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1632, registered under the name "round", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — MethodCallGen on a FunctionGenerator-registered BuiltInMethods static helper; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `round` (`velox/functions/prestosql/registration/MathematicalFunctionsRegistration.cpp`).

@@ -4,38 +4,49 @@ Category: [Arithmetic](../index.md#arithmetic) | Aliases: `/`
 
 ## Role and scenarios
 
-Numeric division. Integer divided by integer returns DOUBLE — Flink never does truncating integer division; DECIMAL/DECIMAL returns a DECIMAL with derived precision. NULL propagates. Ratios and per-unit measures.
+Numeric division (infix `/`): dividing integer operands returns DOUBLE, and Flink performs no truncating integer division; DECIMAL divided by DECIMAL returns a DECIMAL derived by precision inference. When either operand is NULL, the result is NULL. It is used for ratios and unit measures.
 
 ## Usage
 
-Input: `a / b` — numeric divided by numeric; result DOUBLE for integer inputs, DECIMAL for decimal inputs.
+Signature: `a / b` (infix division)
+
+| Parameter | Type | Description |
+|---|---|---|
+| Left operand | Numeric | Dividend |
+| Right operand | Numeric | Divisor |
+
+Return: Dividing integer operands yields DOUBLE; dividing DECIMAL operands yields a DECIMAL derived by precision inference. NULL when either operand is NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, bid.auction / 7 FROM bid;
 ```
 
-Output: DOUBLE; `auction / 7` per row, e.g. 3 / 7 = 0.42857142857142855.
+Output: DOUBLE; `auction / 7` for each row, e.g. 3 / 7 = 0.42857142857142855.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 of the 16 source rows, illustrative data; leading columns are input columns, the last column is the result for that row):
 
-| auction | auction / 7 |
+| auction | auction / 7 | Notes |
+|---|---|---|
+| 3 | 0.42857142857142855 | The quotient is less than 1; the full fraction is kept |
+| 19 | 2.7142857142857144 | Not evenly divisible; the quotient is the DOUBLE approximation of an infinitely repeating decimal |
+| 8 | 1.1428571428571428 | Not evenly divisible |
+| 1 | 0.14285714285714285 | The quotient is less than 1 |
+| 14 | 2.0 | Evenly divisible; the result is still DOUBLE |
+| 7 | 1.0 | Evenly divisible; the result is still DOUBLE |
+| 11 | 1.5714285714285714 | Not evenly divisible |
+| 20 | 2.857142857142857 | Not evenly divisible |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | 0.42857142857142855 |
-| 19 | 2.7142857142857144 |
-| 8 | 1.1428571428571428 |
-| 1 | 0.14285714285714285 |
-| 14 | 2.0 |
-| 7 | 1.0 |
-| 11 | 1.5714285714285714 |
-| 20 | 2.857142857142857 |
+| Parser recognition | the `DIVIDE` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `DIVIDE` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | numeric division is inlined by `ScalarOperatorGens`; DECIMAL division takes the precision-preserving route of `DivCallGen` |
 
-## Pipeline
+## Velox implementation
 
-The route of `DIVIDE` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — infix syntax; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.DIVIDE` (FlinkSqlOperatorTable.java:1082).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1337, registered under the name "divide", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined arithmetic (ScalarOperatorGens); DECIMAL division goes through the DivCallGen precision-preserving path.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `divide` (`velox/functions/prestosql/registration/MathematicalOperatorsRegistration.cpp`).

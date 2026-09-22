@@ -4,11 +4,19 @@
 
 ## 定位与场景
 
-分支选择。搜索形式`CASE WHEN cond THEN val ... [ELSE val] END`自上而下求值，返回首个命中；简单形式`CASE expr WHEN v THEN ... END`按值比较。省略ELSE时默认NULL。逐行打标与NULL安全的if/else逻辑。
+分支选择表达式：自上而下求值各WHEN条件，返回第一个求值为TRUE的分支的值；均不满足时返回ELSE值，省略ELSE则返回NULL。搜索形式`CASE WHEN cond THEN val ... END`按条件选择分支；简单形式`CASE expr WHEN v THEN val ... END`将expr依次与各v做等值比较。条件求值遵循三值逻辑：结果为UNKNOWN时视同不满足，继续考察下一分支——判断空值因此必须使用`IS NULL`；`expr = NULL`的求值结果恒为UNKNOWN，不会命中任何分支。
 
 ## 用法
 
-输入：`CASE WHEN cond THEN v [WHEN ...] [ELSE v] END`——各分支结果须统一类型。
+语法：`CASE WHEN cond THEN v [WHEN ...] [ELSE v] END`（搜索形式）或`CASE expr WHEN v THEN r [WHEN ...] [ELSE r] END`（简单形式）——各分支结果须统一为同一类型。
+
+| 组成 | 说明 |
+|---|---|
+| WHEN cond / WHEN v | 自上而下求值，首个为TRUE的分支生效，其后分支不再求值 |
+| THEN v / THEN r | 所属分支生效时返回的值 |
+| ELSE v | 所有分支均不满足时返回的值；省略则返回NULL |
+
+返回：生效分支的值；类型为各分支结果的公共类型。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -30,12 +38,16 @@ SELECT auction, bidder, 0.908 * price + 10, CASE WHEN bid.auction > 10 THEN 'hig
 | 11 | high |
 | 20 | high |
 
-## 实现链路
+## 源码位置
 
-`CASE`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该表达式的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——CASE WHEN..THEN..ELSE..END，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:433处的注册条目，注册名`"ifThenElse"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——由ExprCodeGenerator内联为按条件求值的多分支if/else（ScalarOperatorGens）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配`BuiltInFunctionDefinitions`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`IF`条目（SCALAR） |
+| 求值逻辑 | `ScalarOperatorGens`内联生成的多分支if/else |
+
+## velox实现
+
+velox表达式内核将其作为特型`if`/`switch`处理（`velox/expression/RegisterSpecialForm.cpp`），无独立函数注册。

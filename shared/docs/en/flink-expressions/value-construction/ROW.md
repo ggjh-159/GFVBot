@@ -4,20 +4,26 @@ Category: [Value Construction](../index.md#value-construction) | Aliases: —
 
 ## Role and scenarios
 
-Row constructor `ROW(v1, v2, ...)` building an anonymous composite value with fields f0, f1, ... (rename them with AS). Packaging heterogeneous values that travel together.
+Row constructor: `ROW(v1, v2, ...)` produces an anonymous composite value whose fields default to the names f0, f1, and so on, renamable with AS. Used to pack heterogeneous values that travel together.
 
 ## Usage
 
-Input: `ROW(v1, v2, ...)` — fields may differ in type.
+Signature: `ROW(v1, v2, ...)` — row constructor syntax.
+
+| Parameter | Type | Description |
+|---|---|---|
+| v1, v2, ... | Any type | The fields of the row, possibly of different types; field names default to f0, f1, ..., renamable with AS |
+
+Return: ROW<T1, T2, ...>; the field types may differ.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ROW(1, 'a', bid.auction) FROM bid;
 ```
 
-Output: ROW<INT, STRING, BIGINT>; `(1, 'a', auction)` per row.
+Output: ROW<INT, STRING, BIGINT>; each row is `(1, 'a', auction)`.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | ROW(1, 'a', auction) |
 |---|---|
@@ -30,12 +36,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | (1, a, 11) |
 | 20 | (1, a, 20) |
 
-## Pipeline
+## Source locations
 
-The route of `ROW` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — ROW(..) constructor; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.ROW` (FlinkSqlOperatorTable.java:1156).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1989, registered under the name "row", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's ROW case into a GenericRowData build.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | the `ROW` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `ROW` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined via the ROW branch of `ExprCodeGenerator` as `GenericRowData` construction |
+
+## Velox implementation
+
+The velox expression kernel handles it as the special form `row_constructor` (`velox/expression/RegisterSpecialForm.cpp`), with no standalone function registration.

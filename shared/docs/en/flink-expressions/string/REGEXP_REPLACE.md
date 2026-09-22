@@ -4,38 +4,50 @@ Category: [String](../index.md#string) | Aliases: —
 
 ## Role and scenarios
 
-Replaces every substring of s that matches the Java regex with replacement. Masking digits, normalizing whitespace, rewriting log fragments.
+Replaces every substring of s that matches the Java regex with replacement, following java.util.regex semantics, used for digit masking, whitespace normalization, and rewriting log fragments.
 
 ## Usage
 
-Input: `REGEXP_REPLACE(s, regex, replacement)` — java.util.regex semantics.
+Signature: `REGEXP_REPLACE(s, regex, replacement)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING | the original string |
+| regex | STRING | a Java regular expression |
+| replacement | STRING | the replacement text |
+
+Return: STRING; the string after all replacements are done.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, REGEXP_REPLACE(bid.extra, '[0-9]', '#') FROM bid;
 ```
 
-Output: STRING; `extra` with every digit replaced by '#' (data-dependent).
+Output: STRING; every digit in `extra` replaced with '#' (varies with the row data).
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last column is the result for that row):
 
-| extra | REGEXP_REPLACE(extra, '[0-9]', '#') |
+| extra | REGEXP_REPLACE(extra, '[0-9]', '#') | Notes |
+|---|---|---|
+| A3F19C27B4E0 | A#F##C##B#E# | every digit character replaced with '#' |
+| 8B2D4F90A1C3 | #B#D#F##A#C# | every digit character replaced with '#' |
+| C7E5A0D39F16 | C#E#A#D##F## | every digit character replaced with '#' |
+| ZK9M2Q7XVBT5 | ZK#M#Q#XVBT# | every digit character replaced with '#' |
+| D4C8B1E6A2F7 | D#C#B#E#A#F# | every digit character replaced with '#' |
+| 5F0A9D3C7E8B | #F#A#D#C#E#B | every digit character replaced with '#' |
+| ZZYYXXWWVVUU | ZZYYXXWWVVUU | contains no digits; returned unchanged |
+| E2B7F5A9C3D0 | E#B#F#A#C#D# | every digit character replaced with '#' |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| A3F19C27B4E0 | A#F##C##B#E# |
-| 8B2D4F90A1C3 | #B#D#F##A#C# |
-| C7E5A0D39F16 | C#E#A#D##F## |
-| ZK9M2Q7XVBT5 | ZK#M#Q#XVBT# |
-| D4C8B1E6A2F7 | D#C#B#E#A#F# |
-| 5F0A9D3C7E8B | #F#A#D#C#E#B |
-| ZZYYXXWWVVUU | ZZYYXXWWVVUU |
-| E2B7F5A9C3D0 | E#B#F#A#C#D# |
+| Parser recognition | the `REGEXP_REPLACE` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `REGEXP_REPLACE` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateRegexpReplace` (direct call to `SqlFunctionUtils`'s `regexpReplace`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `REGEXP_REPLACE` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.REGEXP_REPLACE` (FlinkSqlOperatorTable.java:468).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1167, registered under the name "regexpReplace", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `regexp_replace` (`velox/functions/prestosql/registration/StringFunctionsRegistration.cpp`).

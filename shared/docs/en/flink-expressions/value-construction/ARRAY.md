@@ -4,20 +4,26 @@ Category: [Value Construction](../index.md#value-construction) | Aliases: —
 
 ## Role and scenarios
 
-Array constructor `ARRAY[v1, v2, ...]`; the elements unify to a common element type. Bundling columns into one array value for downstream array functions.
+Array constructor: `ARRAY[v1, v2, ...]` unifies the elements into a common element type and produces an array value. Used to pack multiple columns into a single array value for downstream array functions.
 
 ## Usage
 
-Input: `ARRAY[v1, v2, ...]` — elements of a common type.
+Signature: `ARRAY[v1, v2, ...]` — constructor syntax, not an ordinary function call.
+
+| Parameter | Type | Description |
+|---|---|---|
+| v1, v2, ... | Any type | Array elements; must unify to a common element type |
+
+Return: ARRAY<T>; T is the common type of the elements.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ARRAY[bid.auction, bid.bidder, 99] FROM bid;
 ```
 
-Output: ARRAY<BIGINT>; `[auction, bidder, 99]` per row.
+Output: ARRAY<BIGINT>; each row is `[auction, bidder, 99]`.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data; leading columns are input columns, the last column is the result for that row):
 
 | auction | bidder | ARRAY[auction, bidder, 99] |
 |---|---|---|
@@ -30,12 +36,16 @@ Example (first 8 of the 16 source rows, illustrative; input columns followed by 
 | 11 | 11 | [11, 11, 99] |
 | 20 | 36 | [20, 36, 99] |
 
-## Pipeline
+## Source locations
 
-The route of `ARRAY` from SQL text to the executing operator (Flink 1.19.2):
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-1. **Parse** — ARRAY[..] constructor; no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:1963, registered under the name "array", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator's ARRAY_VALUE_CONSTRUCTOR case into a GenericArrayData build.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+| Stage | Location |
+|---|---|
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `ARRAY` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | inlined via the ARRAY_VALUE_CONSTRUCTOR branch of `ExprCodeGenerator` as `GenericArrayData` construction |
+
+## Velox implementation
+
+Velox already provides an implementation: the sparksql suite's `array` (`velox/functions/sparksql/registration/RegisterArray.cpp`) (the prestosql side also provides `array_constructor`).

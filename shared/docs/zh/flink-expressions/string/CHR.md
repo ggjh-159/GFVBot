@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-按Unicode码点生成单字符字符串。由数字构造控制或展示字符。
+按Unicode码点n生成对应的单字符字符串，用于由数字构造控制字符或展示字符。
 
 ## 用法
 
-输入：`CHR(n)`——n为INT；返回STRING。
+签名：`CHR(n)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| n | INT | Unicode码点 |
+
+返回：STRING；码点对应的单字符。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,16 +25,20 @@ SELECT auction, bidder, 0.908 * price + 10, CHR(65) FROM bid;
 
 示例（输入→输出）：
 
-| 输入 | 输出 |
-|---|
-| CHR(65) | A |
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| CHR(65) | A | 码点65对应字符'A' |
 
-## 实现链路
+## 源码位置
 
-`CHR`从SQL文本到执行算子的路径（Flink 1.19.2）：
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.CHR`（FlinkSqlOperatorTable.java:380）。
-2. **定义**——BuiltInFunctionDefinitions.java:1015处的注册条目，注册名`"chr"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | `FlinkSqlOperatorTable`的`CHR`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CHR`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateChr`（直调`SqlFunctionUtils`的`chr`） |
+
+## velox实现
+
+velox已有内建`chr`（`velox/functions/prestosql/registration/StringFunctionsRegistration.cpp`）。

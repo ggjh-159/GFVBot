@@ -4,31 +4,41 @@ Category: [Collection](../index.md#collection) | Aliases: —
 
 ## Role and scenarios
 
-Removes every occurrence of the value from the array. Blacklist filtering on tagged data.
+Removes from an array every element equal to the given value; the remaining elements keep their original order. Used for blacklist filtering on tagged data.
 
 ## Usage
 
-Input: `ARRAY_REMOVE(arr, v)` — arr ARRAY, v of the element type.
+Signature: `ARRAY_REMOVE(arr, v)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| arr | ARRAY<T> | The original array |
+| v | T | The value to remove, of the array element type |
+
+Return: ARRAY<T>; every occurrence of the matched value is removed.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, ARRAY_REMOVE(ARRAY[1,2,1], 1) FROM bid;
 ```
 
-Output: ARRAY<INT>; [2] on every row.
+Output: ARRAY<INT>; every row is [2].
 
-Example (input -> output):
+| Input | Output | Notes |
+|---|---|---|
+| ARRAY_REMOVE(ARRAY[1,2,1], 1) | [2] | Both occurrences of 1 are removed |
+| ARRAY_REMOVE(ARRAY[1,2], 9) | [1, 2] | The array is returned unchanged when the value is absent |
 
-| Input | Output |
-|---|
-| ARRAY_REMOVE(ARRAY[1,2,1], 1) | [2] |
+## Source locations
 
-## Pipeline
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
 
-The route of `ARRAY_REMOVE` from SQL text to the executing operator (Flink 1.19.2):
+| Stage | Location |
+|---|---|
+| Parser recognition | no dedicated operator-table entry; resolved via `FunctionCatalogOperatorTable` |
+| Definition and type inference | the `ARRAY_REMOVE` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | the `eval()` of `ArrayRemoveFunction` (flink-table-runtime, invoked via `BridgingSqlFunctionCallGen`) |
 
-1. **Parse** — function form; no dedicated FlinkSqlOperatorTable constant — the call is resolved through FunctionDefinitionOperatorTable, which adapts BuiltInFunctionDefinitions entries into SqlFunctions on the fly.
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:261, registered under the name "ARRAY_REMOVE", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — BridgingSqlFunctionCallGen invokes eval() on the table-runtime class scalar/ArrayRemoveFunction (flink-table-runtime, new-stack carrier).
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+## Velox implementation
+
+Velox already provides the builtin `array_remove` (`velox/functions/prestosql/registration/ArrayFunctionsRegistration.cpp`).

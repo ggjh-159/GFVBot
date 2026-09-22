@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-把map表示为ROW(key, value)对的数组。让map接入面向行的API。
+把map展开为ROW(key, value)对的数组，每个键值对对应结果数组中的一个元素。用于让map接入面向行的API。
 
 ## 用法
 
-输入：`MAP_ENTRIES(m)`——m为MAP；返回ARRAY<ROW<key, value>>。
+签名：`MAP_ENTRIES(m)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| m | MAP<K, V> | 待展开的map |
+
+返回：ARRAY<ROW<K, V>>；每个键值对展开为一个ROW(key, value)。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -17,18 +23,20 @@ SELECT auction, bidder, 0.908 * price + 10, MAP_ENTRIES(MAP['k1', 1]) FROM bid;
 
 输出：ARRAY<ROW<STRING, INT>>；每次调用得到一行(k1, 1)。
 
-示例（输入→输出）：
+| 输入 | 输出 | 说明 |
+|---|---|---|
+| MAP_ENTRIES(MAP['k1', 1]) | [(k1, 1)] | 键值对(k1, 1)展开为一个ROW |
 
-| 输入 | 输出 |
-|---|
-| MAP_ENTRIES(MAP['k1', 1]) | [(k1, 1)] |
+## 源码位置
 
-## 实现链路
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
-`MAP_ENTRIES`从SQL文本到执行算子的路径（Flink 1.19.2）：
+| 环节 | 位置 |
+|---|---|
+| 解析识别 | 无算子表专属条目，经`FunctionCatalogOperatorTable`适配 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`MAP_ENTRIES`条目（SCALAR） |
+| 求值逻辑 | `MapEntriesFunction`的`eval()`（flink-table-runtime，经`BridgingSqlFunctionCallGen`调用） |
 
-1. **解析**——函数形式，FlinkSqlOperatorTable无专属常量——调用经FunctionDefinitionOperatorTable解析，它把BuiltInFunctionDefinitions条目即时适配为SqlFunction。
-2. **定义**——BuiltInFunctionDefinitions.java:169处的注册条目，注册名`"MAP_ENTRIES"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经BridgingSqlFunctionCallGen调用table-runtime类scalar/MapEntriesFunction的eval()（flink-table-runtime，新栈载体）。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+## velox实现
+
+velox已有内建`map_entries`（`velox/functions/prestosql/registration/MapFunctionsRegistration.cpp`）。

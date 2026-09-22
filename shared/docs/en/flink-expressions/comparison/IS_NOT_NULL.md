@@ -4,38 +4,49 @@ Category: [Comparison](../index.md#comparison) | Aliases: —
 
 ## Role and scenarios
 
-The complement of IS NULL, likewise never returning UNKNOWN. Prefiltering rows before null-sensitive arithmetic or string functions.
+The complement of IS NULL, likewise never returning UNKNOWN. Use it to filter rows before NULL-sensitive arithmetic or string functions.
 
 ## Usage
 
-Input: `x IS NOT NULL` — any nullable type; the result itself is never NULL.
+Signature: `x IS NOT NULL` (postfix predicate form)
+
+| Parameter | Type | Description |
+|---|---|---|
+| x | Any nullable type | The value to test |
+
+Return: BOOLEAN; TRUE when x is non-NULL; the result itself is never NULL.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, (bid.auction IS NOT NULL) FROM bid;
 ```
 
-Output: BOOLEAN; true on every row here — `auction` is a NOT NULL column.
+Output: BOOLEAN; true on every row in this example — `auction` is a non-null column.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Example (first 8 rows of the 16-row source, illustrative data, with a final NULL-boundary row appended; leading columns are inputs, the last two are each row's result and notes):
 
-| auction | auction IS NOT NULL |
+| auction | auction IS NOT NULL | Notes |
+|---|---|---|
+| 3 | TRUE | Non-NULL value |
+| 19 | TRUE | Non-NULL value |
+| 8 | TRUE | Non-NULL value |
+| 1 | TRUE | Non-NULL value |
+| 14 | TRUE | Non-NULL value |
+| 7 | TRUE | Non-NULL value |
+| 11 | TRUE | Non-NULL value |
+| 20 | TRUE | Non-NULL value |
+| NULL | FALSE | NULL input yields FALSE; the result is never NULL |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| 3 | TRUE |
-| 19 | TRUE |
-| 8 | TRUE |
-| 1 | TRUE |
-| 14 | TRUE |
-| 7 | TRUE |
-| 11 | TRUE |
-| 20 | TRUE |
+| Parser recognition | The `IS_NOT_NULL` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | The `IS_NOT_NULL` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | Inlined by `ScalarOperatorGens` |
 
-## Pipeline
+## Velox implementation
 
-The route of `IS_NOT_NULL` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — postfix IS NOT NULL; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.IS_NOT_NULL` (FlinkSqlOperatorTable.java:1106).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:519, registered under the name "isNotNull", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — Inlined by ExprCodeGenerator into plain Java operator code (ScalarOperatorGens); no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides an implementation: the sparksql suite's `isnotnull` (`velox/functions/sparksql/registration/RegisterComparison.cpp`) (the prestosql side registers only `is_null`).

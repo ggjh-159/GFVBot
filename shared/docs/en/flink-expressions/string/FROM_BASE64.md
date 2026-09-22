@@ -4,38 +4,48 @@ Category: [String](../index.md#string) | Aliases: —
 
 ## Role and scenarios
 
-Decodes base64 text back into the original string. The inverse of TO_BASE64.
+Decodes the base64 text s back into the original string; it is the inverse of TO_BASE64.
 
 ## Usage
 
-Input: `FROM_BASE64(s)` — s of STRING; returns STRING.
+Signature: `FROM_BASE64(s)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING | base64-encoded text |
+
+Return: STRING; the original string restored by decoding.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, FROM_BASE64(TO_BASE64(bid.extra)) FROM bid;
 ```
 
-Output: STRING; round-trips back to `extra` itself per row.
+Output: STRING; restored to `extra` itself on every row.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last column is the result for that row):
 
-| extra | FROM_BASE64(TO_BASE64(extra)) |
+| extra | FROM_BASE64(TO_BASE64(extra)) | Notes |
+|---|---|---|
+| A3F19C27B4E0 | A3F19C27B4E0 | restored to the original string after the base64 encode-decode round trip |
+| 8B2D4F90A1C3 | 8B2D4F90A1C3 | restored to the original string after the base64 encode-decode round trip |
+| C7E5A0D39F16 | C7E5A0D39F16 | restored to the original string after the base64 encode-decode round trip |
+| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5 | restored to the original string after the base64 encode-decode round trip |
+| D4C8B1E6A2F7 | D4C8B1E6A2F7 | restored to the original string after the base64 encode-decode round trip |
+| 5F0A9D3C7E8B | 5F0A9D3C7E8B | restored to the original string after the base64 encode-decode round trip |
+| ZZYYXXWWVVUU | ZZYYXXWWVVUU | restored to the original string after the base64 encode-decode round trip |
+| E2B7F5A9C3D0 | E2B7F5A9C3D0 | restored to the original string after the base64 encode-decode round trip |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| A3F19C27B4E0 | A3F19C27B4E0 |
-| 8B2D4F90A1C3 | 8B2D4F90A1C3 |
-| C7E5A0D39F16 | C7E5A0D39F16 |
-| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5 |
-| D4C8B1E6A2F7 | D4C8B1E6A2F7 |
-| 5F0A9D3C7E8B | 5F0A9D3C7E8B |
-| ZZYYXXWWVVUU | ZZYYXXWWVVUU |
-| E2B7F5A9C3D0 | E2B7F5A9C3D0 |
+| Parser recognition | the `FROM_BASE64` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `FROM_BASE64` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateFromBase64` (direct call to `SqlFunctionUtils`'s `fromBase64`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `FROM_BASE64` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.FROM_BASE64` (FlinkSqlOperatorTable.java:731).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:991, registered under the name "fromBase64", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `from_base64` (`velox/functions/prestosql/registration/BinaryFunctionsRegistration.cpp`).

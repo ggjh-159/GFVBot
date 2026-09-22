@@ -4,11 +4,17 @@
 
 ## 定位与场景
 
-首字符的数字编码；空串得0。查看首字符用于路由或校验。
+返回字符串s首字符的数字编码，用于查看首字符的编码值以做路由或校验。s为空串时返回0。
 
 ## 用法
 
-输入：`ASCII(s)`——s为STRING；返回INT。
+签名：`ASCII(s)`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| s | STRING | 待取首字符编码的字符串 |
+
+返回：INT；首字符的数字编码；空串得0。
 
 ```sql
 -- 16行有界bid源：auction BIGINT、bidder BIGINT、price DECIMAL(10,2)、dateTime TIMESTAMP(3)、extra STRING
@@ -19,23 +25,28 @@ SELECT auction, bidder, 0.908 * price + 10, ASCII(bid.extra) FROM bid;
 
 示例（16行源的前8行，示意数据；前列为输入列，末列为该行结果）：
 
-| extra | ASCII(extra) |
+| extra | ASCII(extra) | 说明 |
+|---|---|---|
+| A3F19C27B4E0 | 65 | 首字符'A'的编码 |
+| 8B2D4F90A1C3 | 56 | 首字符'8'的编码 |
+| C7E5A0D39F16 | 67 | 首字符'C'的编码 |
+| ZK9M2Q7XVBT5 | 90 | 首字符'Z'的编码 |
+| D4C8B1E6A2F7 | 68 | 首字符'D'的编码 |
+| 5F0A9D3C7E8B | 53 | 首字符'5'的编码 |
+| ZZYYXXWWVVUU | 90 | 首字符'Z'的编码 |
+| E2B7F5A9C3D0 | 69 | 首字符'E'的编码 |
+| ''（空串） | 0 | 空串返回0 |
+
+## 源码位置
+
+GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
+
+| 环节 | 位置 |
 |---|---|
-| A3F19C27B4E0 | 65 |
-| 8B2D4F90A1C3 | 56 |
-| C7E5A0D39F16 | 67 |
-| ZK9M2Q7XVBT5 | 90 |
-| D4C8B1E6A2F7 | 68 |
-| 5F0A9D3C7E8B | 53 |
-| ZZYYXXWWVVUU | 90 |
-| E2B7F5A9C3D0 | 69 |
+| 解析识别 | `FlinkSqlOperatorTable`的`ASCII`条目 |
+| 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`ASCII`条目（SCALAR） |
+| 求值逻辑 | `StringCallGen`的`generateAscii`（内联`BinaryStringData`的`byteAt`） |
 
-## 实现链路
+## velox实现
 
-`ASCII`从SQL文本到执行算子的路径（Flink 1.19.2）：
-
-1. **解析**——函数形式，解析器产出SqlNode，算子锚点为`FlinkSqlOperatorTable.ASCII`（FlinkSqlOperatorTable.java:862）。
-2. **定义**——BuiltInFunctionDefinitions.java:1007处的注册条目，注册名`"ascii"`，kind为SCALAR；planner把解析出的调用绑定到该定义。
-3. **规划**——无专属改写；作为普通RexCall随通用规则移动——过滤/投影下推、CalcMergeRule，全字面量时被常量折叠（ExpressionReducer）。
-4. **代码生成**——经StringCallGen生成对BuiltInMethods/StringUtils的直调，无独立运行时类。
-5. **执行**——经Janino编译进消费ExecNode的算子：投影/过滤时就是StreamExecCalc生成的TableStreamOperator子类（CodeGenOperatorFactory），在processElement里逐行求值；出现在JOIN条件或聚合参数中时改在StreamExecJoin / StreamExecGroupAggregate的算子里执行。见[链路总览](../index.md#链路总览)。
+velox已有实现：sparksql套件的`ascii`（`velox/functions/sparksql/registration/RegisterString.cpp`）。

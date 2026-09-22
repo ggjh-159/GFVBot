@@ -4,38 +4,51 @@ Category: [String](../index.md#string) | Aliases: —
 
 ## Role and scenarios
 
-Pads s on the right with pad until it is exactly len characters; longer inputs are cut down to len.
+Pads s on the right with pad to exactly len characters; when s is longer than len characters the result is truncated to len characters. Used to format fixed-width codes and display columns.
 
 ## Usage
 
-Input: `RPAD(s, len, pad)` — len INT.
+Signature: `RPAD(s, len, pad)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| s | STRING | the original string |
+| len | INT | the result width |
+| pad | STRING | the string used for padding |
+
+Return: STRING; a result of width len; over-long input is truncated to len.
 
 ```sql
 -- 16-row bounded bid source: auction BIGINT, bidder BIGINT, price DECIMAL(10,2), dateTime TIMESTAMP(3), extra STRING
 SELECT auction, bidder, 0.908 * price + 10, RPAD(bid.extra, 15, '*') FROM bid;
 ```
 
-Output: STRING; width 15 — three '*' appended to `extra` per row.
+Output: STRING; width 15 — three '*' appended after `extra` on every row.
 
-Example (first 8 of the 16 source rows, illustrative; input columns followed by the result column):
+Examples (first 8 rows of the 16-row source, illustrative data; leading columns are the input columns, the last column is the result for that row):
 
-| extra | RPAD(extra, 15, '*') |
+| extra | RPAD(extra, 15, '*') | Notes |
+|---|---|---|
+| A3F19C27B4E0 | A3F19C27B4E0*** | three '*' padded on the right up to width 15 |
+| 8B2D4F90A1C3 | 8B2D4F90A1C3*** | three '*' padded on the right up to width 15 |
+| C7E5A0D39F16 | C7E5A0D39F16*** | three '*' padded on the right up to width 15 |
+| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5*** | three '*' padded on the right up to width 15 |
+| D4C8B1E6A2F7 | D4C8B1E6A2F7*** | three '*' padded on the right up to width 15 |
+| 5F0A9D3C7E8B | 5F0A9D3C7E8B*** | three '*' padded on the right up to width 15 |
+| ZZYYXXWWVVUU | ZZYYXXWWVVUU*** | three '*' padded on the right up to width 15 |
+| E2B7F5A9C3D0 | E2B7F5A9C3D0*** | three '*' padded on the right up to width 15 |
+| abcdefghijklmnopqrst (illustrative, 20 characters) | abcdefghijklmno | when the input exceeds len it is truncated to the first len=15 characters |
+
+## Source locations
+
+The Flink 1.19.2 source anchors to consult when implementing the velox side of this function in GFV:
+
+| Stage | Location |
 |---|---|
-| A3F19C27B4E0 | A3F19C27B4E0*** |
-| 8B2D4F90A1C3 | 8B2D4F90A1C3*** |
-| C7E5A0D39F16 | C7E5A0D39F16*** |
-| ZK9M2Q7XVBT5 | ZK9M2Q7XVBT5*** |
-| D4C8B1E6A2F7 | D4C8B1E6A2F7*** |
-| 5F0A9D3C7E8B | 5F0A9D3C7E8B*** |
-| ZZYYXXWWVVUU | ZZYYXXWWVVUU*** |
-| E2B7F5A9C3D0 | E2B7F5A9C3D0*** |
+| Parser recognition | the `RPAD` entry in `FlinkSqlOperatorTable` |
+| Definition and type inference | the `RPAD` entry in `BuiltInFunctionDefinitions` (SCALAR) |
+| Evaluation logic | `StringCallGen`'s `generateRpad` (direct call to `SqlFunctionUtils`'s `rpad`) |
 
-## Pipeline
+## Velox implementation
 
-The route of `RPAD` from SQL text to the executing operator (Flink 1.19.2):
-
-1. **Parse** — function form; the parser emits the SqlNode and the operator is anchored at `FlinkSqlOperatorTable.RPAD` (FlinkSqlOperatorTable.java:403).
-2. **Definition** — the BuiltInFunctionDefinitions entry at BuiltInFunctionDefinitions.java:962, registered under the name "rpad", kind SCALAR; the planner binds the parsed call to this definition.
-3. **Planning** — No dedicated rewrite; as a plain RexCall it moves with the generic rules — filter/project push-down, CalcMergeRule, constant folding (ExpressionReducer) when fully literal.
-4. **Codegen** — StringCallGen generates direct calls into BuiltInMethods/StringUtils helpers; no separate runtime class.
-5. **Execution** — compiled (Janino) into the operator of the consuming ExecNode: for a projection or filter, the TableStreamOperator subclass generated for StreamExecCalc (CodeGenOperatorFactory), evaluated per row in processElement; inside a join condition or aggregate argument it runs in the StreamExecJoin / StreamExecGroupAggregate operators instead. See [Pipeline overview](../index.md#pipeline-overview).
+Velox already provides the builtin `rpad` (`velox/functions/prestosql/registration/StringFunctionsRegistration.cpp`).
