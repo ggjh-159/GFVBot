@@ -3,8 +3,35 @@
   "description": "Operator development: planning, execution, state, and data structures of stateful operators",
   "description_zh": "算子开发：stateful算子的规划、执行、状态与数据结构",
   "workflow": "workflow.md",
-  "agents": [],
+  "agents": [
+    "stateful-operator-orchestrator",
+    "stateful-operator-architect",
+    "stateful-operator-developer",
+    "stateful-operator-reviewer",
+    "stateful-operator-verifier"
+  ],
   "skills": [],
   "docs": [],
-  "templates": []
+  "templates": [
+    "en/spec.md",
+    "zh/spec.md"
+  ],
+  "shared": {
+    "skills": [
+      "flink-velox-build",
+      "flink-velox-unit-test",
+      "flink-velox-docs-search",
+      "flink-velox-code-review"
+    ],
+    "docs": [
+      "en/nexmark-queries.md",
+      "zh/nexmark-queries.md",
+      "en/verification.md",
+      "zh/verification.md",
+      "en/architecture.md",
+      "zh/architecture.md",
+      "en/internals",
+      "zh/internals"
+    ]
+  }
 }
