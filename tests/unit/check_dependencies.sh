@@ -3,7 +3,8 @@
 #   1. plugins are mutually independent — no manifest references another plugin
 #   2. plugin-owned skill & agent names are globally unique across plugins
 #   3. shared/ never references plugin content
-#   4. every shared unit is referenced by >= 2 plugins
+#   4. every shared docs/templates unit is referenced by >= 2 plugins
+#      (skills are exempt: a shared skill may legitimately serve one plugin)
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -51,22 +52,20 @@ for kind in skills agents; do
 done
 
 # 3. shared/ must not reference plugin content
-if grep -rn --include='*.md' --include='*.json' --include='SKILL.md' 'plugins/' "$SHARED_DIR" 2>/dev/null | grep -v '\.gitkeep' | grep -q .; then
+if grep -rn --include='*.md' --include='*.json' --include='SKILL.md' 'plugins/' "$SHARED_DIR" 2>/dev/null | grep -q .; then
   fail "shared/ references plugins/ content"
 else
   pass "shared/ free of plugin references"
 fi
 
-# 4. shared units must be referenced by >= 2 plugins
-# skills are top-level directories; docs/templates units live one level below
-# the mirrored en/ zh/ language trees and carry the language segment in the
-# manifest entry (en/<name>, zh/<name>)
-for kind in skills docs templates; do
-  if [ "$kind" = skills ]; then
-    units=$(find "$SHARED_DIR/$kind" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' 2>/dev/null | LC_ALL=C sort)
-  else
-    units=$(find "$SHARED_DIR/$kind" -mindepth 2 -maxdepth 2 ! -name .gitkeep -printf '%P\n' 2>/dev/null | LC_ALL=C sort -u)
-  fi
+# 4. shared docs/templates units must be referenced by >= 2 plugins
+# skills are exempt from the >= 2 rule: a shared skill may serve a single
+# plugin, so forcing extra declarations only binds unimplemented plugins
+# units are declared by neutral name (the en/ zh/ trees pair content), so
+# enumeration is one level below shared/en/<kind>/ (zh twin parity is
+# check_language.sh's business)
+for kind in docs templates; do
+  units=$(find "$SHARED_DIR/en/$kind" -mindepth 1 -maxdepth 1 -printf '%P\n' 2>/dev/null | LC_ALL=C sort -u)
   while IFS= read -r u; do
     [ -n "$u" ] || continue
     refs=0

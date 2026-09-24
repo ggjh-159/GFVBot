@@ -56,6 +56,8 @@ gfvbot install stateful-operator-development
 
 将插件安装到当前项目——skills、参考文档与开发流程一并安装。不带`--tool`时交互式选择AI Agent，指定`--tool claude`可跳过交互。目前可选`claude`（Claude Code）与`opencode`；`codex`、`dsh`（DeepSeek Harness）适配器已就绪，待验证环境可用后开放。
 
+内容语言随输出语言（`gfvbot lang`），`--lang en|zh`可覆盖。安装后只落一种语言、项目内没有en/zh目录层，切换语言即重新安装覆盖。
+
 `gfvbot list`显示该插件已安装即表示成功。
 
 ### 第3步：克隆GFV源码仓

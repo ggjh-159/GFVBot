@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # check_language.sh — L1: content language policy.
-#   AI-facing content (workflow.md, agents/, skills/) must be English-only.
-#   Docs and templates are bilingual through mirrored en/ and zh/ directory
-#   trees: every markdown unit under en/ has its zh/ counterpart (on disk and
-#   in the manifest), the en/ side is English-only, and nothing lives directly
-#   under docs/ or templates/ outside the two language trees. Single files
-#   outside those trees (quickstart, prompt) keep the <base>.zh.md suffix
-#   pair, like the repo README.
+#
+#   Everything language-dependent lives in the top-level en/ and zh/ subtrees
+#   of each plugin (and of shared/): workflow, quickstart, prompt, agents,
+#   skills, docs, templates. The two subtrees are structurally mirrored —
+#   every file has a twin — the en/ subtree markdown is English-only, and
+#   non-markdown payload (bin/, scripts/) is byte-identical across twins
+#   (translation touches prose only). The plugin root carries only
+#   language-neutral entries: plugin.json, install.sh, evals/, en/, zh/.
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -19,69 +20,48 @@ SHARED_DIR="$ROOT/shared"
 # E3..EF; Latin typography like the em-dash lives at E2 and stays legal)
 has_cjk() { LC_ALL=C grep -q $'[\xe3-\xef]' "$1"; }
 
-check_english_tree() {  # <dir> <what>
-  local f
-  [ -d "$1" ] || return 0
-  while IFS= read -r f; do
-    if has_cjk "$f"; then
-      fail "CJK in $2: ${f#"$ROOT"/}"
-    else
-      pass "english-only $2: ${f#"$ROOT"/}"
-    fi
-  done < <(find "$1" -type f ! -name .gitkeep | LC_ALL=C sort)
-}
+# check_lang_subtrees <base> <what> — mirrored en/ zh/ subtrees under <base>
+check_lang_subtrees() {
+  local base=$1 what=$2
+  local f rel
+  [ -d "$base/en" ] || { fail "$what has no en/ subtree"; return; }
+  [ -d "$base/zh" ] || { fail "$what has no zh/ subtree"; return; }
 
-check_bilingual_tree() {  # <dir> <what> — a docs/ or templates/ directory
-  local f rel base="$1" what="$2"
-  [ -d "$base" ] || return 0
-
-  # nothing outside the two language trees, and no suffix-pair leftovers
-  while IFS= read -r f; do
-    case "$f" in
-      "$base/en/"*|"$base/zh/"*) : ;;
-      *) fail "$what outside en/ zh/ trees: ${f#"$ROOT"/}" ;;
-    esac
-  done < <(find "$base" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
+  # no suffix-pair leftovers: the trees replaced the <base>.zh.md convention
   while IFS= read -r f; do
     fail "suffix pair no longer used in $what (zh/ tree instead): ${f#"$ROOT"/}"
   done < <(find "$base" -type f -name '*.zh.md' | LC_ALL=C sort)
 
-  # en side: English-only, and every unit mirrored on disk under zh/
-  [ -d "$base/en" ] || return 0
+  # en side: markdown English-only; every file mirrored under zh/
   while IFS= read -r f; do
     rel="${f#"$base/en/"}"
-    if has_cjk "$f"; then
-      fail "CJK in $what en tree: ${f#"$ROOT"/}"
-    else
-      pass "english-only $what en: ${f#"$ROOT"/}"
-    fi
-    [ -f "$base/zh/$rel" ] \
-      && pass "$what zh mirror exists: $rel" \
-      || fail "$what missing zh mirror: ${f#"$ROOT"/}"
-  done < <(find "$base/en" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
+    case "$f" in
+      *.md)
+        if has_cjk "$f"; then
+          fail "CJK in $what en subtree: ${f#"$ROOT"/}"
+        else
+          pass "english-only $what en: ${f#"$ROOT"/}"
+        fi ;;
+    esac
+    [ -f "$base/zh/$rel" ] || fail "$what missing zh twin: ${f#"$ROOT"/}"
+  done < <(find "$base/en" -type f | LC_ALL=C sort)
 
   # zh side: no orphans
   while IFS= read -r f; do
     rel="${f#"$base/zh/"}"
-    [ -f "$base/en/$rel" ] \
-      || fail "$what zh unit without en mirror: ${f#"$ROOT"/}"
-  done < <(find "$base/zh" -type f -name '*.md' ! -name .gitkeep | LC_ALL=C sort)
-}
+    [ -f "$base/en/$rel" ] || fail "$what zh file without en twin: ${f#"$ROOT"/}"
+  done < <(find "$base/zh" -type f | LC_ALL=C sort)
 
-check_manifest_lang_mirror() {  # <manifest> <jq-field> <src-dir> <what>
-  local m="$1" field="$2" dir="$3" what="$4" u twin
-  while IFS= read -r u; do
-    [ -z "$u" ] && continue
-    case "$u" in
-      en/*) twin="zh/${u#en/}" ;;
-      zh/*) twin="en/${u#zh/}" ;;
-      *) fail "$what unit not under en/ or zh/: $u" ; continue ;;
-    esac
-    [ -e "$dir/$twin" ] || fail "$what twin missing on disk: $twin"
-    jq -e --arg t "$twin" "($field // []) | index(\$t) != null" "$m" >/dev/null \
-      && pass "$what twin declared: $twin" \
-      || fail "$what twin not declared in manifest: $twin"
-  done < <(jq -r "($field // []) | .[]" "$m")
+  # non-markdown payload: byte-identical across twins — executable content
+  # must not fork between languages
+  while IFS= read -r f; do
+    rel="${f#"$base/en/"}"
+    if [ -f "$base/zh/$rel" ] && cmp -s "$f" "$base/zh/$rel"; then
+      pass "$what non-md identical across twins: $rel"
+    else
+      fail "$what non-md missing or differs in zh twin: $rel"
+    fi
+  done < <(find "$base/en" -type f ! -name '*.md' | LC_ALL=C sort)
 }
 
 for d in "$PLUGINS_DIR"/*/; do
@@ -89,41 +69,38 @@ for d in "$PLUGINS_DIR"/*/; do
   echo "plugin: $p"
   m="$d/plugin.json"
 
-  # AI-facing content: English only
-  if [ -f "$d/workflow.md" ]; then
-    has_cjk "$d/workflow.md" && fail "CJK in workflow.md of $p" || pass "english-only: $p/workflow.md"
-  else
-    fail "workflow.md missing: $p"
-  fi
-  check_english_tree "$d/agents" "agents"
-  check_english_tree "$d/skills" "skills"
+  # plugin root whitelist: only language-neutral entries beside the trees
+  while IFS= read -r e; do
+    [ -z "$e" ] && continue
+    case "$e" in
+      plugin.json|install.sh|en|zh|evals) : ;;
+      *) fail "unexpected entry at plugin root: $p/$e" ;;
+    esac
+  done < <(ls -A "$d")
 
-  # bilingual trees: mirrored en/ zh/ directories, on disk and in the manifest
-  check_bilingual_tree "$d/docs" "docs"
-  check_bilingual_tree "$d/templates" "templates"
-  check_manifest_lang_mirror "$m" .docs "$d/docs" "plugin docs"
-  check_manifest_lang_mirror "$m" .templates "$d/templates" "plugin templates"
-  check_manifest_lang_mirror "$m" .shared.docs "$SHARED_DIR/docs" "shared docs"
-  check_manifest_lang_mirror "$m" .shared.templates "$SHARED_DIR/templates" "shared templates"
+  check_lang_subtrees "$d" "plugin $p"
 
-  # quickstart is human-facing: pair it when present
-  if [ -f "$d/quickstart.md" ]; then
-    [ -f "$d/quickstart.zh.md" ] \
-      && pass "quickstart bilingual pair: $p" \
-      || fail "quickstart missing quickstart.zh.md pair: $p"
-  fi
-
-  # task prompt is human-facing: pair it when present
-  if [ -f "$d/prompt.md" ]; then
-    [ -f "$d/prompt.zh.md" ] \
-      && pass "prompt bilingual pair: $p" \
-      || fail "prompt missing prompt.zh.md pair: $p"
-  fi
+  # agent bindings are neutral and identical across the en/ zh/ twins
+  while IFS= read -r a; do
+    [ -z "$a" ] && continue
+    [ -f "$d/en/agents/$a.md" ] && [ -f "$d/zh/agents/$a.md" ] || continue
+    for key in skills docs; do
+      en_b=$(fm_list "$d/en/agents/$a.md" "$key" | LC_ALL=C sort -u)
+      zh_b=$(fm_list "$d/zh/agents/$a.md" "$key" | LC_ALL=C sort -u)
+      [ "$en_b" = "$zh_b" ] \
+        || fail "agent $a $key bindings differ between en/ zh/ twins: $p"
+    done
+  done < <(jq -r '.agents[]? // empty' "$m")
 done
 
-# shared AI-facing content: English only
-check_english_tree "$SHARED_DIR/skills" "shared skills"
-check_bilingual_tree "$SHARED_DIR/docs" "shared docs"
-check_bilingual_tree "$SHARED_DIR/templates" "shared templates"
+# shared: mirrored subtrees; the shared root carries only en/ and zh/
+while IFS= read -r e; do
+  [ -z "$e" ] && continue
+  case "$e" in
+    en|zh) : ;;
+    *) fail "unexpected entry at shared root: shared/$e" ;;
+  esac
+done < <(ls -A "$SHARED_DIR")
+check_lang_subtrees "$SHARED_DIR" "shared"
 
 finish

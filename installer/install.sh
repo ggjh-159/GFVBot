@@ -3,7 +3,7 @@
 #
 # Usage:
 #   install.sh [--plugin <name>]... [--all] [--tool <claude|opencode>]
-#              [--target <dir>] [--dry-run] [--link]
+#              [--target <dir>] [--lang <en|zh>] [--dry-run] [--link]
 #   install.sh <plugin> [tool]      # positional shortcut (thin-entry style)
 #   install.sh                      # no args → interactive
 #
@@ -35,7 +35,7 @@ install.sh — GFVBot安装引擎（gfvbot install的后端）
 
 用法:
   install.sh [--plugin <name>]... [--all] [--tool <claude|opencode>]
-             [--target <dir>] [--dry-run] [--link]
+             [--target <dir>] [--lang <en|zh>] [--dry-run] [--link]
   install.sh <插件名> [AI Agent]  # 位置参数简写（薄入口风格）
   install.sh                      # 无参数 → 交互式选择
 EOF
@@ -63,6 +63,7 @@ while [ $# -gt 0 ]; do
     --all)     ALL=1; shift ;;
     --tool)    [ $# -ge 2 ] || die "$(t err_needs_value --tool)"; TOOL="$2"; shift 2 ;;
     --target)  [ $# -ge 2 ] || die "$(t err_needs_value --target)"; TARGET="$2"; shift 2 ;;
+    --lang)    [ $# -ge 2 ] || die "$(t err_needs_value --lang)"; CONTENT_LANG="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --link)    LINK_MODE=1; shift ;;
     -h|--help) usage ;;
@@ -77,6 +78,11 @@ while [ $# -gt 0 ]; do
       ;;
   esac
 done
+
+case "$CONTENT_LANG" in
+  en|zh) ;;
+  *) die "$(t err_bad_lang "$CONTENT_LANG")" ;;
+esac
 
 require_core_tools
 [ -d "$SHARED_DIR" ] || die "$(t err_shared_missing "$ROOT")"
@@ -124,44 +130,47 @@ validate_manifest() {
   [ -f "$m" ] || die "$(t err_manifest "$m")"
   [ "$(jq -r '.name' "$m")" = "$p" ] || die "$(t err_name_mismatch "$p")"
   [ "$(jq -r '.workflow' "$m")" = "workflow.md" ] || die "$(t err_workflow_field "$p")"
-  [ -f "$PLUGINS_DIR/$p/workflow.md" ] || die "$(t err_workflow_missing "$p")"
+  [ -f "$(workflow_src "$PLUGINS_DIR/$p")" ] || die "$(t err_workflow_missing "$p")"
   local u kind
   for u in $(jq -r '.agents[]? // empty' "$m"); do
-    check_unit "$PLUGINS_DIR/$p/agents/$u.md" "agent"
+    check_unit "$PLUGINS_DIR/$p/$CONTENT_LANG/agents/$u.md" "agent"
   done
   for u in $(jq -r '.skills[]? // empty' "$m"); do
-    check_unit "$PLUGINS_DIR/$p/skills/$u" "skill"
+    check_unit "$PLUGINS_DIR/$p/$CONTENT_LANG/skills/$u" "skill"
   done
   for u in $(jq -r '.docs[]? // empty' "$m"); do
-    check_unit "$PLUGINS_DIR/$p/docs/$u" "doc"
+    check_unit "$PLUGINS_DIR/$p/$CONTENT_LANG/docs/$u" "doc"
   done
   for u in $(jq -r '.templates[]? // empty' "$m"); do
-    check_unit "$PLUGINS_DIR/$p/templates/$u" "template"
+    check_unit "$PLUGINS_DIR/$p/$CONTENT_LANG/templates/$u" "template"
   done
   for kind in skills docs templates; do
     for u in $(jq -r ".shared.$kind[]? // empty" "$m"); do
-      check_unit "$SHARED_DIR/$kind/$u" "shared $kind"
+      check_unit "$SHARED_DIR/$CONTENT_LANG/$kind/$u" "shared $kind"
     done
   done
 }
 
 # ---------------------------------------------------------------------------
-# source fingerprint — plugin content (minus source-state files and evals)
-# plus declared shared units; any content change flips the record to UPDATE
+# source fingerprint — the entire content-language subtree of the plugin
+# (everything under plugins/<p>/<lang>/ minus the source-state files
+# quickstart/prompt that never land) plus the declared shared units of the
+# content language. Any content change — or a language switch — flips the
+# record to UPDATE, and stale cleanup then removes the previous language's
+# files.
 # ---------------------------------------------------------------------------
 fingerprint() {
   local p=$1
   local m="$PLUGINS_DIR/$p/plugin.json"
   local kind u
   {
-    find "$PLUGINS_DIR/$p" -type f \
-      ! -name install.sh ! -name quickstart.md ! -name quickstart.zh.md \
-      ! -name prompt.md ! -name prompt.zh.md ! -path '*/evals/*' \
+    find "$PLUGINS_DIR/$p/$CONTENT_LANG" -type f \
+      ! -name quickstart.md ! -name prompt.md \
       | LC_ALL=C sort | xargs -r sha256sum
     for kind in skills docs templates; do
       while IFS= read -r u; do
         [ -n "$u" ] || continue
-        find "$SHARED_DIR/$kind/$u" -type f 2>/dev/null \
+        find "$SHARED_DIR/$CONTENT_LANG/$kind/$u" -type f 2>/dev/null \
           | LC_ALL=C sort | xargs -r sha256sum
       done < <(jq -r ".shared.$kind[]? // empty" "$m")
     done
@@ -178,15 +187,17 @@ install_one() {
   local rec; rec=$(record_path "$TARGET" "$p" "$TOOL")
   local fp; fp=$(fingerprint "$p")
   local cur_link=false; [ -n "$LINK_MODE" ] && cur_link=true
-  local state=NEW old_entry=false
+  local state=NEW old_entry=false old_lang=""
   local old_files=()
 
   # records are keyed by plugin+tool: installing the same plugin under
   # another tool coexists; each record's lifecycle is independent
   if [ -f "$rec" ]; then
     old_entry=$(jq -r '.entry_created' "$rec")
+    old_lang=$(jq -r '.lang // ""' "$rec")
     if [ "$(jq -r '.fingerprint' "$rec")" = "$fp" ] \
-       && [ "$(jq -r '.link' "$rec")" = "$cur_link" ]; then
+       && [ "$(jq -r '.link' "$rec")" = "$cur_link" ] \
+       && [ "$old_lang" = "$CONTENT_LANG" ]; then
       ok "$(t msg_skip "$p")"
       return 0
     fi
@@ -194,9 +205,27 @@ install_one() {
     mapfile -t old_files < <(jq -r '.files[]' "$rec")
   fi
 
-  step "$(t step_install "$p" "$state" "$TOOL" "$TARGET")${LINK_MODE:+$(t link_mode_suffix)}"
+  step "$(t step_install "$p" "$state" "$TOOL" "$TARGET" "$CONTENT_LANG")${LINK_MODE:+$(t link_mode_suffix)}"
   ENTRY_CREATED=$old_entry
   INSTALLED_FILES=()
+
+  # language switch: the recorded files are ours, and their content is the
+  # other language's — remove them first so re-landing is a clean overwrite
+  # instead of a .gfvbot.bak backup per file
+  if [ "$state" = UPDATE ] && [ "$old_lang" != "$CONTENT_LANG" ]; then
+    local f
+    for f in "${old_files[@]:-}"; do
+      [ -n "$f" ] || continue
+      if [ -e "$f" ] || [ -L "$f" ]; then
+        if [ -n "$DRY_RUN" ]; then
+          echo "  $(t dry_remove_stale "$f")"
+        else
+          rm -rf "$f"
+        fi
+      fi
+    done
+  fi
+
   adapter_install "$p" "$m" "$TARGET"
 
   # stale cleanup: files landed by the previous install that this one no longer covers

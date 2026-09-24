@@ -56,6 +56,8 @@ gfvbot install stateful-operator-development
 
 Installs the plugin into the current project — its skills, its docs, and its development workflow. Without `--tool` it asks for the AI agent interactively; add `--tool claude` to skip the question. Selectable today: `claude` (Claude Code) and `opencode`; the `codex` and `dsh` (DeepSeek Harness) adapters are ready and open once verification environments are available.
 
+Content language follows the output language (`gfvbot lang`); override with `--lang en|zh`. Exactly one language lands — no en/zh layer inside the project — and switching language is a reinstall over the top.
+
 Done when `gfvbot list` shows the plugin as installed.
 
 ### Step 3: clone the GFV source repos
