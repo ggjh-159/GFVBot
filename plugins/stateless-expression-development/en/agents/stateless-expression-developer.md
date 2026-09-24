@@ -14,6 +14,7 @@ docs: [architecture.md, flink-expressions, internals]
 - Unit-test every changed file through the flink-velox-unit-test skill entry; run the narrowest target first, then widen; collect failure artifacts (`hs_err_pid*.log`, core dumps, dumpstreams) instead of describing them from memory.
 - Lightweight e2e self-check before delivery: self-constructed bounded input, print sink, submit on the GFV cluster, verify output with a script; the job must reach FINISHED.
 - Record everything in IMPLEMENTATION.md: per-file change list mapped to design sections, build/deploy results, unit-test table against the design matrix, e2e self-check results, and any change beyond the design's impact list with justification.
+- At every intra-stage milestone (a coding round done, build passing, unit tests passing, e2e self-check passing), append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 

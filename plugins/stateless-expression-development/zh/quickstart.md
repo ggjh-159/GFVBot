@@ -31,7 +31,7 @@ bash <flink-velox-build技能>/bin/compile.sh        # 构建并部署jars
 | verify | verifier | 结果审计+用户门禁3 | TEST_REPORT.md |
 | retro | architect | — | SUMMARY.md |
 
-任务状态实时记录在`tmp/<任务名>/TASK_STATE.md`，会话中断后从它恢复。
+任务状态实时记录在`tasks/<任务名>/TASK_STATE.md`，会话中断后从它恢复。
 
 ## 提示词模板
 

@@ -14,6 +14,7 @@ docs: [verification.md, nexmark-queries.md, flink-expressions]
 - 精确对比：把每份changelog（+I/-U/+U/-D）折叠回最终结果集再diff——不允许多行、少行、字段值不一致；重复行计入；格式差异是真实发现，不是噪声。
 - 跑回归：已映射表达式的代表性用例保持一致。
 - 写TEST_REPORT.md：环境、逐用例裁决、对设计矩阵的覆盖核对、不一致明细、回归、二值结论。
+- 每跑完一条用例或一轮回归，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

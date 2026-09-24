@@ -17,6 +17,7 @@ docs: [architecture.md, flink-expressions, internals]
   4. gluten映射设计：RexCallConverterFactory条目，直接名称映射还是自定义converter，调整逻辑写清楚。
   5. 单测覆盖矩阵、e2e覆盖矩阵（每用例一个SQL文件+固定输入）、特殊场景节、风险。
 - 每条设计断言保持可独立核查——reviewer会逐条重核。
+- 阶段内每到一个里程碑（读完卡片、对照表成形、矩阵成形），向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

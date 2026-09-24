@@ -17,6 +17,7 @@ docs: [architecture.md, flink-expressions, internals]
   4. Gluten mapping design: the RexCallConverterFactory entry, direct name mapping or custom converter with the adjustment logic spelled out.
   5. Unit-test coverage matrix, e2e coverage matrix (one SQL file + fixed input per case), special cases section, risks.
 - Keep every design claim individually checkable — the reviewer will re-verify each one.
+- At every intra-stage milestone (card read, comparison table shaped, matrices shaped), append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 

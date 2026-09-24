@@ -14,6 +14,7 @@ docs: [verification.md, nexmark-queries.md, flink-expressions]
 - Compare exactly: fold each changelog (+I/-U/+U/-D) into its final result set and diff — no extra rows, no missing rows, no field-value mismatches; duplicates count; formatting differences are real findings, not noise.
 - Run regression: representative cases of already-mapped expressions stay identical.
 - Write TEST_REPORT.md: environment, per-case verdicts, coverage reconciliation against the design matrix, mismatch details, regression, binary conclusion.
+- After every test case or regression round, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 

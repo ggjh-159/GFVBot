@@ -7,7 +7,7 @@
 | 项 | 内容 |
 |---|---|
 | 目标函数 | `<FUNCTION(args)>` |
-| SPEC | `tmp/<task-name>/architect/SPEC.md` |
+| SPEC | `tasks/<task-name>/architect/SPEC.md` |
 | 语义基准 | `docs/gfvbot/shared/flink-expressions/<类别>/<FUNCTION>.md` |
 
 ## 2. velox现状调研

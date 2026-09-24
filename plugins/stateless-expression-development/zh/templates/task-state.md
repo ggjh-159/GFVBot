@@ -16,28 +16,30 @@
 
 | 门禁 | 轮次 | 裁决 | 报告 | 日期 |
 |---|---|---|---|---|
-| 设计审计 | 1 | <通过/不通过/未开始> | `tmp/<task-name>/reviewer/DESIGN_AUDIT.md` | |
-| 代码审计 | 1 | <通过/不通过/未开始> | `tmp/<task-name>/reviewer/CODE_AUDIT.md` | |
-| 结果审计 | 1 | <通过/不通过/未开始> | `tmp/<task-name>/reviewer/RESULT_AUDIT.md` | |
-| 用户门禁1（设计后） | — | <已放行/未放行> | `tmp/<task-name>/USER_GATES.md` | |
-| 用户门禁2（代码交付前） | — | <已放行/未放行> | `tmp/<task-name>/USER_GATES.md` | |
-| 用户门禁3（验收后） | — | <已放行/未放行> | `tmp/<task-name>/USER_GATES.md` | |
+| 设计审计 | 1 | <通过/不通过/未开始> | `tasks/<task-name>/reviewer/DESIGN_AUDIT.md` | |
+| 代码审计 | 1 | <通过/不通过/未开始> | `tasks/<task-name>/reviewer/CODE_AUDIT.md` | |
+| 结果审计 | 1 | <通过/不通过/未开始> | `tasks/<task-name>/reviewer/RESULT_AUDIT.md` | |
+| 用户门禁1（设计后） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
+| 用户门禁2（代码交付前） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
+| 用户门禁3（验收后） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
 
 ## 产物索引
 
 ```
-tmp/<task-name>/
+tasks/<task-name>/
   TASK_STATE.md                 本文件：跨Agent共享状态锚点
   USER_GATES.md                 用户门禁决策点与用户答复的逐轮追加记录
+  PROGRESS.md                   阶段内进度心跳：owner逐里程碑追加一行（时间+agent+一句话）
   architect/    SPEC.md  DESIGN.md  SUMMARY.md
   developer/    IMPLEMENTATION.md  PR.md
   reviewer/     DESIGN_AUDIT.md  CODE_AUDIT.md  RESULT_AUDIT.md
   verifier/     TEST_REPORT.md
   upstream/                     社区issue/PR草稿（经用户确认后提交）
-  logs/                         临时产物（随时可清理，不作裁决依据）：cmd-outputs/  jobs/
+
+tmp/<task-name>/logs/           只放日志（随时可清理，不作裁决依据）：cmd-outputs/  jobs/
 ```
 
-项目根另有`e2e/{sql,data,out,verify}/`验证证据树——不在tmp下、任务结束保留，全量结果汇总在`e2e/verify/RESULTS.md`。
+项目根另有`e2e/{sql,data,out,verify}/`验证证据树——不在任务目录下、任务结束保留，全量结果汇总在`e2e/verify/RESULTS.md`。
 
 ## 快照与裁决惯例
 

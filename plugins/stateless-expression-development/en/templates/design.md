@@ -7,7 +7,7 @@
 | Item | Content |
 |---|---|
 | Target function | `<FUNCTION(args)>` |
-| SPEC | `tmp/<task-name>/architect/SPEC.md` |
+| SPEC | `tasks/<task-name>/architect/SPEC.md` |
 | Semantic baseline | `docs/gfvbot/shared/flink-expressions/<category>/<FUNCTION>.md` |
 
 ## 2. velox Status Survey

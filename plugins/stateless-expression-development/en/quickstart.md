@@ -31,7 +31,7 @@ A typical task — velox already has prestosql `upper`, but the iron rule requir
 | verify | verifier | result audit + user gate 3 | TEST_REPORT.md |
 | retro | architect | — | SUMMARY.md |
 
-Task state lives in `tmp/<task-name>/TASK_STATE.md`; recover from it after a session break.
+Task state lives in `tasks/<task-name>/TASK_STATE.md`; recover from it after a session break.
 
 ## Prompt Template
 

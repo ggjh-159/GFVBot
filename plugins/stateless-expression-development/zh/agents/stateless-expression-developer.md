@@ -14,6 +14,7 @@ docs: [architecture.md, flink-expressions, internals]
 - 每个改动文件的单测只走flink-velox-unit-test技能入口；先跑最窄目标再放宽；失败现场（`hs_err_pid*.log`、core dump、dumpstreams）落盘收集，不凭记忆描述。
 - 交付前轻量e2e自测：自构造有界输入、print sink、GFV集群提交、脚本核对输出；作业必须到FINISHED。
 - 一切记录进IMPLEMENTATION.md：逐文件改动清单对设计条目、构建部署结果、单测表对设计矩阵、e2e自测结果、超出设计影响清单的改动及理由。
+- 阶段内每到一个里程碑（编码完成一轮、构建通过、单测通过、e2e自测通过），向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

@@ -89,23 +89,29 @@ Forbidden: implementing before the design audit passes; running full e2e before 
 
 ## Artifact contract
 
-Task-scoped, shared-vs-agent vs transient (per the framework's runtime artifact layout):
+The artifacts under `tasks/<task-name>/` are the single source of truth shared across agents; a verbal conclusion does not exist until written into an artifact. Later stages read artifacts, not chat history.
 
-```
-tmp/<task-name>/
+```text
+tasks/<task-name>/
   TASK_STATE.md                  cross-agent state anchor
   USER_GATES.md                  per-round appended record of user-gate decision points and user replies
+  PROGRESS.md                    intra-stage progress heartbeat: one appended line per owner milestone (time + agent + one sentence)
   architect/    SPEC.md  DESIGN.md  SUMMARY.md
   developer/    IMPLEMENTATION.md  PR.md
   reviewer/     DESIGN_AUDIT.md  CODE_AUDIT.md  RESULT_AUDIT.md
   verifier/     TEST_REPORT.md
   upstream/     community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
-  logs/                          transient: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
+
+tmp/<task-name>/logs/            logs only: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
 ```
 
-The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out,verify}/`, not under tmp — the SQL expresses verification scope, the data is the fixed input, outputs and diffs are run evidence, and the whole tree accretes across tasks into a regression bank. The full-result rollup lives in `e2e/verify/RESULTS.md` (refreshed in place each round); TEST_REPORT only cites its paths and conclusions.
+The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out,verify}/`, not under the task directory — the SQL expresses verification scope, the data is the fixed input, outputs and diffs are run evidence, and the whole tree accretes across tasks into a regression bank. The full-result rollup lives in `e2e/verify/RESULTS.md` (refreshed in place each round); TEST_REPORT only cites its paths and conclusions.
 
-Verbal conclusions do not exist until written into an artifact. TASK_STATE.md is the single recovery anchor: updated after every stage and every gate verdict. Artifacts are snapshots: rework refreshes existing files in place, and when the described object has changed (code rolled back and relanded, scope redefined) the affected artifacts must be refreshed before the next gate. Build/test command outputs are redirected into `logs/cmd-outputs/`, job submissions and crash captures into `logs/jobs/`; reports cite those paths as evidence, but logs themselves never decide a gate.
+TASK_STATE.md is the single recovery anchor: updated after every stage and every gate verdict. Artifacts are snapshots: rework refreshes existing files in place, and when the described object has changed (code rolled back and relanded, scope redefined) the affected artifacts must be refreshed before the next gate.
+
+Progress tracking: at every milestone (key references read, a section drafted, a build finished) the owner agent appends one line to `PROGRESS.md`: time, agent, one sentence. At dispatch the orchestrator says who takes the stage and what artifact to expect; when the owner returns it reports the outcome immediately and updates TASK_STATE.md; when PROGRESS.md stays silent too long it checks the artifacts and run records and re-dispatches if needed — progress awareness is the orchestrator's duty, not the user's. The user can `tail -f tasks/<task-name>/PROGRESS.md` at any time.
+
+Build/test command outputs are redirected into `tmp/<task-name>/logs/cmd-outputs/`, job submissions and crash captures into `tmp/<task-name>/logs/jobs/`; reports cite those paths as evidence, but logs themselves are transient — cleanable anytime, never deciding a gate.
 
 ## User gates
 

@@ -89,23 +89,29 @@ architect归档：SUMMARY.md（交付了什么、与设计的偏差、遗留问�
 
 ## 产物契约
 
-按任务组织、跨Agent共享与临时分层（框架运行时产物布局）：
+`tasks/<task-name>/`下的产物是跨Agent的唯一事实来源；口头结论不落产物即不存在。后序阶段读产物，不读聊天记录。
 
-```
-tmp/<task-name>/
+```text
+tasks/<task-name>/
   TASK_STATE.md                  跨Agent状态锚点
   USER_GATES.md                  用户门禁决策点与用户答复的逐轮追加记录
+  PROGRESS.md                    阶段内进度心跳：owner逐里程碑追加一行（时间+agent+一句话）
   architect/    SPEC.md  DESIGN.md  SUMMARY.md
   developer/    IMPLEMENTATION.md  PR.md
   reviewer/     DESIGN_AUDIT.md  CODE_AUDIT.md  RESULT_AUDIT.md
   verifier/     TEST_REPORT.md
   upstream/     社区issue/PR草稿（按shared upstream-contribution模板，经用户确认后提交）
-  logs/                          临时产物：cmd-outputs/  jobs/——不作门禁依据，随时可清理
+
+tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作门禁依据，随时可清理
 ```
 
-e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在tmp下——SQL表达验证范围、数据是固定输入、输出与对比是运行证据，跨任务沉淀为回归用例库；全量结果汇总在`e2e/verify/RESULTS.md`（每轮原地刷新），TEST_REPORT只引用其路径与结论。
+e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录下——SQL表达验证范围、数据是固定输入、输出与对比是运行证据，跨任务沉淀为回归用例库；全量结果汇总在`e2e/verify/RESULTS.md`（每轮原地刷新），TEST_REPORT只引用其路径与结论。
 
-口头结论不落产物即不存在。TASK_STATE.md是唯一的恢复锚点：每次阶段流转与门禁裁决后更新。产物是快照：返工原地刷新既有文件，描述对象变了（代码回退重落、口径变更）须先刷新受影响产物再进下一门禁。构建/测试命令输出重定向进`logs/cmd-outputs/`，作业提交与崩溃现场进`logs/jobs/`；报告引用这些路径作为依据，但logs本身不裁决门禁。
+TASK_STATE.md是唯一的恢复锚点：每次阶段流转与门禁裁决后更新。产物是快照：返工原地刷新既有文件，描述对象变了（代码回退重落、口径变更）须先刷新受影响产物再进下一门禁。
+
+进度跟进：owner agent每到一个里程碑（读完关键参考、草拟完一节、跑完一轮构建）向`PROGRESS.md`追加一行：时间、agent、一句话。orchestrator派发时说明交给谁、预期产出什么，owner返回后立即汇报并更新TASK_STATE.md；PROGRESS.md长时间静默时主动核查、必要时重派——进展感知是协调者的职责，不是用户的。用户随时`tail -f tasks/<task-name>/PROGRESS.md`感知进展。
+
+构建/测试命令输出重定向进`tmp/<task-name>/logs/cmd-outputs/`，作业提交与崩溃现场进`tmp/<task-name>/logs/jobs/`；报告引用这些路径作为依据，但logs本身是临时产物——随时可清理，不裁决门禁。
 
 ## 用户门禁
 
