@@ -5,8 +5,8 @@
   "workflow": "workflow.md",
   "agents": ["stateful-operator-reviewer"],
   "skills": ["stateful-operator-codegen"],
-  "docs": ["en/stateful-arch.md", "zh/stateful-arch.md"],
-  "templates": ["en/spec.md", "zh/spec.md"],
+  "docs": ["stateful-arch.md"],
+  "templates": ["spec.md"],
   "shared": {
     "skills": ["flink-velox-build"]
   }

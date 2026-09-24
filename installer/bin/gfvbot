@@ -22,7 +22,7 @@ usage() {
 gfvbot — GFVBot插件安装器
 
 用法:
-  gfvbot install <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run] [--link]
+  gfvbot install <插件名>... [--tool <claude|opencode>] [--target <dir>] [--lang <en|zh>] [--dry-run] [--link]
   gfvbot install --all [同上参数]
   gfvbot uninstall <插件名>... [--tool <claude|opencode>] [--target <dir>] [--dry-run]
                    （装载多个Agent时不带--tool会交互勾选要卸载哪些）
@@ -35,7 +35,9 @@ gfvbot — GFVBot插件安装器
   gfvbot completion bash|zsh
 
 命令:
-  install      安装插件到目标项目。不带--tool时交互选择AI Agent；--target缺省为当前目录
+  install      安装插件到目标项目。不带--tool时交互选择AI Agent；--target缺省为当前目录；
+               --lang选择安装内容语言（缺省为输出语言），安装后仅落一种语言、无en/zh目录层，
+               切换语言重跑install覆盖
   uninstall    卸载已安装的插件。不带--tool时卸载该插件在全部AI Agent下的安装
   prompt       打印插件的任务prompt模板；--task加--tool时调用AI Agent生成填好的完整prompt；--file把结果写入文件
   env          检查构建依赖与AI Agent环境并归档到目标项目.gfvbot/env.json；有缺失时转交对应OS的安装脚本补齐
@@ -51,6 +53,7 @@ gfvbot — GFVBot插件安装器
 
 参数:
   --tool <name>    指定AI Agent（claude、opencode）
+  --lang <en|zh>   安装内容语言，缺省为输出语言（en/zh），仅install支持
   --target <dir>   目标项目目录，缺省为当前目录
   --task <text>    任务的一句话描述，生成prompt时必填
   --file <path>    把任务prompt输出写入文件，缺省打印到stdout
@@ -65,7 +68,7 @@ EOF
 gfvbot — GFVBot plugin installer
 
 Usage:
-  gfvbot install <plugin>... [--tool <claude|opencode>] [--target <dir>] [--dry-run] [--link]
+  gfvbot install <plugin>... [--tool <claude|opencode>] [--target <dir>] [--lang <en|zh>] [--dry-run] [--link]
   gfvbot install --all [same flags]
   gfvbot uninstall <plugin>... [--tool <claude|opencode>] [--target <dir>] [--dry-run]
                    (installs under several agents without --tool get an interactive tick-list)
@@ -80,7 +83,10 @@ Usage:
 Commands:
   install      Install plugins into a target project. Prompts for the AI
                agent when --tool is omitted; --target defaults to the
-               current directory.
+               current directory. --lang picks the content language
+               (defaults to the output language); exactly one language
+               lands, with no en/zh directory layer — switching language
+               is a reinstall over the top.
   uninstall    Remove installed plugins. Without --tool, the installs under
                every AI agent are removed.
   prompt       Print the plugin's task prompt template; with --task and
@@ -107,6 +113,8 @@ Commands:
 
 Flags:
   --tool <name>    AI agent to install for / uninstall from (claude, opencode)
+  --lang <en|zh>   Content language for install; defaults to the output
+                   language (en/zh); install only
   --target <dir>   Target project directory; defaults to the current directory
   --task <text>    One-line task description; required for generation
   --file <path>    Write the task prompt to a file; defaults to stdout
@@ -145,8 +153,7 @@ cmd_prompt() {
   fi
   local dir="$ROOT/plugins/$p"
   [ -d "$dir" ] || { echo "$(t err_unknown_arg "$p")" >&2; exit 1; }
-  local f="$dir/prompt.md"
-  [ "$T_LANG" = zh ] && [ -f "$dir/prompt.zh.md" ] && f="$dir/prompt.zh.md"
+  local f="$dir/$T_LANG/prompt.md"
   [ -f "$f" ] || { echo "$(t err_no_prompt "$p")" >&2; exit 1; }
 
   local result
@@ -326,9 +333,12 @@ _gfvbot() {
     --plugin)
       COMPREPLY=($(compgen -W "$(ls '__ROOT__/plugins' 2>/dev/null)" -- "$cur"))
       return ;;
+    --lang)
+      COMPREPLY=($(compgen -W "en zh" -- "$cur"))
+      return ;;
   esac
   if [[ "$cur" == -* ]]; then
-    COMPREPLY=($(compgen -W "--tool --target --plugin --all --dry-run --link --shallow --fork --help" -- "$cur"))
+    COMPREPLY=($(compgen -W "--tool --target --plugin --lang --all --dry-run --link --shallow --fork --help" -- "$cur"))
     return
   fi
   case "$cmd" in

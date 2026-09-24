@@ -9,7 +9,8 @@
 #
 # Sequence: repo copy + fixtures → L1 → dry-run → install A → install B →
 # idempotent reinstall → source-update reinstall → uninstall A (shared kept) →
-# uninstall B (territory reclaim, zero residue) → pre-existing CLAUDE.md case.
+# uninstall B (territory reclaim, zero residue) → pre-existing CLAUDE.md case →
+# opencode lifecycle → language-switch reinstall → multi-tool coexistence.
 
 set -u
 export GFVBOT_LANG=en   # assertions grep English messages; keep them stable
@@ -55,11 +56,16 @@ else
   bad "L1 fails on fixture-loaded copy"
 fi
 
-# --- dry-run must not touch the target --------------------------------------
+# --- dry-run must not touch the target (both content languages) -------------
 a "dry-run: clean target" bash -c "
   TMP=\$(mktemp -d '$SANDBOX'/dry.XXXX) &&
   bash '$COPY/installer/install.sh' --plugin stateful-operator-development \
        --tool claude --target \"\$TMP\" --dry-run >/dev/null 2>&1 &&
+  [ -z \"\$(ls -A \"\$TMP\")\" ]"
+a "dry-run zh: clean target" bash -c "
+  TMP=\$(mktemp -d '$SANDBOX'/dryzh.XXXX) &&
+  bash '$COPY/installer/install.sh' --plugin stateful-operator-development \
+       --tool claude --target \"\$TMP\" --dry-run --lang zh >/dev/null 2>&1 &&
   [ -z \"\$(ls -A \"\$TMP\")\" ]"
 
 # --- first install via the thin entry (explicit --target) -------------------
@@ -71,10 +77,11 @@ a "install A: anchor exact" anchor_ok
 a "install A: record exists" test -f "$T/.gfvbot/records/stateful-operator-development.claude.json"
 a "install A: shared skill landed" test -f "$T/.claude/skills/flink-velox-build/SKILL.md"
 a "install A: agent landed" test -f "$T/.claude/agents/stateful-operator-reviewer.md"
-a "install A: docs en landed" test -f "$T/docs/gfvbot/stateful-operator-development/en/stateful-arch.md"
-a "install A: docs zh landed" test -f "$T/docs/gfvbot/stateful-operator-development/zh/stateful-arch.md"
-a "install A: templates en landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/en/spec.md"
-a "install A: templates zh landed" test -f "$T/docs/gfvbot/stateful-operator-development/templates/zh/spec.md"
+a "install A: docs landed at neutral path" test -f "$T/docs/gfvbot/stateful-operator-development/stateful-arch.md"
+a "install A: docs content is the en side" grep -q 'E2E FIXTURE' "$T/docs/gfvbot/stateful-operator-development/stateful-arch.md"
+a "install A: no language layer in landing" test ! -e "$T/docs/gfvbot/stateful-operator-development/en"
+a "install A: templates landed at neutral path" test -f "$T/docs/gfvbot/stateful-operator-development/templates/spec.md"
+a "install A: record lang=en" bash -c "jq -e '.lang==\"en\"' '$T/.gfvbot/records/stateful-operator-development.claude.json'"
 
 # --- second plugin: shared dedup, index sections, anchor stable -------------
 bash "$COPY/installer/install.sh" --plugin performance-optimization --tool claude --target "$T" >/dev/null 2>&1
@@ -87,7 +94,7 @@ bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool 
   | grep -q 'already installed' && ok "reinstall: skip" || bad "reinstall: skip"
 
 # --- source update → UPDATE path, markers survive section replace ------------
-echo "e2e-update-marker" >> "$COPY/plugins/performance-optimization/workflow.md"
+echo "e2e-update-marker" >> "$COPY/plugins/performance-optimization/en/workflow.md"
 bash "$COPY/installer/install.sh" --plugin performance-optimization --tool claude --target "$T" >/dev/null 2>&1
 a "update: anchor exact after section replace" anchor_ok
 a "update: new content in index" grep -q '^e2e-update-marker$' "$T/.claude/gfvbot/index.md"
@@ -125,6 +132,20 @@ a "opencode: agent landed" test -f "$TO/.opencode/agents/performance-reviewer.md
 a "opencode: AGENTS.md anchor carries index copy" grep -q 'gfvbot:plugin:performance-optimization' "$TO/AGENTS.md"
 bash "$COPY/installer/uninstall.sh" performance-optimization --target "$TO" >/dev/null 2>&1
 a "opencode: reclaim zero residue" bash -c "[ -z \"\$(ls -A '$TO')\" ]"
+
+# --- language switch: reinstall in another language overwrites in place -------
+TL="$SANDBOX/target-langswitch"
+mkdir -p "$TL"
+bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TL" >/dev/null 2>&1
+a "langswitch: en agent body landed by default" grep -q 'fixture agent body (en)' "$TL/.claude/agents/stateful-operator-reviewer.md"
+bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TL" --lang zh >/dev/null 2>&1
+a "langswitch: zh agent body replaced en" bash -c "grep -q '（中文版）' '$TL/.claude/agents/stateful-operator-reviewer.md'"
+a "langswitch: zh doc content replaced" bash -c "grep -q '（中文版）' '$TL/docs/gfvbot/stateful-operator-development/stateful-arch.md'"
+a "langswitch: landing path still neutral" test -f "$TL/docs/gfvbot/stateful-operator-development/stateful-arch.md"
+a "langswitch: record lang=zh" bash -c "jq -e '.lang==\"zh\"' '$TL/.gfvbot/records/stateful-operator-development.claude.json'"
+a "langswitch: no backup litter from the switch" bash -c "! find '$TL' -name '*.gfvbot.bak.*' | grep -q ."
+bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TL" --lang zh 2>&1 \
+  | grep -q 'already installed' && ok "langswitch: same-lang reinstall skips" || bad "langswitch: same-lang reinstall skips"
 
 # --- multi-tool coexistence: one plugin under claude AND opencode --------------
 TM="$SANDBOX/target-multi"

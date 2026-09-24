@@ -13,25 +13,24 @@
   "skills": [],
   "docs": [],
   "templates": [
-    "en/spec.md",
-    "zh/spec.md"
+    "spec.md"
   ],
   "shared": {
     "skills": [
       "flink-velox-build",
       "flink-velox-unit-test",
       "flink-velox-docs-search",
-      "flink-velox-code-review"
+      "flink-velox-code-review",
+      "flink-velox-e2e-verify"
     ],
     "docs": [
-      "en/nexmark-queries.md",
-      "zh/nexmark-queries.md",
-      "en/verification.md",
-      "zh/verification.md",
-      "en/architecture.md",
-      "zh/architecture.md",
-      "en/internals",
-      "zh/internals"
+      "nexmark-queries.md",
+      "verification.md",
+      "architecture.md",
+      "internals"
+    ],
+    "templates": [
+      "upstream-contribution"
     ]
   }
 }

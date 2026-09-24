@@ -6,6 +6,26 @@
 . "$(dirname "${BASH_SOURCE[0]}")/i18n.sh"
 
 # ---------------------------------------------------------------------------
+# content language — which language subtree of the bilingual source lands in
+# the target project. Source layout: plugins/<p>/{en,zh}/... and
+# shared/{en,zh}/... with everything language-dependent inside the subtree.
+# Defaults to the UI language chain (GFVBOT_LANG > configs > locale);
+# install.sh --lang overrides. Only one language ever lands and the
+# installed tree carries no en/ zh/ layer; switching language means
+# reinstalling (the fingerprint is per-language, so the reinstall takes the
+# UPDATE path and stale cleanup removes the other language's files).
+# ---------------------------------------------------------------------------
+CONTENT_LANG="${CONTENT_LANG:-$T_LANG}"
+case "$CONTENT_LANG" in
+  zh*) CONTENT_LANG=zh ;;
+  *)   CONTENT_LANG=en ;;
+esac
+
+workflow_src() {  # <plugin_dir> → the workflow file of the content language
+  printf '%s' "$1/$CONTENT_LANG/workflow.md"
+}
+
+# ---------------------------------------------------------------------------
 # logging
 # ---------------------------------------------------------------------------
 ok()   { printf '  \033[32m✔\033[0m %s\n' "$*"; }
@@ -614,7 +634,7 @@ gen_index_section() {
   {
     echo "## Plugin: ${plugin}"
     echo
-    cat "$plugin_dir/workflow.md"
+    cat "$(workflow_src "$plugin_dir")"
     if [ "$mode" = "with_agents" ]; then
       local agent
       while IFS= read -r agent; do
@@ -622,7 +642,7 @@ gen_index_section() {
         echo
         echo "### Agent: ${agent}"
         echo
-        cat "$plugin_dir/agents/${agent}.md"
+        cat "$plugin_dir/$CONTENT_LANG/agents/${agent}.md"
       done < <(jq -r '.agents[]? // empty' "$plugin_dir/plugin.json")
     fi
   } > "$out"
@@ -655,26 +675,27 @@ ensure_index() {
 #   plugin-owned : docs/gfvbot/<plugin>/<unit>
 #   shared       : docs/gfvbot/shared/<unit>            (docs)
 #                  docs/gfvbot/shared/templates/<unit>  (templates)
+# The source unit lives under the content-language tree
+# (<plugin>/<lang>/docs/<unit>, shared/<lang>/docs/<unit>); the language
+# prefix is stripped on landing, so the installed tree has no en/ zh/ layer.
+# Relative links between units survive because every unit loses the same
+# prefix level.
 # Reference-counted on uninstall via shared_refs in the install record.
 # ---------------------------------------------------------------------------
 install_docs_templates() {
   local plugin=$1 manifest=$2 target=$3
   local unit
   while IFS= read -r unit; do
-    [ -z "$unit" ] && continue
-    idem_install "$PLUGINS_DIR/$plugin/docs/$unit" "$target/docs/gfvbot/$plugin/$unit"
+    [ -z "$unit" ] || idem_install "$PLUGINS_DIR/$plugin/$CONTENT_LANG/docs/$unit" "$target/docs/gfvbot/$plugin/$unit"
   done < <(jq -r '.docs[]? // empty' "$manifest")
   while IFS= read -r unit; do
-    [ -z "$unit" ] && continue
-    idem_install "$PLUGINS_DIR/$plugin/templates/$unit" "$target/docs/gfvbot/$plugin/templates/$unit"
+    [ -z "$unit" ] || idem_install "$PLUGINS_DIR/$plugin/$CONTENT_LANG/templates/$unit" "$target/docs/gfvbot/$plugin/templates/$unit"
   done < <(jq -r '.templates[]? // empty' "$manifest")
   while IFS= read -r unit; do
-    [ -z "$unit" ] && continue
-    idem_install "$SHARED_DIR/docs/$unit" "$target/docs/gfvbot/shared/$unit"
+    [ -z "$unit" ] || idem_install "$SHARED_DIR/$CONTENT_LANG/docs/$unit" "$target/docs/gfvbot/shared/$unit"
   done < <(jq -r '.shared.docs[]? // empty' "$manifest")
   while IFS= read -r unit; do
-    [ -z "$unit" ] && continue
-    idem_install "$SHARED_DIR/templates/$unit" "$target/docs/gfvbot/shared/templates/$unit"
+    [ -z "$unit" ] || idem_install "$SHARED_DIR/$CONTENT_LANG/templates/$unit" "$target/docs/gfvbot/shared/templates/$unit"
   done < <(jq -r '.shared.templates[]? // empty' "$manifest")
 }
 
@@ -706,6 +727,7 @@ record_write() {
   jq -n \
     --arg plugin "$plugin" \
     --arg tool "$tool" \
+    --arg lang "$CONTENT_LANG" \
     --argjson link "$link_flag" \
     --argjson files "$files_json" \
     --argjson shared "$shared_json" \
@@ -714,7 +736,7 @@ record_write() {
     --arg fingerprint "${FINGERPRINT:-}" \
     --arg installed_at "$(date -Iseconds)" \
     --arg version "1" \
-    '{plugin: $plugin, tool: $tool, link: $link, files: $files, shared_refs: $shared,
+    '{plugin: $plugin, tool: $tool, lang: $lang, link: $link, files: $files, shared_refs: $shared,
       snapshot: $snapshot, entry_created: $entry_created, fingerprint: $fingerprint,
       installed_at: $installed_at, record_version: $version}' \
     > "$rec"

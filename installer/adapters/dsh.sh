@@ -17,10 +17,10 @@ adapter_install() {
   local u
 
   while IFS= read -r u; do
-    [ -n "$u" ] && idem_install "$PLUGINS_DIR/$p/skills/$u" "$t/.agents/skills/$u"
+    [ -n "$u" ] && idem_install "$PLUGINS_DIR/$p/$CONTENT_LANG/skills/$u" "$t/.agents/skills/$u"
   done < <(jq -r '.skills[]? // empty' "$m")
   while IFS= read -r u; do
-    [ -n "$u" ] && idem_install "$SHARED_DIR/skills/$u" "$t/.agents/skills/$u"
+    [ -n "$u" ] && idem_install "$SHARED_DIR/$CONTENT_LANG/skills/$u" "$t/.agents/skills/$u"
   done < <(shared_skills "$m")
 
   install_docs_templates "$p" "$m" "$t"

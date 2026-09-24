@@ -33,10 +33,10 @@ adapter_install() {
   local u
 
   while IFS= read -r u; do
-    [ -n "$u" ] && codex_skill_install "$PLUGINS_DIR/$p/skills/$u" "$t/.codex/prompts/$u.md"
+    [ -n "$u" ] && codex_skill_install "$PLUGINS_DIR/$p/$CONTENT_LANG/skills/$u" "$t/.codex/prompts/$u.md"
   done < <(jq -r '.skills[]? // empty' "$m")
   while IFS= read -r u; do
-    [ -n "$u" ] && codex_skill_install "$SHARED_DIR/skills/$u" "$t/.codex/prompts/$u.md"
+    [ -n "$u" ] && codex_skill_install "$SHARED_DIR/$CONTENT_LANG/skills/$u" "$t/.codex/prompts/$u.md"
   done < <(shared_skills "$m")
 
   install_docs_templates "$p" "$m" "$t"
