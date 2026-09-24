@@ -47,22 +47,10 @@ bash installer/setup.sh
 
 Installs the `gfvbot` command-line tool. Done when `gfvbot help` prints the command list.
 
-### Step 2: install a scenario plugin
+### Step 2: clone the GFV source repos
 
 ```bash
 cd /path/to/gfv      # the target project root; run all further commands from here
-gfvbot install stateful-operator-development
-```
-
-Installs the plugin into the current project — its skills, its docs, and its development workflow. Without `--tool` it asks for the AI agent interactively; add `--tool claude` to skip the question. Selectable today: `claude` (Claude Code) and `opencode`; the `codex` and `dsh` (DeepSeek Harness) adapters are ready and open once verification environments are available.
-
-Content language follows the output language (`gfvbot lang`); override with `--lang en|zh`. Exactly one language lands — no en/zh layer inside the project — and switching language is a reinstall over the top.
-
-Done when `gfvbot list` shows the plugin as installed.
-
-### Step 3: clone the GFV source repos
-
-```bash
 gfvbot clone
 ```
 
@@ -77,16 +65,28 @@ Clones the four source repos under `repos/`, giving every machine the same works
 
 Useful flags: `--fork <user>` clones velox/velox4j/gluten from your forks (same branches; flink always official), `--shallow` = `--depth 1`, or name repos to clone a subset (`gfvbot clone velox velox4j`). Existing repos are skipped; after cloning, version control is plain git.
 
-### Step 4: scan the environment and fill the gaps
+### Step 3: scan the environment and fill the gaps
 
 ```bash
 gfvbot env          # scan dependencies, archive to .gfvbot/env.json
 gfvbot env-init     # tick-list install of whatever is missing
 ```
 
-`env` probes build tools, JDK, Maven, the flink/nexmark stack, locally available AI agent CLIs, and machine facts. `env-init` opens the OS-specific tick-list installer: build dependencies, flink / nexmark (both optional — untick to skip), and source-deps (Velox's source-built C++ libraries linked from `/usr/local`; the entry appears once the velox checkout exists).
+`env` probes build tools, JDK, Maven, the flink/nexmark stack, locally available AI agent CLIs, and machine facts. `env-init` opens the OS-specific tick-list installer: build dependencies, flink / nexmark (both optional — untick to skip), and source-deps (Velox's source-built C++ libraries linked from `/usr/local`).
 
 Done when a rerun of `gfvbot env` reports no gaps.
+
+### Step 4: install a scenario plugin
+
+```bash
+gfvbot install stateful-operator-development
+```
+
+Installs the plugin into the current project — its skills, its docs, and its development workflow. Without `--tool` it asks for the AI agent interactively; add `--tool claude` to skip the question. Selectable today: `claude` (Claude Code) and `opencode`; the `codex` and `dsh` (DeepSeek Harness) adapters are ready and open once verification environments are available.
+
+Content language follows the output language (`gfvbot lang`); override with `--lang en|zh`. Exactly one language lands — no en/zh layer inside the project — and switching language is a reinstall over the top.
+
+Done when `gfvbot list` shows the plugin as installed.
 
 ### Step 5: build the GFV stack and start the cluster
 

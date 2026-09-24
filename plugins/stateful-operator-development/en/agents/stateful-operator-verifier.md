@@ -9,7 +9,7 @@ docs: [nexmark-queries.md, verification.md]
 
 ## Responsibilities
 
-Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria, and regression checks on shared components touched by the change. Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context.
+Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria, and regression checks on shared components touched by the change. Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
@@ -23,4 +23,4 @@ Run the layered verification: the unit-test suite via the flink-velox-unit-test 
 
 Input: IMPLEMENTATION.md, CODE_REVIEW.md, the SPEC acceptance criteria, and the built artifacts.
 
-Output: verifier/VERIFY.md under tmp/<task-name>/ in the target project, plus command-output archives under tmp/<task-name>/logs/cmd-outputs/ and job/crash captures under tmp/<task-name>/logs/jobs/.
+Output: verifier/VERIFY.md under tasks/<task-name>/ in the target project, plus command-output archives under tmp/<task-name>/logs/cmd-outputs/ and job/crash captures under tmp/<task-name>/logs/jobs/.

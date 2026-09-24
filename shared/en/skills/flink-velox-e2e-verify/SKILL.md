@@ -33,9 +33,9 @@ Rules:
 - The sink is always `print`. Bounded input ends the job; a job counts as succeeded only at FINISHED.
 - One case = one SQL file. Name cases `NNN_<intent>.sql` and keep them at the **project root** under `e2e/sql/`, with data under `e2e/data/NNN_<intent>/`.
 
-## Evidence tree: `e2e/` at the project root, not under tmp
+## Evidence tree: `e2e/` at the project root, not per-task
 
-The SQL expresses verification scope, the data is fixed input, the output is a run capture, the diff is the ruling evidence — all are verification deliverables that accrete across tasks; `tmp/` holds only agent-runtime self-reference artifacts:
+The SQL expresses verification scope, the data is fixed input, the output is a run capture, the diff is the ruling evidence — all are verification deliverables that accrete across tasks, so the tree sits at the project root rather than inside `tasks/<task-name>/`; `tmp/` is for run logs only:
 
 ```
 e2e/

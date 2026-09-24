@@ -9,7 +9,7 @@ docs: [architecture.md, nexmark-queries.md, internals]
 
 ## Responsibilities
 
-Implement per the approved design. Self-compile and format before every review submission. Write unit tests for every new or modified production file, covering the normal path and boundary conditions. On rework from code review, verification, or acceptance, fix the issues, run a single-point self-verification of the failed case, and resubmit through code review. Record actual changes, deviations from the design with reasons, key behavior changes, new tests, and test results in IMPLEMENTATION.md — refresh that record after rework; never leave it at an early snapshot. After acceptance, prepare PR.md; when the changes touch upstream repos, prepare community issue/PR drafts per `docs/gfvbot/shared/templates/upstream-contribution/`, to be filed only after final user confirmation.
+Implement per the approved design. Self-compile and format before every review submission. Write unit tests for every new or modified production file, covering the normal path and boundary conditions. On rework from code review, verification, or acceptance, fix the issues, run a single-point self-verification of the failed case, and resubmit through code review. Record actual changes, deviations from the design with reasons, key behavior changes, new tests, and test results in IMPLEMENTATION.md — refresh that record after rework; never leave it at an early snapshot. After acceptance, prepare PR.md; when the changes touch upstream repos, prepare community issue/PR drafts per `docs/gfvbot/shared/templates/upstream-contribution/`, to be filed only after final user confirmation. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
@@ -24,4 +24,4 @@ Implement per the approved design. Self-compile and format before every review s
 
 Input: DESIGN.md, CODE_REVIEW.md, VERIFY.md, REVIEW_GATE.md feedback.
 
-Output: code changes in the repos, developer/IMPLEMENTATION.md, developer/PR.md. All artifacts under tmp/<task-name>/ in the target project.
+Output: code changes in the repos, developer/IMPLEMENTATION.md, developer/PR.md. All artifacts under tasks/<task-name>/ in the target project.

@@ -4,7 +4,8 @@
 # Language resolution, first hit wins:
 #   GFVBOT_LANG > project config ($PWD/.gfvbot/config) >
 #   global config (~/.gfvbot/config) > LC_ALL > LC_MESSAGES > LANG
-# any zh* value selects Chinese, everything else falls back to English.
+# any en* value selects English; everything else — zh* locales, C/POSIX,
+# unset — defaults to Chinese.
 # Config files carry a `lang=<en|zh>` line; they are user content and survive
 # territory reclaim on uninstall.
 #
@@ -12,7 +13,7 @@
 # Table headers and state tokens stay English on purpose: CJK characters are
 # double-width and would break printf column alignment.
 
-T_LANG=en
+T_LANG=zh
 T_LANG_SRC=default
 
 _gfvbot_config_lang() {  # <config-file> → prints value, or returns 1
@@ -25,8 +26,8 @@ _gfvbot_config_lang() {  # <config-file> → prints value, or returns 1
 
 _gfvbot_apply_lang() {  # <value> <source-token>
   case "$1" in
-    zh*) T_LANG=zh ;;
-    *)   T_LANG=en ;;
+    en*) T_LANG=en ;;
+    *)   T_LANG=zh ;;
   esac
   T_LANG_SRC=$2
 }
@@ -88,6 +89,10 @@ MSG_EN[lbl_entry]='empty entry file'
 MSG_ZH[lbl_entry]='空入口文件'
 MSG_EN[lbl_records_root]='records root'
 MSG_ZH[lbl_records_root]='记录根目录'
+MSG_EN[dry_remove_settings]='[dry-run] remove agent-teams keys from %s'
+MSG_ZH[dry_remove_settings]='[dry-run]移除%s中的agent teams键'
+MSG_EN[lbl_settings_empty]='empty settings file'
+MSG_ZH[lbl_settings_empty]='空settings文件'
 
 # --- install.sh ---------------------------------------------------------------
 MSG_EN[err_needs_value]='%s needs a value'
@@ -156,6 +161,18 @@ MSG_EN[msg_health_ok]='%s: health check passed (%s landed paths)'
 MSG_ZH[msg_health_ok]='%s:健康检查通过（落盘%s项）'
 MSG_EN[step_done]='done: %s plugin(s) -> %s @ %s'
 MSG_ZH[step_done]='完成: %s个插件-> %s @ %s'
+
+# --- adapters/claude.sh -------------------------------------------------------
+MSG_EN[dry_write_settings]='[dry-run] write agent-teams defaults to %s'
+MSG_ZH[dry_write_settings]='[dry-run]写入agent teams默认值: %s'
+MSG_EN[msg_settings_done]='agent-teams defaults in place: %s'
+MSG_ZH[msg_settings_done]='agent teams默认值已写入: %s'
+MSG_EN[warn_no_tmux]='tmux not found: teammateMode left unset (teammates still run, shown via /tasks instead of panes)'
+MSG_ZH[warn_no_tmux]='未找到tmux，暂不设置teammateMode（teammate仍可运行，经/tasks观察而非分屏）'
+MSG_EN[warn_settings_user]='settings.json keeps user value %s=%s, gfvbot default not applied'
+MSG_ZH[warn_settings_user]='settings.json保留用户值%s=%s，未覆盖为gfvbot默认值'
+MSG_EN[warn_settings_invalid]='%s is not valid JSON, agent-teams defaults not applied'
+MSG_ZH[warn_settings_invalid]='%s不是合法JSON，未写入agent teams默认值'
 
 # --- uninstall.sh -------------------------------------------------------------
 MSG_EN[err_no_plugin_given]='no plugin given (see --help)'
