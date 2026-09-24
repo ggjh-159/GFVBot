@@ -1,0 +1,43 @@
+{
+  "name": "stateless-expression-development",
+  "description": "Stateless expression development: end-to-end function integration across velox / velox4j / gluten-flink",
+  "description_zh": "无状态表达式开发：函数在velox / velox4j / gluten-flink三层的端到端接入",
+  "workflow": "workflow.md",
+  "agents": [
+    "stateless-expression-orchestrator",
+    "stateless-expression-architect",
+    "stateless-expression-developer",
+    "stateless-expression-reviewer",
+    "stateless-expression-verifier"
+  ],
+  "skills": [],
+  "docs": [],
+  "templates": [
+    "spec.md",
+    "design.md",
+    "task-state.md",
+    "implementation.md",
+    "audit-report.md",
+    "test-report.md"
+  ],
+  "shared": {
+    "skills": [
+      "flink-velox-build",
+      "flink-velox-unit-test",
+      "flink-velox-docs-search",
+      "flink-velox-code-review",
+      "flink-velox-e2e-verify",
+      "flink-velox-flinksql-registration"
+    ],
+    "docs": [
+      "nexmark-queries.md",
+      "verification.md",
+      "architecture.md",
+      "flink-expressions",
+      "internals"
+    ],
+    "templates": [
+      "upstream-contribution"
+    ]
+  }
+}
