@@ -50,7 +50,7 @@ Environment readiness is a CLI concern, not an agent stage. Before the task star
 | verify | verifier | acceptance pass against SPEC acceptance criteria | verifier/VERIFY.md, reviewer/REVIEW_GATE.md |
 | retro | architect | all artifacts archived | developer/PR.md, architect/SUMMARY.md, RETROSPECTIVE.md, upstream/ drafts (when involved) |
 
-All artifact paths are relative to `tmp/<task-name>/` under the target project root; `<task-name>` is a stable short identifier chosen at task start.
+All artifact paths are relative to `tasks/<task-name>/` under the target project root; `<task-name>` is a stable short identifier chosen at task start.
 
 ## Stage details
 
@@ -82,7 +82,7 @@ Gate: the reviewer signs REVIEW_GATE.md, checking each SPEC acceptance criterion
 
 ### Retro
 
-The developer prepares PR.md (documentation updates, commit plan, PR description, pre-merge checklist). When the changes touch the velox/velox4j/gluten repos, the developer also prepares community drafts per the routing rules in `docs/gfvbot/shared/templates/upstream-contribution/`: one PR draft per changed repo, at most one issue draft per operator (gluten templates when the gluten repo changed, otherwise velox/velox4j templates), placed under `tmp/<task-name>/upstream/`, filed only after final user confirmation — agents never auto-submit issues or PRs. The architect produces SUMMARY.md: final scope, approved deviations from the design, review verdicts across stages, verification coverage, remaining risks, follow-up suggestions, and whether lessons are worth distilling into the plugin's skills/docs (with a distillation suggestion when yes). Every participating agent writes a RETROSPECTIVE.md listing mistakes, lessons, and process suggestions. The final design document is archived into the target project's own documentation tree; the specifics follow the target project's conventions.
+The developer prepares PR.md (documentation updates, commit plan, PR description, pre-merge checklist). When the changes touch the velox/velox4j/gluten repos, the developer also prepares community drafts per the routing rules in `docs/gfvbot/shared/templates/upstream-contribution/`: one PR draft per changed repo, at most one issue draft per operator (gluten templates when the gluten repo changed, otherwise velox/velox4j templates), placed under `tasks/<task-name>/upstream/`, filed only after final user confirmation — agents never auto-submit issues or PRs. The architect produces SUMMARY.md: final scope, approved deviations from the design, review verdicts across stages, verification coverage, remaining risks, follow-up suggestions, and whether lessons are worth distilling into the plugin's skills/docs (with a distillation suggestion when yes). Every participating agent writes a RETROSPECTIVE.md listing mistakes, lessons, and process suggestions. The final design document is archived into the target project's own documentation tree; the specifics follow the target project's conventions.
 
 ## Allowed regressions and forbidden jumps
 
@@ -106,21 +106,23 @@ Forbidden jumps, without exception:
 
 ## Artifact contract
 
-Artifacts under `tmp/<task-name>/` are the single source of truth across agents; verbal conclusions do not exist until written into an artifact. Later stages read artifacts, not chat history.
+Artifacts under `tasks/<task-name>/` are the single source of truth across agents; verbal conclusions do not exist until written into an artifact. Later stages read artifacts, not chat history.
 
 ```text
-tmp/<task-name>/
+tasks/<task-name>/
   TASK_STATE.md                  cross-agent state anchor
   USER_GATES.md                  per-round appended record of user-gate decision points and user replies
+  PROGRESS.md                    intra-stage progress heartbeat: one appended line per milestone (time + agent + one sentence)
   architect/    SPEC.md, DESIGN.md, SUMMARY.md, RETROSPECTIVE.md
   developer/    IMPLEMENTATION.md, PR.md, RETROSPECTIVE.md
   reviewer/     SPEC_REVIEW.md, DESIGN_REVIEW.md, CODE_REVIEW.md, REVIEW_GATE.md
   verifier/     VERIFY.md, RETROSPECTIVE.md
   upstream/     community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
-  logs/                          transient: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
+
+tmp/<task-name>/logs/            logs only: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
 ```
 
-The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out,verify}/`, not under tmp — the SQL expresses verification scope, outputs and diffs are run evidence, and the tree accretes across tasks into a regression bank. The full-result rollup lives in `e2e/verify/RESULTS.md` (refreshed in place each round); VERIFY.md only cites its paths and conclusions.
+The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out,verify}/`, not inside any task directory — the SQL expresses verification scope, outputs and diffs are run evidence, and the tree accretes across tasks into a regression bank. The full-result rollup lives in `e2e/verify/RESULTS.md` (refreshed in place each round); VERIFY.md only cites its paths and conclusions.
 
 Snapshot management: artifacts are snapshots — rework **refreshes the existing file in place** (DESIGN.md, CODE_REVIEW.md, and so on), with no version suffixes and no old copies left behind; the orchestrator names the target artifact and section explicitly when routing rework. When the described object has changed (code rolled back and relanded, scope redefined), refresh the affected artifacts before entering the next gate. Round history is carried by the TASK_STATE gate records, one appended line per round.
 

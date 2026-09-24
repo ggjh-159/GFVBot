@@ -1,6 +1,6 @@
 # Upstream issue/PR draft templates — routing and discipline
 
-> When a task changes the velox / velox4j / gluten repositories, the retro stage drafts community issues and PRs from the templates in this unit into `tmp/<task-name>/upstream/` of the target project. Nothing is filed until the user gives final confirmation; agents never submit issues or PRs on their own.
+> When a task changes the velox / velox4j / gluten repositories, the retro stage drafts community issues and PRs from the templates in this unit into `tasks/<task-name>/upstream/` of the target project. Nothing is filed until the user gives final confirmation; agents never submit issues or PRs on their own.
 
 ## Template selection
 

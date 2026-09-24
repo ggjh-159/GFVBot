@@ -40,6 +40,10 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# Build parallelism: min(32, cores) — more C++ units at once exhaust memory
+# and starve shared machines.
+BUILD_JOBS=$(( $(nproc) > 32 ? 32 : $(nproc) ))
+
 VELOX_DIR=$(jq -r '.repos["velox"].path // empty' "$ENV_JSON")
 V4J_ROOT=$(jq -r '.repos["velox4j"].path // empty' "$ENV_JSON")
 if [ -z "$VELOX_DIR" ] || [ "$VELOX_DIR" = "null" ]; then
@@ -111,14 +115,14 @@ cd "$BUILD_DIR"
 
 if [ "$TEST_TARGET" = "all" ]; then
   for target in "${ALL_TARGETS[@]}"; do
-    cmake --build . --target "$target" -j "$(nproc)"
+    cmake --build . --target "$target" -j "$BUILD_JOBS"
   done
   for target in "${ALL_TARGETS[@]}"; do
     echo "=== Running $target ==="
     ctest -R "$target" -V
   done
 else
-  cmake --build . --target "$TEST_TARGET" -j "$(nproc)"
+  cmake --build . --target "$TEST_TARGET" -j "$BUILD_JOBS"
   if [ -n "$GTEST_FILTER" ]; then
     ctest -R "$TEST_TARGET" -V --output-on-failure -- "$GTEST_FILTER"
   else

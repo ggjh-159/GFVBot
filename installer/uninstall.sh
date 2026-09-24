@@ -308,6 +308,29 @@ for tool in "${!AFFECTED[@]}"; do
       rm_path "$entry" "$(t lbl_entry)"
     fi
   fi
+  # claude: drop the agent-teams/tmux defaults the install filled in — only
+  # the keys still holding our values; user-set values stay untouched, and a
+  # file left with nothing but our defaults goes away with them
+  if [ "$tool" = claude ] && [ -f "$TARGET/.claude/settings.json" ]; then
+    sfile="$TARGET/.claude/settings.json"
+    if [ -n "$DRY_RUN" ]; then
+      echo "  $(t dry_remove_settings "$sfile")"
+    else
+      stmp=$(mktemp)
+      if jq 'if .env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1"
+             then .env |= del(.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) else . end
+             | if .teammateMode == "tmux" then del(.teammateMode) else . end
+             | if .env == {} then del(.env) else . end' \
+             "$sfile" > "$stmp" 2>/dev/null; then
+        mv "$stmp" "$sfile"
+        if jq -e 'length == 0' "$sfile" >/dev/null 2>&1; then
+          rm_path "$sfile" "$(t lbl_settings_empty)"
+        fi
+      else
+        rm -f "$stmp"
+      fi
+    fi
+  fi
   rm_path "$index" "$(t lbl_index)"
   case "$tool" in
     claude)   reclaim_dirs=(.claude/gfvbot .claude/skills .claude/agents .claude) ;;

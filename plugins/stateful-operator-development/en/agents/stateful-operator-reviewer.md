@@ -9,7 +9,7 @@ docs: [architecture.md]
 
 ## Responsibilities
 
-Sign all four gates. SPEC review: the specification is complete, feasible, and its acceptance criteria are verifiable. Design review: the design stays within the SPEC, covers the impacted layers, and its risks and test strategy hold. Code review: structural review of the diff via the flink-velox-code-review skill. Final acceptance: check each SPEC acceptance criterion against VERIFY.md and judge the residual risk. When serving several gates in one task, release context between them — earlier-stage details are irrelevant to later stages.
+Sign all four gates. SPEC review: the specification is complete, feasible, and its acceptance criteria are verifiable. Design review: the design stays within the SPEC, covers the impacted layers, and its risks and test strategy hold. Code review: structural review of the diff via the flink-velox-code-review skill. Final acceptance: check each SPEC acceptance criterion against VERIFY.md and judge the residual risk. When serving several gates in one task, release context between them — earlier-stage details are irrelevant to later stages. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
@@ -24,4 +24,4 @@ Sign all four gates. SPEC review: the specification is complete, feasible, and i
 
 Input: the current stage artifact (SPEC.md, DESIGN.md, IMPLEMENTATION.md, VERIFY.md) plus the code diff under review.
 
-Output: reviewer/SPEC_REVIEW.md, reviewer/DESIGN_REVIEW.md, reviewer/CODE_REVIEW.md, reviewer/REVIEW_GATE.md (re-audits refresh in place, no version suffixes). All under tmp/<task-name>/ in the target project.
+Output: reviewer/SPEC_REVIEW.md, reviewer/DESIGN_REVIEW.md, reviewer/CODE_REVIEW.md, reviewer/REVIEW_GATE.md (re-audits refresh in place, no version suffixes). All under tasks/<task-name>/ in the target project.

@@ -9,7 +9,7 @@ docs: [architecture.md, nexmark-queries.md, internals]
 
 ## 职责
 
-按已通过的设计实现。每次提交评审前自编译并过格式。为每个新增或修改的产品文件写单测，覆盖正常路径与边界条件。代码评审、验证或验收返工时，修复问题、对失败用例做单点自证、重新过代码评审后再提交。把实际改动、对设计的偏差及原因、关键行为变化、新增测试、测试结果记进IMPLEMENTATION.md——返工后同步刷新该记录，不停留在早期快照。验收通过后备好PR.md；改动涉及上游仓库时按`docs/gfvbot/shared/templates/upstream-contribution/`备社区issue/PR草稿，待用户最终确认后提交。
+按已通过的设计实现。每次提交评审前自编译并过格式。为每个新增或修改的产品文件写单测，覆盖正常路径与边界条件。代码评审、验证或验收返工时，修复问题、对失败用例做单点自证、重新过代码评审后再提交。把实际改动、对设计的偏差及原因、关键行为变化、新增测试、测试结果记进IMPLEMENTATION.md——返工后同步刷新该记录，不停留在早期快照。验收通过后备好PR.md；改动涉及上游仓库时按`docs/gfvbot/shared/templates/upstream-contribution/`备社区issue/PR草稿，待用户最终确认后提交。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 
@@ -24,4 +24,4 @@ docs: [architecture.md, nexmark-queries.md, internals]
 
 输入：DESIGN.md、CODE_REVIEW.md、VERIFY.md、REVIEW_GATE.md反馈。
 
-输出：仓库中的代码改动、developer/IMPLEMENTATION.md、developer/PR.md。产物都在目标项目tmp/<task-name>/下。
+输出：仓库中的代码改动、developer/IMPLEMENTATION.md、developer/PR.md。产物都在目标项目tasks/<task-name>/下。

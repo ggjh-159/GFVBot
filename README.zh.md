@@ -47,22 +47,10 @@ bash installer/setup.sh
 
 安装`gfvbot`命令行工具。`gfvbot help`能打印命令列表即表示成功。
 
-### 第2步：安装场景插件
+### 第2步：克隆GFV源码仓
 
 ```bash
 cd /path/to/gfv      # 目标项目根目录；后续命令均在此执行
-gfvbot install stateful-operator-development
-```
-
-将插件安装到当前项目——skills、参考文档与开发流程一并安装。不带`--tool`时交互式选择AI Agent，指定`--tool claude`可跳过交互。目前可选`claude`（Claude Code）与`opencode`；`codex`、`dsh`（DeepSeek Harness）适配器已就绪，待验证环境可用后开放。
-
-内容语言随输出语言（`gfvbot lang`），`--lang en|zh`可覆盖。安装后只落一种语言、项目内没有en/zh目录层，切换语言即重新安装覆盖。
-
-`gfvbot list`显示该插件已安装即表示成功。
-
-### 第3步：克隆GFV源码仓
-
-```bash
 gfvbot clone
 ```
 
@@ -77,16 +65,28 @@ gfvbot clone
 
 常用参数：`--fork <用户名>`指定velox/velox4j/gluten从个人fork仓克隆同分支（flink始终使用官方仓）；`--shallow`即`--depth 1`；也可指定仓库名克隆子集（`gfvbot clone velox velox4j`）。已存在的仓库跳过；克隆完成后按常规git流程管理。
 
-### 第4步：扫描环境并补齐依赖
+### 第3步：扫描环境并补齐依赖
 
 ```bash
 gfvbot env          # 扫描依赖，归档到.gfvbot/env.json
 gfvbot env-init     # 按勾选清单安装缺失项
 ```
 
-`env`探测构建工具、JDK、Maven、flink/nexmark、本机可用的AI Agent CLI与机器信息。`env-init`调起OS对应的勾选清单安装器：构建依赖、flink/nexmark（两项可选，不勾选即跳过）、source-deps（Velox的源码级C++库，从`/usr/local`链接；velox克隆完成后该项才出现）。
+`env`探测构建工具、JDK、Maven、flink/nexmark、本机可用的AI Agent CLI与机器信息。`env-init`调起OS对应的勾选清单安装器：构建依赖、flink/nexmark（两项可选，不勾选即跳过）、source-deps（Velox的源码级C++库，从`/usr/local`链接）。
 
 重新运行`gfvbot env`不再报告缺失即表示完成。
+
+### 第4步：安装场景插件
+
+```bash
+gfvbot install stateful-operator-development
+```
+
+将插件安装到当前项目——skills、参考文档与开发流程一并安装。不带`--tool`时交互式选择AI Agent，指定`--tool claude`可跳过交互。目前可选`claude`（Claude Code）与`opencode`；`codex`、`dsh`（DeepSeek Harness）适配器已就绪，待验证环境可用后开放。
+
+内容语言随输出语言（`gfvbot lang`），`--lang en|zh`可覆盖。安装后只落一种语言、项目内没有en/zh目录层，切换语言即重新安装覆盖。
+
+`gfvbot list`显示该插件已安装即表示成功。
 
 ### 第5步：构建GFV栈并启动集群
 

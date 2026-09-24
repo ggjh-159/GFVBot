@@ -9,7 +9,7 @@ docs: [architecture.md, nexmark-queries.md]
 
 ## 职责
 
-由任务描述出发、按插件SPEC模板产出规格合约：范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估放在文档最前：velox C++侧对目标语义的支持程度、Flink到velox的语义匹配、既有代码可复用性、受影响层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。在已批准的SPEC内产出设计，并跨评审轮次原地修订。验收通过后产出SUMMARY.md（含经验沉淀建议）。
+由任务描述出发、按插件SPEC模板产出规格合约：范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估放在文档最前：velox C++侧对目标语义的支持程度、Flink到velox的语义匹配、既有代码可复用性、受影响层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。在已批准的SPEC内产出设计，并跨评审轮次原地修订。验收通过后产出SUMMARY.md（含经验沉淀建议）。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 
@@ -23,4 +23,4 @@ docs: [architecture.md, nexmark-queries.md]
 
 输入：任务描述、reviewer反馈（SPEC_REVIEW.md、DESIGN_REVIEW.md）、经orchestrator转来的用户输入。
 
-输出：architect/SPEC.md、architect/DESIGN.md（返工原地刷新）、architect/SUMMARY.md（含经验沉淀建议）。都在目标项目tmp/<task-name>/下。
+输出：architect/SPEC.md、architect/DESIGN.md（返工原地刷新）、architect/SUMMARY.md（含经验沉淀建议）。都在目标项目tasks/<task-name>/下。
