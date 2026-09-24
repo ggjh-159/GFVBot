@@ -35,7 +35,7 @@ For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into 
 
 For cases where the feature is correct but performance falls short. The workflow is a loop: run the nexmark benchmark against native Flink to quantify the gap, profile to locate hotspots (on both the C++ and JVM sides), apply the fix, regression-verify, and iterate until the target is met.
 
-## Five steps from a bare machine to AI-assisted coding
+## Four steps from a bare machine to AI-assisted coding
 
 Supported OSes: openEuler, CentOS 7/9, Ubuntu/Debian. Run the steps in order — each one builds on the previous, and together they take you from an empty machine to a working GFV workspace where the AI agent does the coding with you. Every step resumes: detected dependencies are skipped, existing repos and configuration are left untouched, so after an interruption just rerun the same command.
 
@@ -87,33 +87,6 @@ Installs the plugin into the current project — its skills, its docs, and its d
 Content language follows the output language (`gfvbot lang`); override with `--lang en|zh`. Exactly one language lands — no en/zh layer inside the project — and switching language is a reinstall over the top.
 
 Done when `gfvbot list` shows the plugin as installed.
-
-### Step 5: start your first AI-assisted task
-
-```bash
-gfvbot prompt stateful-operator-development
-```
-
-Prints the plugin's task template. Fill in the placeholders, start the AI agent at the project root (`claude` or `opencode`), paste, and send — a TopN task for example:
-
-```text
-> Develop the `TopN` stateful operator for gluten-flink.
-> - Goal: emit the Top-N bids ranked by price
-> - Verification: run Nexmark query `q19` against the cluster and compare the output with native Flink
-> - Acceptance: q19 output matches the native baseline; q0-q18 must not regress
-> - Notes: none
-> Follow the installed stateful-operator-development workflow; start from the SPEC stage.
-```
-
-Or let the AI agent fill the template for you (run inside the target project — it reads the plugin docs and the project's source files):
-
-```bash
-gfvbot prompt stateful-operator-development --task "develop a TopN operator, verify with nexmark q19" --tool claude --file topn-prompt.md
-```
-
-From here on, coding is AI-assisted: the plugin's workflow carries the task from SPEC to verification, its skills build the stack and run the tests, and its docs explain the internals along the way.
-
-The first GFV build is owned by the workflow — no manual build before the task: during the implement stage the flink-velox-build skill compiles, deploys the jars, and restarts the cluster. The C++ build runs long; watch `tasks/<task-name>/PROGRESS.md` for progress.
 
 ## Other commands
 
