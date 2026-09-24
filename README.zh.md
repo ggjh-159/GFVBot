@@ -35,7 +35,7 @@ GFV（gluten-flink-velox集成路线）的AI底座。内容按插件组织：一
 
 用于功能已正确但性能未达要求的场景。流程为闭环：运行nexmark基准与原生Flink对比以量化差距→profiling定位热点（C++/JVM两侧）→修改→回归验证，迭代直至达标。
 
-## 六步从裸机到AI辅助编码
+## 五步从裸机到AI辅助编码
 
 支持openEuler、CentOS 7/9与Ubuntu/Debian。按顺序执行以下步骤，完成后即得到可与AI Agent协同开发的GFV工作区。每一步均支持续跑：已探测的依赖自动跳过、已有仓库与配置保持不变，中断后重新运行同一命令即可继续。
 
@@ -88,16 +88,7 @@ gfvbot install stateful-operator-development
 
 `gfvbot list`显示该插件已安装即表示成功。
 
-### 第5步：构建GFV栈并启动集群
-
-```bash
-bash <installed-skill>/bin/compile.sh     # velox4j+gluten-flink的jar进入/opt/flink/lib/
-/opt/flink/bin/start-cluster.sh
-```
-
-`compile.sh`是插件flink-velox-build skill提供的构建入口。jar进入`/opt/flink/lib/`、集群启动后，环境准备完毕。
-
-### 第6步：发起第一个AI辅助任务
+### 第5步：发起第一个AI辅助任务
 
 ```bash
 gfvbot prompt stateful-operator-development
@@ -121,6 +112,8 @@ gfvbot prompt stateful-operator-development --task "开发TopN算子，用nexmar
 ```
 
 至此即可开始AI辅助编码：插件的workflow驱动任务从SPEC到验收，skills负责构建与测试，docs说明各层内部机制。
+
+首次GFV构建由工作流接管，任务前无需手工编译：implement阶段走flink-velox-build技能完成编译、部署jars并重启集群；C++编译耗时较长，进度看`tasks/<任务名>/PROGRESS.md`心跳。
 
 ## 其他命令
 

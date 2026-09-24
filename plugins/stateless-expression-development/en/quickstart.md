@@ -6,9 +6,9 @@
 gfvbot install stateless-expression-development   # install the plugin (skills/docs/templates)
 gfvbot clone                                      # clone the four repos into repos/
 gfvbot env && gfvbot env-init                     # environment scan and fix-up
-bash <flink-velox-build skill>/bin/compile.sh     # build and deploy jars
-/opt/flink/bin/start-cluster.sh                   # start the cluster
 ```
+
+The first GFV build and the cluster start are owned by the workflow: during the implement stage the flink-velox-build skill compiles, deploys the jars, and restarts the cluster — no manual build before the task.
 
 ## Example Task: Migrate `UPPER` to the flinksql Namespace
 

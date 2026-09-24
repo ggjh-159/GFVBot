@@ -6,9 +6,9 @@
 gfvbot install stateless-expression-development   # 装插件（含skills/docs/模板）
 gfvbot clone                                      # 四仓克隆到repos/
 gfvbot env && gfvbot env-init                     # 环境扫描与补齐
-bash <flink-velox-build技能>/bin/compile.sh        # 构建并部署jars
-/opt/flink/bin/start-cluster.sh                   # 起集群
 ```
+
+首次GFV构建与集群启动由工作流接管：implement阶段走flink-velox-build技能完成编译、部署jars并重启集群，任务前无需手工编译。
 
 ## 示例任务：把`UPPER`迁到flinksql命名空间
 

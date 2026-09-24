@@ -35,7 +35,7 @@ For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into 
 
 For cases where the feature is correct but performance falls short. The workflow is a loop: run the nexmark benchmark against native Flink to quantify the gap, profile to locate hotspots (on both the C++ and JVM sides), apply the fix, regression-verify, and iterate until the target is met.
 
-## Six steps from a bare machine to AI-assisted coding
+## Five steps from a bare machine to AI-assisted coding
 
 Supported OSes: openEuler, CentOS 7/9, Ubuntu/Debian. Run the steps in order — each one builds on the previous, and together they take you from an empty machine to a working GFV workspace where the AI agent does the coding with you. Every step resumes: detected dependencies are skipped, existing repos and configuration are left untouched, so after an interruption just rerun the same command.
 
@@ -88,16 +88,7 @@ Content language follows the output language (`gfvbot lang`); override with `--l
 
 Done when `gfvbot list` shows the plugin as installed.
 
-### Step 5: build the GFV stack and start the cluster
-
-```bash
-bash <installed-skill>/bin/compile.sh     # velox4j + gluten-flink jars land in /opt/flink/lib/
-/opt/flink/bin/start-cluster.sh
-```
-
-`compile.sh` is the build entry installed with the plugin's flink-velox-build skill. With the jars in `/opt/flink/lib/` and the cluster up, the environment is ready.
-
-### Step 6: start your first AI-assisted task
+### Step 5: start your first AI-assisted task
 
 ```bash
 gfvbot prompt stateful-operator-development
@@ -121,6 +112,8 @@ gfvbot prompt stateful-operator-development --task "develop a TopN operator, ver
 ```
 
 From here on, coding is AI-assisted: the plugin's workflow carries the task from SPEC to verification, its skills build the stack and run the tests, and its docs explain the internals along the way.
+
+The first GFV build is owned by the workflow — no manual build before the task: during the implement stage the flink-velox-build skill compiles, deploys the jars, and restarts the cluster. The C++ build runs long; watch `tasks/<task-name>/PROGRESS.md` for progress.
 
 ## Other commands
 
