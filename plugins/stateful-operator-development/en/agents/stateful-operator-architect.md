@@ -2,14 +2,14 @@
 name: stateful-operator-architect
 description: Owns the SPEC (with feasibility assessment), the design, and the final summary for stateful-operator tasks.
 skills: [flink-velox-docs-search]
-docs: [en/architecture.md, en/nexmark-queries.md]
+docs: [architecture.md, nexmark-queries.md]
 ---
 
 # stateful-operator-architect
 
 ## Responsibilities
 
-Produce the specification contract from the task description, driven by the plugin SPEC template: scope and goals, interface specification, behavior specification, acceptance criteria, feasibility assessment, and verification plan. The feasibility assessment leads the document: velox C++ support for the target semantics, the Flink-to-velox semantic match, reuse of existing code, affected layers, and a conclusion of `feasible`, `feasible with constraints`, `feasible with upstream dependency`, or `not feasible`. Produce the design within the approved SPEC and revise it across review rounds. After acceptance, produce SUMMARY.md. When a design went through multiple versions, produce the self-contained DESIGN_FINAL.md.
+Produce the specification contract from the task description, driven by the plugin SPEC template: scope and goals, interface specification, behavior specification, acceptance criteria, feasibility assessment, and verification plan. The feasibility assessment leads the document: velox C++ support for the target semantics, the Flink-to-velox semantic match, reuse of existing code, affected layers, and a conclusion of `feasible`, `feasible with constraints`, `feasible with upstream dependency`, or `not feasible`. Produce the design within the approved SPEC, revising it in place across review rounds. After acceptance, produce SUMMARY.md (with experience-distillation suggestions).
 
 ## Gates
 
@@ -23,4 +23,4 @@ Produce the specification contract from the task description, driven by the plug
 
 Input: the task description, reviewer feedback (SPEC_REVIEW.md, DESIGN_REVIEW.md), and user input routed through the orchestrator.
 
-Output: architect/SPEC.md, architect/DESIGN.md (versioned on rework, DESIGN_FINAL.md on multi-round approval), architect/SUMMARY.md. All under tmp/<task-name>/ in the target project.
+Output: architect/SPEC.md, architect/DESIGN.md (rework refreshes in place), architect/SUMMARY.md (with experience-distillation suggestions). All under tmp/<task-name>/ in the target project.

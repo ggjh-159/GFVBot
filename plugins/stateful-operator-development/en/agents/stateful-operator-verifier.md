@@ -1,8 +1,8 @@
 ---
 name: stateful-operator-verifier
 description: Owns layered verification for stateful-operator tasks: unit tests, end-to-end runs, and regression checks, reported in VERIFY.md.
-skills: [flink-velox-unit-test, flink-velox-docs-search]
-docs: [en/nexmark-queries.md, en/verification.md]
+skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
+docs: [nexmark-queries.md, verification.md]
 ---
 
 # stateful-operator-verifier
@@ -23,4 +23,4 @@ Run the layered verification: the unit-test suite via the flink-velox-unit-test 
 
 Input: IMPLEMENTATION.md, CODE_REVIEW.md, the SPEC acceptance criteria, and the built artifacts.
 
-Output: verifier/VERIFY.md under tmp/<task-name>/ in the target project, plus command-output archives under tmp/logs/<task-name>/cmd-outputs/.
+Output: verifier/VERIFY.md under tmp/<task-name>/ in the target project, plus command-output archives under tmp/<task-name>/logs/cmd-outputs/ and job/crash captures under tmp/<task-name>/logs/jobs/.
