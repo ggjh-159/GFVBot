@@ -24,4 +24,4 @@ Sign all four gates. SPEC review: the specification is complete, feasible, and i
 
 Input: the current stage artifact (SPEC.md, DESIGN.md, IMPLEMENTATION.md, VERIFY.md) plus the code diff under review.
 
-Output: reviewer/SPEC_REVIEW.md, reviewer/DESIGN_REVIEW.md, reviewer/CODE_REVIEW.md, reviewer/REVIEW_GATE.md (re-audits refresh in place, no version suffixes). All under tmp/<task-name>/ in the target project.
+Output: reviewer/SPEC_REVIEW.md, reviewer/DESIGN_REVIEW.md, reviewer/CODE_REVIEW.md, reviewer/REVIEW_GATE.md (re-audits refresh in place, no version suffixes). All under tasks/<task-name>/ in the target project.

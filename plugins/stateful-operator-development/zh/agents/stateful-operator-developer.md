@@ -24,4 +24,4 @@ docs: [architecture.md, nexmark-queries.md, internals]
 
 输入：DESIGN.md、CODE_REVIEW.md、VERIFY.md、REVIEW_GATE.md反馈。
 
-输出：仓库中的代码改动、developer/IMPLEMENTATION.md、developer/PR.md。产物都在目标项目tmp/<task-name>/下。
+输出：仓库中的代码改动、developer/IMPLEMENTATION.md、developer/PR.md。产物都在目标项目tasks/<task-name>/下。

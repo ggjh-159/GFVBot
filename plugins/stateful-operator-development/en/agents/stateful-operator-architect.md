@@ -23,4 +23,4 @@ Produce the specification contract from the task description, driven by the plug
 
 Input: the task description, reviewer feedback (SPEC_REVIEW.md, DESIGN_REVIEW.md), and user input routed through the orchestrator.
 
-Output: architect/SPEC.md, architect/DESIGN.md (rework refreshes in place), architect/SUMMARY.md (with experience-distillation suggestions). All under tmp/<task-name>/ in the target project.
+Output: architect/SPEC.md, architect/DESIGN.md (rework refreshes in place), architect/SUMMARY.md (with experience-distillation suggestions). All under tasks/<task-name>/ in the target project.

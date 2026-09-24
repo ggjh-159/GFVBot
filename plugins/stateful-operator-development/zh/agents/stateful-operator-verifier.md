@@ -23,4 +23,4 @@ docs: [nexmark-queries.md, verification.md]
 
 输入：IMPLEMENTATION.md、CODE_REVIEW.md、SPEC验收标准、构建产物。
 
-输出：目标项目tmp/<task-name>/下的verifier/VERIFY.md，及tmp/<task-name>/logs/cmd-outputs/下的命令输出归档与tmp/<task-name>/logs/jobs/下的作业/崩溃现场。
+输出：目标项目tasks/<task-name>/下的verifier/VERIFY.md，及tmp/<task-name>/logs/cmd-outputs/下的命令输出归档与tmp/<task-name>/logs/jobs/下的作业/崩溃现场。

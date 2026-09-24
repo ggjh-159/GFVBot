@@ -24,4 +24,4 @@ Implement per the approved design. Self-compile and format before every review s
 
 Input: DESIGN.md, CODE_REVIEW.md, VERIFY.md, REVIEW_GATE.md feedback.
 
-Output: code changes in the repos, developer/IMPLEMENTATION.md, developer/PR.md. All artifacts under tmp/<task-name>/ in the target project.
+Output: code changes in the repos, developer/IMPLEMENTATION.md, developer/PR.md. All artifacts under tasks/<task-name>/ in the target project.

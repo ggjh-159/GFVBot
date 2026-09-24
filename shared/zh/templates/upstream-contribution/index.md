@@ -1,6 +1,6 @@
 # upstream issue/PR草稿模板——路由与纪律
 
-> 任务改动涉及velox/velox4j/gluten仓库时，retro阶段按本单元模板产出社区issue与PR草稿，落目标项目`tmp/<task-name>/upstream/`。草稿经用户最终确认后才实际提交；Agent绝不自动提issue或PR。
+> 任务改动涉及velox/velox4j/gluten仓库时，retro阶段按本单元模板产出社区issue与PR草稿，落目标项目`tasks/<task-name>/upstream/`。草稿经用户最终确认后才实际提交；Agent绝不自动提issue或PR。
 
 ## 模板选择
 

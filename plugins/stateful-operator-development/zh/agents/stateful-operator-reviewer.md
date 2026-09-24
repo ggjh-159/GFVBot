@@ -24,4 +24,4 @@ docs: [architecture.md]
 
 输入：当前阶段产物（SPEC.md、DESIGN.md、IMPLEMENTATION.md、VERIFY.md）与受审代码diff。
 
-输出：reviewer/SPEC_REVIEW.md、reviewer/DESIGN_REVIEW.md、reviewer/CODE_REVIEW.md、reviewer/REVIEW_GATE.md（复审原地刷新，不加版本号）。都在目标项目tmp/<task-name>/下。
+输出：reviewer/SPEC_REVIEW.md、reviewer/DESIGN_REVIEW.md、reviewer/CODE_REVIEW.md、reviewer/REVIEW_GATE.md（复审原地刷新，不加版本号）。都在目标项目tasks/<task-name>/下。

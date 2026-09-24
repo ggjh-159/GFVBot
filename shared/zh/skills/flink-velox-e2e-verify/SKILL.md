@@ -33,9 +33,9 @@ INSERT INTO sink SELECT <受测表达式或查询> FROM src;
 - sink永远是`print`。有界输入结束作业；作业只有到FINISHED才算成功。
 - 一条用例=一个SQL文件。用例命名`NNN_<intent>.sql`，落**项目根**`e2e/sql/`下，数据落`e2e/data/NNN_<intent>/`。
 
-## 证据树：`e2e/`在项目根，不在tmp下
+## 证据树：`e2e/`在项目根，不按任务收纳
 
-SQL表达验证范围、数据是固定输入、输出是运行捕获、diff是裁决依据——都是验证交付的证据，跨任务沉淀；`tmp/`只是Agent运行时自参考产物：
+SQL表达验证范围、数据是固定输入、输出是运行捕获、diff是裁决依据——都是验证交付的证据，跨任务沉淀，故放项目根而非`tasks/<task-name>/`内；`tmp/`只放运行日志：
 
 ```
 e2e/

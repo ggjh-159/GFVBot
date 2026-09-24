@@ -23,4 +23,4 @@ Run the layered verification: the unit-test suite via the flink-velox-unit-test 
 
 Input: IMPLEMENTATION.md, CODE_REVIEW.md, the SPEC acceptance criteria, and the built artifacts.
 
-Output: verifier/VERIFY.md under tmp/<task-name>/ in the target project, plus command-output archives under tmp/<task-name>/logs/cmd-outputs/ and job/crash captures under tmp/<task-name>/logs/jobs/.
+Output: verifier/VERIFY.md under tasks/<task-name>/ in the target project, plus command-output archives under tmp/<task-name>/logs/cmd-outputs/ and job/crash captures under tmp/<task-name>/logs/jobs/.

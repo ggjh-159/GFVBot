@@ -23,4 +23,4 @@ docs: [architecture.md, nexmark-queries.md]
 
 输入：任务描述、reviewer反馈（SPEC_REVIEW.md、DESIGN_REVIEW.md）、经orchestrator转来的用户输入。
 
-输出：architect/SPEC.md、architect/DESIGN.md（返工原地刷新）、architect/SUMMARY.md（含经验沉淀建议）。都在目标项目tmp/<task-name>/下。
+输出：architect/SPEC.md、architect/DESIGN.md（返工原地刷新）、architect/SUMMARY.md（含经验沉淀建议）。都在目标项目tasks/<task-name>/下。
