@@ -134,10 +134,10 @@ compile_velox4j() {
     # Build the native part against the workspace velox checkout instead of
     # letting CPM fetch a pinned commit: local edits to repos/velox must end
     # up in the produced .so, and the fetch would be a large, failure-prone
-    # download. VELOX4J_BUILD_JOBS bounds compile parallelism (nproc can far
-    # exceed what the memory of the machine sustains for C++ units).
+    # download. VELOX4J_BUILD_JOBS bounds compile parallelism: min(32, cores) —
+    # more C++ jobs exhaust memory and starve shared machines.
     export VELOX4J_VELOX_SOURCE_DIR="$VELOX_PATH"
-    export VELOX4J_BUILD_JOBS="${VELOX4J_BUILD_JOBS:-128}"
+    export VELOX4J_BUILD_JOBS="${VELOX4J_BUILD_JOBS:-$(( $(nproc) > 32 ? 32 : $(nproc) ))}"
     cd "$VELOX4J_PATH"
     local MVN_COMMON_ARGS=(-Dgpg.skip -Dgpg.skip=true -Dmaven.javadoc.skip=true)
     if [ "${RUN_TESTS}" = "true" ]; then

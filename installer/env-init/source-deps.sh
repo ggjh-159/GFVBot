@@ -131,7 +131,9 @@ fi
 # guarded by "(return) && return" and never runs.
 export INSTALL_PREFIX=/usr/local
 export DEPENDENCY_DIR="${GFVBOT_SOURCE_DEPS_DIR:-/tmp/gfvbot-source-deps}"
-export BUILD_THREADS="${BUILD_THREADS:-128}"
+# Build parallelism: min(32, cores) — more C++ units at once exhaust memory
+# and starve shared machines (velox reads BUILD_THREADS in its setup scripts).
+export BUILD_THREADS="${BUILD_THREADS:-$(( $(nproc) > 32 ? 32 : $(nproc) ))}"
 export PROMPT_ALWAYS_RESPOND=n   # never ask to wipe DEPENDENCY_DIR
 # A download cut mid-stream leaves a dependency dir holding only a partial
 # tarball; with prompts silenced velox's wget_and_untar would then treat the
