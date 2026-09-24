@@ -112,6 +112,7 @@ developer备好PR.md（文档更新、提交计划、PR描述、合入前检查�
 tasks/<task-name>/
   TASK_STATE.md                  跨Agent状态锚点
   USER_GATES.md                  用户门禁决策点与用户答复的逐轮追加记录
+  PROGRESS.md                    阶段内进度心跳：owner逐里程碑追加一行（时间+agent+一句话）
   architect/    SPEC.md, DESIGN.md, SUMMARY.md, RETROSPECTIVE.md
   developer/    IMPLEMENTATION.md, PR.md, RETROSPECTIVE.md
   reviewer/     SPEC_REVIEW.md, DESIGN_REVIEW.md, CODE_REVIEW.md, REVIEW_GATE.md
@@ -126,6 +127,8 @@ e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录�
 快照管理：产物是快照，返工**原地刷新**既有文件（DESIGN.md、CODE_REVIEW.md等），不加版本序号、不留旧版文件；orchestrator路由返工时显式点名目标产物与章节。描述对象变了（代码回退重落、口径变更）先刷新受影响产物再进下一门禁。轮次历史由TASK_STATE门禁记录每轮追加一行承载。
 
 TASK_STATE.md是上下文恢复锚点。orchestrator在每次阶段流转时维护它：任务描述、当前阶段、各阶段状态、决策、用户约束、已知风险。每个Agent在启动与上下文压缩后都读它。
+
+进度跟进：owner agent每到一个里程碑（读完关键参考、草拟完一节、跑完一轮构建）向`PROGRESS.md`追加一行：时间、agent、一句话。orchestrator派发时说明交给谁、预期产出什么，owner返回后立即汇报并更新TASK_STATE.md；PROGRESS.md长时间静默时主动核查、必要时重派——进展感知是协调者的职责，不是用户的。用户随时`tail -f tasks/<task-name>/PROGRESS.md`感知进展。
 
 命令输出归档：长时命令（编译、测试运行）输出重定向或tee到`tmp/<task-name>/logs/cmd-outputs/`，起描述性文件名；作业提交与崩溃现场进`tmp/<task-name>/logs/jobs/`。重跑命令前先读归档；只有输入变了才重跑。报告引用这些路径作为依据，但logs本身是临时产物——随时可清理，不裁决门禁。
 

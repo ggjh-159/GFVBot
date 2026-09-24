@@ -112,6 +112,7 @@ Artifacts under `tasks/<task-name>/` are the single source of truth across agent
 tasks/<task-name>/
   TASK_STATE.md                  cross-agent state anchor
   USER_GATES.md                  per-round appended record of user-gate decision points and user replies
+  PROGRESS.md                    intra-stage progress heartbeat: one appended line per milestone (time + agent + one sentence)
   architect/    SPEC.md, DESIGN.md, SUMMARY.md, RETROSPECTIVE.md
   developer/    IMPLEMENTATION.md, PR.md, RETROSPECTIVE.md
   reviewer/     SPEC_REVIEW.md, DESIGN_REVIEW.md, CODE_REVIEW.md, REVIEW_GATE.md

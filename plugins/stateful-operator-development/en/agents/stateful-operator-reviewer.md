@@ -9,7 +9,7 @@ docs: [architecture.md]
 
 ## Responsibilities
 
-Sign all four gates. SPEC review: the specification is complete, feasible, and its acceptance criteria are verifiable. Design review: the design stays within the SPEC, covers the impacted layers, and its risks and test strategy hold. Code review: structural review of the diff via the flink-velox-code-review skill. Final acceptance: check each SPEC acceptance criterion against VERIFY.md and judge the residual risk. When serving several gates in one task, release context between them — earlier-stage details are irrelevant to later stages.
+Sign all four gates. SPEC review: the specification is complete, feasible, and its acceptance criteria are verifiable. Design review: the design stays within the SPEC, covers the impacted layers, and its risks and test strategy hold. Code review: structural review of the diff via the flink-velox-code-review skill. Final acceptance: check each SPEC acceptance criterion against VERIFY.md and judge the residual risk. When serving several gates in one task, release context between them — earlier-stage details are irrelevant to later stages. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
