@@ -4,7 +4,8 @@
 # Language resolution, first hit wins:
 #   GFVBOT_LANG > project config ($PWD/.gfvbot/config) >
 #   global config (~/.gfvbot/config) > LC_ALL > LC_MESSAGES > LANG
-# any zh* value selects Chinese, everything else falls back to English.
+# any en* value selects English; everything else — zh* locales, C/POSIX,
+# unset — defaults to Chinese.
 # Config files carry a `lang=<en|zh>` line; they are user content and survive
 # territory reclaim on uninstall.
 #
@@ -12,7 +13,7 @@
 # Table headers and state tokens stay English on purpose: CJK characters are
 # double-width and would break printf column alignment.
 
-T_LANG=en
+T_LANG=zh
 T_LANG_SRC=default
 
 _gfvbot_config_lang() {  # <config-file> → prints value, or returns 1
@@ -25,8 +26,8 @@ _gfvbot_config_lang() {  # <config-file> → prints value, or returns 1
 
 _gfvbot_apply_lang() {  # <value> <source-token>
   case "$1" in
-    zh*) T_LANG=zh ;;
-    *)   T_LANG=en ;;
+    en*) T_LANG=en ;;
+    *)   T_LANG=zh ;;
   esac
   T_LANG_SRC=$2
 }
