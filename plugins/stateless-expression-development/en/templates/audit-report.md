@@ -30,6 +30,8 @@
 | Reuse decisions correct (no direct reuse where semantics differ) | | |
 | Registered under the flinksql namespace, not reusing spark/presto | | |
 | All three layers (velox / mapping / gluten) present, no gaps | | |
+| Typography discipline met (bullets, one fact + anchor per bullet, no prose walls — DESIGN template header) | | |
+| Content holds core directions and key points only, no process narration (agent search/thinking steps) | | |
 
 ### A2. Support Verification
 

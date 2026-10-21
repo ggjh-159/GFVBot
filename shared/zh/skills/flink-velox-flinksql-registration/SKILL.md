@@ -11,6 +11,8 @@ description: 在velox的flinksql命名空间下注册Flink语义的表达式函�
 
 每个新的GFV表达式函数都实现并注册在**flinksql命名空间**下。禁止复用spark/presto注册（`velox/functions/sparksql/`、`velox/functions/prestosql/`）作为运行时实现——spark/presto的名字只可作语义参考。既有代码里部分已映射表达式仍在复用spark/presto注册，那是过渡状态，不是可效仿的模式。
 
+表达式实现优先复用velox既有库/类（含既有函数实现——语义一致时经flinksql注册直接引用即可，无须重写）；复用不成立（无对应设施，或语义对照不一致）时才自写。不允许修改既有表达式实现——行为、签名、结构一律不动；差异化语义只能扩展或新增（新重载、新注册条目、新文件），既有代码允许直接复用。
+
 ## 什么放哪
 
 | 部件 | 位置（velox仓内） |
@@ -46,3 +48,5 @@ description: 在velox的flinksql命名空间下注册Flink语义的表达式函�
 - [ ] 对照velox4j调用点核实加载prefix
 - [ ] gluten映射条目已增/已改；GFV上冒烟SQL跑通
 - [ ] 未复用任何spark/presto注册作为运行时路径
+- [ ] 优先复用了velox既有库/类（自写时写明原因：无对应设施，或语义对照不一致）
+- [ ] 未修改任何既有表达式实现（diff只含新增文件/条目/重载；既有类仅被引用）

@@ -19,7 +19,11 @@ stages:
 
 Covers one Flink scalar expression end to end across the GFV stack: the velox C++ implementation registered under the flinksql namespace, the gluten planner mapping, and the test pyramid (unit tests, lightweight e2e, full dual-run e2e). Out of scope: stateful operators, aggregate functions, performance tuning (other plugins own those).
 
-Standing rule for every task: the runtime path is registered under `velox/functions/flinksql/` — spark/presto registrations are semantic references only, never the runtime implementation.
+Standing rules for every task:
+
+- The runtime path is registered under `velox/functions/flinksql/` — spark/presto registrations are semantic references only, never the runtime implementation.
+- Expression implementations prefer reusing existing velox libraries/classes, including existing function implementations — when semantics match, the flinksql registration references them directly, no rewrite needed; self-write only when reuse does not hold (no such facility, or the semantic comparison diverges).
+- Modifying existing expression implementations is forbidden — behavior, signature, and structure all stay untouched; divergent semantics go through extension or addition only (new overloads, new registration entries, new files); reusing existing code directly is allowed.
 
 ## Agents
 
@@ -59,9 +63,10 @@ The architect fills the DESIGN template (`templates/design.md`). Mandatory movem
 2. Semantic comparison table: NULL handling, empty input, out-of-range/illegal arguments, type matrix, return precision, function-specific dimensions — any mismatch forbids direct reuse.
 3. flinksql registration design (name, files, registration method, explicit signatures, CMake) per the flink-velox-flinksql-registration skill.
 4. Gluten mapping design (RexCallConverterFactory entry; custom converter or direct name mapping).
-5. Unit-test coverage matrix, e2e coverage matrix (each e2e case is one SQL file with fixed input), special cases, risks.
+5. Typography and content: follow the header disciplines — bullets, one fact + anchor per bullet, at most two lines, multi-ruling conclusions as a ruling list, no prose walls; core directions and key points only, with the agent's search/thinking process left out.
+6. Unit-test coverage matrix, e2e coverage matrix (each e2e case is one SQL file with fixed input), special cases, risks.
 
-Gate: the reviewer produces DESIGN_AUDIT (audit-report template, section A: scheme soundness, every supporting claim re-verified, coverage completeness). Verdict vocabulary: pass / fail — nothing else; a fail must carry concrete audit opinions. Only after pass does user gate 1 release implementation.
+Gate: the reviewer produces DESIGN_AUDIT (audit-report template, section A: scheme soundness, every supporting claim re-verified, coverage completeness, typography and content discipline). Verdict vocabulary: pass / fail — nothing else; a fail must carry concrete audit opinions; sub-standard typography (prose walls, anchor-less bullets) or process narration (agent search/thinking steps) also fails, with rework limited to re-layout and dropping the process narration — conclusions and key points stay unchanged. Only after pass does user gate 1 release implementation.
 
 ### Implement
 
