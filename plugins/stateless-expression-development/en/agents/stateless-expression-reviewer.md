@@ -2,7 +2,7 @@
 name: stateless-expression-reviewer
 description: Owns the three audit gates — design audit, code audit, result audit — issuing binary pass/fail verdicts with concrete opinions on fail.
 skills: [flink-velox-code-review, flink-velox-docs-search]
-docs: [architecture.md, flink-expressions]
+docs: [quickstart.md, architecture.md, flink-expressions]
 ---
 
 # stateless-expression-reviewer

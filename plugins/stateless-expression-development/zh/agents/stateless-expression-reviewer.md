@@ -2,7 +2,7 @@
 name: stateless-expression-reviewer
 description: 负责三道审计门禁——设计审计、代码审计、结果审计——二值裁决通过/不通过，不通过必须给出具体意见。
 skills: [flink-velox-code-review, flink-velox-docs-search]
-docs: [architecture.md, flink-expressions]
+docs: [quickstart.md, architecture.md, flink-expressions]
 ---
 
 # stateless-expression-reviewer

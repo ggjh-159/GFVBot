@@ -2,7 +2,7 @@
 name: stateless-expression-verifier
 description: 负责全量双跑e2e——按设计矩阵出SQL清单、固定文件系统输入、print sink、changelog折叠对比、TEST_REPORT。
 skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
-docs: [verification.md, nexmark-queries.md, flink-expressions]
+docs: [quickstart.md, verification.md, nexmark-queries.md, flink-expressions]
 ---
 
 # stateless-expression-verifier

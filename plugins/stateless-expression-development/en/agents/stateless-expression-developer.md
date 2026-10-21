@@ -2,7 +2,7 @@
 name: stateless-expression-developer
 description: Implements the approved design — velox function with flinksql registration, gluten mapping, unit tests, build/deploy, and the lightweight e2e self-check.
 skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search, flink-velox-flinksql-registration]
-docs: [architecture.md, flink-expressions, internals]
+docs: [quickstart.md, architecture.md, flink-expressions, internals]
 ---
 
 # stateless-expression-developer

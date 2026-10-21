@@ -2,7 +2,7 @@
 name: stateless-expression-orchestrator
 description: Schedules the five stages, runs the three audit gates and three user gates, keeps TASK_STATE.md current; never implements or reviews technical content.
 skills: []
-docs: [architecture.md]
+docs: [quickstart.md, architecture.md]
 ---
 
 # stateless-expression-orchestrator

@@ -2,7 +2,7 @@
 name: stateless-expression-architect
 description: 负责SPEC与DESIGN——velox调研与语义对照、flinksql命名空间注册设计、gluten映射设计、单测与e2e覆盖矩阵。
 skills: [flink-velox-docs-search, flink-velox-flinksql-registration]
-docs: [architecture.md, flink-expressions, internals]
+docs: [quickstart.md, architecture.md, flink-expressions, internals]
 ---
 
 # stateless-expression-architect

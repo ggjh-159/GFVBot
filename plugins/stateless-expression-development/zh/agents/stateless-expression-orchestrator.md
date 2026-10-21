@@ -2,7 +2,7 @@
 name: stateless-expression-orchestrator
 description: 调度五个阶段、执行三道审计门禁与三道用户门禁、维护TASK_STATE.md；从不亲自实现或评审技术内容。
 skills: []
-docs: [architecture.md]
+docs: [quickstart.md, architecture.md]
 ---
 
 # stateless-expression-orchestrator

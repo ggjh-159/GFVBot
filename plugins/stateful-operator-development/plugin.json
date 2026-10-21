@@ -11,7 +11,7 @@
     "stateful-operator-verifier"
   ],
   "skills": [],
-  "docs": [],
+  "docs": ["quickstart.md"],
   "templates": [
     "spec.md"
   ],

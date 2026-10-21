@@ -2,7 +2,7 @@
 name: stateful-operator-developer
 description: 按已通过的设计实现stateful-operator改动，自编译、写单测、备PR。
 skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search]
-docs: [architecture.md, nexmark-queries.md, internals]
+docs: [quickstart.md, architecture.md, nexmark-queries.md, internals]
 ---
 
 # stateful-operator-developer

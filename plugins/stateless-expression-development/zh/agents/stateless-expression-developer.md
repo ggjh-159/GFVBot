@@ -2,7 +2,7 @@
 name: stateless-expression-developer
 description: 按已通过的设计实现——velox函数与flinksql注册、gluten映射、单测、构建部署、轻量e2e自测。
 skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search, flink-velox-flinksql-registration]
-docs: [architecture.md, flink-expressions, internals]
+docs: [quickstart.md, architecture.md, flink-expressions, internals]
 ---
 
 # stateless-expression-developer

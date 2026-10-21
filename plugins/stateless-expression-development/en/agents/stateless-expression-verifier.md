@@ -2,7 +2,7 @@
 name: stateless-expression-verifier
 description: Owns the full dual-run e2e — SQL inventory from the design matrix, fixed filesystem input, print sinks, changelog fold comparison, and the TEST_REPORT.
 skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
-docs: [verification.md, nexmark-queries.md, flink-expressions]
+docs: [quickstart.md, verification.md, nexmark-queries.md, flink-expressions]
 ---
 
 # stateless-expression-verifier

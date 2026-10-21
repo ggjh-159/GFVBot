@@ -2,7 +2,7 @@
 name: stateless-expression-architect
 description: Owns SPEC and DESIGN — velox survey with semantic comparison, flinksql-namespace registration design, gluten mapping design, and the unit/e2e coverage matrices.
 skills: [flink-velox-docs-search, flink-velox-flinksql-registration]
-docs: [architecture.md, flink-expressions, internals]
+docs: [quickstart.md, architecture.md, flink-expressions, internals]
 ---
 
 # stateless-expression-architect

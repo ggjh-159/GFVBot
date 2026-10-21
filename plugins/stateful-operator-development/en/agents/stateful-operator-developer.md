@@ -2,7 +2,7 @@
 name: stateful-operator-developer
 description: Implements stateful-operator changes per the approved design, self-compiles, writes unit tests, and prepares the PR.
 skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search]
-docs: [architecture.md, nexmark-queries.md, internals]
+docs: [quickstart.md, architecture.md, nexmark-queries.md, internals]
 ---
 
 # stateful-operator-developer
