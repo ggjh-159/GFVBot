@@ -4,7 +4,7 @@ Category: [Temporal](../index.md#temporal) | Aliases: —
 
 ## Role and scenarios
 
-Converts a raw epoch value into a TIMESTAMP WITH LOCAL TIME ZONE at the given precision — 0 seconds, 3 milliseconds, 6 microseconds, 9 nanoseconds — rendered according to the session time zone. Useful for converting numeric epoch columns.
+Converts a raw epoch value into a TIMESTAMP WITH LOCAL TIME ZONE at the given precision — 0 seconds, 3 milliseconds — rendered according to the session time zone. Useful for converting numeric epoch columns. Flink 1.19.2 supports only these two precisions (any other value throws `TableException` at runtime); 6 microseconds and 9 nanoseconds are newer-Flink behavior.
 
 ## Usage
 
@@ -13,7 +13,7 @@ Signature: `TO_TIMESTAMP_LTZ(numeric, precision)`
 | Parameter | Type | Description |
 |---|---|---|
 | numeric | BIGINT | Raw epoch value |
-| precision | INT | Precision of the epoch value: 0 seconds, 3 milliseconds, 6 microseconds, 9 nanoseconds |
+| precision | INT | Precision of the epoch value: 0 seconds, 3 milliseconds (1.19.2 supports only these two; anything else throws `TableException`) |
 
 Return: TIMESTAMP_LTZ; the timestamp constructed from the epoch value, rendered in the session time zone.
 
@@ -38,7 +38,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `TO_TIMESTAMP_LTZ` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `TO_TIMESTAMP_LTZ` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | static methods of `BuiltInMethods` (direct call via `MethodCallGen`) |
+| Evaluation logic | `DateTimeUtils.toTimestampData` (direct call via the static methods of `BuiltInMethods` (Scala object) and `MethodCallGen`; the 0/3-only precision constraint lives here) |
 
 ## Velox implementation
 

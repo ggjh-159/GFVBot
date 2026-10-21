@@ -39,7 +39,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`CONVERT_TZ`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CONVERT_TZ`条目（SCALAR） |
-| 求值逻辑 | `BuiltInMethods`静态方法（经`MethodCallGen`直调） |
+| 求值逻辑 | `BuiltInMethods`（Scala object）静态方法（经`MethodCallGen`直调） |
 
 ## velox实现
 

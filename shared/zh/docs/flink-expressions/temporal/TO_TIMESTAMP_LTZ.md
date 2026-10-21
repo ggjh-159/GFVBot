@@ -4,7 +4,7 @@
 
 ## 定位与场景
 
-把原始epoch值按指定精度——0秒、3毫秒、6微秒、9纳秒——转换为TIMESTAMP WITH LOCAL TIME ZONE，呈现随会话时区。适用于转换数值epoch列。
+把原始epoch值按指定精度——0秒、3毫秒——转换为TIMESTAMP WITH LOCAL TIME ZONE，呈现随会话时区。适用于转换数值epoch列。Flink 1.19.2仅支持这两档精度（其余精度运行时抛`TableException`）；6微秒、9纳秒为更新版本Flink的行为。
 
 ## 用法
 
@@ -13,7 +13,7 @@
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | numeric | BIGINT | 原始epoch值 |
-| precision | INT | epoch值的精度：0秒、3毫秒、6微秒、9纳秒 |
+| precision | INT | epoch值的精度：0秒、3毫秒（1.19.2仅此两档，其余抛`TableException`） |
 
 返回：TIMESTAMP_LTZ；由epoch值构造、按会话时区呈现的时间戳。
 
@@ -38,7 +38,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`TO_TIMESTAMP_LTZ`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`TO_TIMESTAMP_LTZ`条目（SCALAR） |
-| 求值逻辑 | `BuiltInMethods`静态方法（经`MethodCallGen`直调） |
+| 求值逻辑 | `DateTimeUtils.toTimestampData`（经`BuiltInMethods`（Scala object）静态方法、`MethodCallGen`直调；精度仅0/3的约束在此） |
 
 ## velox实现
 

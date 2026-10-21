@@ -45,7 +45,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`CEIL`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`CEIL`条目（SCALAR） |
-| 求值逻辑 | 经`FloorCeilCallGen`生成：数值走`BuiltInMethods`的`FLOOR`/`CEIL`，时间截断走`UNIX_DATE`/`UNIX_TIMESTAMP`系列helper |
+| 求值逻辑 | 经`FloorCeilCallGen`生成：数值走`BuiltInMethods`（Scala object）的`FLOOR`/`CEIL`，时间截断走`UNIX_DATE`/`UNIX_TIMESTAMP`系列helper |
 
 ## velox实现
 

@@ -38,7 +38,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `JSON_QUERY` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `JSON_QUERY` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | calls a `BuiltInMethods` static method registered by `FunctionGenerator` via `MethodCallGen`, with no standalone runtime class |
+| Evaluation logic | calls a `BuiltInMethods` (Scala object) static method registered by `FunctionGenerator` via `MethodCallGen`, with no standalone runtime class |
 
 ## Velox implementation
 

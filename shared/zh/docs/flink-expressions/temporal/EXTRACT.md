@@ -45,7 +45,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`EXTRACT`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`EXTRACT`条目（SCALAR） |
-| 求值逻辑 | `ExtractCallGen`调`BuiltInMethods`.`UNIX_DATE_EXTRACT`（带时区时间戳走`EXTRACT_FROM_TIMESTAMP_TIME_ZONE`） |
+| 求值逻辑 | `ExtractCallGen`调`BuiltInMethods`（Scala object）.`UNIX_DATE_EXTRACT`（带时区时间戳走`EXTRACT_FROM_TIMESTAMP_TIME_ZONE`） |
 
 ## velox实现
 
