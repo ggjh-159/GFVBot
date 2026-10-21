@@ -153,8 +153,8 @@ validate_manifest() {
 
 # ---------------------------------------------------------------------------
 # source fingerprint — the entire content-language subtree of the plugin
-# (everything under plugins/<p>/<lang>/ minus the source-state files
-# quickstart/prompt that never land) plus the declared shared units of the
+# (everything under plugins/<p>/<lang>/ minus the source-state prompt
+# template that never lands) plus the declared shared units of the
 # content language. Any content change — or a language switch — flips the
 # record to UPDATE, and stale cleanup then removes the previous language's
 # files.
@@ -165,7 +165,7 @@ fingerprint() {
   local kind u
   {
     find "$PLUGINS_DIR/$p/$CONTENT_LANG" -type f \
-      ! -name quickstart.md ! -name prompt.md \
+      ! -name prompt.md \
       | LC_ALL=C sort | xargs -r sha256sum
     for kind in skills docs templates; do
       while IFS= read -r u; do
