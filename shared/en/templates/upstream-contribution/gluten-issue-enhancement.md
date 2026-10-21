@@ -4,6 +4,6 @@
 
 **Description**:
 
-<Describe the enhancement and its use cases. If written with AI assistance, note that at the end of the description as the community requires.>
+<Describe the enhancement and its use cases.>
 
 **Gluten version**: <main branch / Gluten-x.x>

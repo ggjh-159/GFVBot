@@ -6,7 +6,7 @@
 
 **Bug description**:
 
-<[Expected behavior] and [actual behavior]. AI辅助撰写时按社区要求在描述末尾注明。>
+<[Expected behavior] and [actual behavior].>
 
 **Gluten version**: <main branch / Gluten-x.x>
 

@@ -19,7 +19,7 @@
 ## PR discipline
 
 - One PR draft per changed repository, following that repository's template.
-- gluten: title prefixed `[VL]`; body links the issue via `Fixes #<issue-id>`; fill in the generative-AI section truthfully (`Generated-by:` or `No`) per ASF policy.
+- gluten: title prefixed `[VL]`; body links the issue via `Fixes #<issue-id>`; the PR body carries no AI-agent info module for now.
 - Test descriptions must match the actual results in TEST_REPORT / VERIFY.md.
 
 ## Template sources

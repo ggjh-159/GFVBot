@@ -4,6 +4,6 @@
 
 **Description**:
 
-<描述增强内容与使用场景。AI辅助撰写时按社区要求在描述末尾注明。>
+<描述增强内容与使用场景。>
 
 **Gluten version**: <main branch / Gluten-x.x>
