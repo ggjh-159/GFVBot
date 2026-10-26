@@ -38,7 +38,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`JSON_QUERY`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`JSON_QUERY`条目（SCALAR） |
-| 求值逻辑 | 经`MethodCallGen`调用`FunctionGenerator`注册的`BuiltInMethods`静态方法，无独立运行时类 |
+| 求值逻辑 | 经`MethodCallGen`调用`FunctionGenerator`注册的`BuiltInMethods`（Scala object）静态方法，无独立运行时类 |
 
 ## velox实现
 

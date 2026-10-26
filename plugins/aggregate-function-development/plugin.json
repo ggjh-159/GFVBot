@@ -5,7 +5,7 @@
   "workflow": "workflow.md",
   "agents": [],
   "skills": [],
-  "docs": [],
+  "docs": ["quickstart.md"],
   "templates": [],
   "shared": {
     "skills": [

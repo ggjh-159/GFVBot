@@ -37,7 +37,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `EXP` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `EXP` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | static methods of `BuiltInMethods` (invoked via `MethodCallGen`) |
+| Evaluation logic | static methods of `BuiltInMethods` (Scala object) (invoked via `MethodCallGen`) |
 
 ## Velox implementation
 

@@ -2,7 +2,7 @@
 name: stateful-operator-orchestrator
 description: 调度五个阶段、执行门禁、在用户门禁处暂停并仲裁分歧；从不亲自实现或评审技术内容。
 skills: []
-docs: [architecture.md]
+docs: [quickstart.md, architecture.md]
 ---
 
 # stateful-operator-orchestrator

@@ -2,7 +2,7 @@
 name: stateful-operator-verifier
 description: 负责stateful-operator任务的分层验证：单测、端到端运行、回归检查，落在VERIFY.md。
 skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
-docs: [nexmark-queries.md, verification.md]
+docs: [quickstart.md, nexmark-queries.md, verification.md]
 ---
 
 # stateful-operator-verifier

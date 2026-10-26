@@ -45,7 +45,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `HEX` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `HEX` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | `MethodCallGen` directly invokes the `HEX_STRING`/`HEX_LONG` methods of `BuiltInMethods` |
+| Evaluation logic | `MethodCallGen` directly invokes the `HEX_STRING`/`HEX_LONG` methods of `BuiltInMethods` (Scala object) |
 
 ## Velox implementation
 

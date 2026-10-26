@@ -19,7 +19,7 @@ description: 定位GFV栈的开发资料——已安装docs与本地源码优先
 ## 本地资源，按尝试顺序
 
 1. 目标项目`docs/gfvbot/`下已安装的docs单元——GFV沉淀的架构、表达式卡片、internals剖析、验证手册，是第一落点，在限定范围内grep。
-2. `<workspace>/repos/`下的源码——终极事实来源。仓库-职责映射与分支基线见`references/module-map.md`。
+2. `<workspace>/repos/`下的源码——终极事实来源。仓库-职责映射与分支基线见`references/module-map.md`。注意：repos/在目标项目里通常被git忽略（`.gitignore`或`.git/info/exclude`），Agent的Grep工具默认尊重gitignore、对repos/静默返回空——检索repos/一律走Bash的`grep -rn`（用rg须加`--no-ignore`）。
 3. 目标项目自己的文档树——设计笔记、特性调研、troubleshooting记录都在那里，回答项目特有问题常比上游文档快。
 4. velox仓内渲染的Velox上游文档（开发者指南、算子、表达式、函数参考）——上网之前先在仓内grep。
 

@@ -25,7 +25,7 @@
 | 3 转换 | `SqlNodeToOperationConversion` -> `FlinkPlannerImpl`（`SqlToRelConverter`+`SqlNodeToRexConverter`） | SqlNode变RexNode进入投影/过滤；IN与BETWEEN被改写为SEARCH（SARG）RexCall，OVERLAPS经`TemporalOverlapsConverter`展开 |
 | 4 优化 | `FlinkLogicalRules`/`FlinkStreamPhysicalRules` | 只有通用移动：过滤/投影下推、`CalcMergeRule`、`ExpressionReducer`对全字面量子树常量折叠 |
 | 5 ExecNode | `StreamExecCalc`（继承`CommonExecCalc`） | 携带表达式的Calc以ExecNode身份进入物理计划 |
-| 6 代码生成 | `CalcCodeGenerator` -> `ExprCodeGenerator` | 每个叶调用生成Java源码，载体分三类：内联运算代码（`ScalarOperatorGens`）、助手直调（`MethodCallGen`->`BuiltInMethods`、`StringCallGen`->`SqlFunctionUtils`/`BinaryStringDataUtil`）、`ScalarFunctionCallGen`直调`flink-table-runtime`的`eval()`实现类 |
+| 6 代码生成 | `CalcCodeGenerator` -> `ExprCodeGenerator` | 每个叶调用生成Java源码，载体分三类：内联运算代码（`ScalarOperatorGens`）、助手直调（`MethodCallGen`->`BuiltInMethods`（Scala object）、`StringCallGen`->`SqlFunctionUtils`/`BinaryStringDataUtil`）、`ScalarFunctionCallGen`直调`flink-table-runtime`的`eval()`实现类 |
 | 7 执行 | `CodeGenOperatorFactory` | Janino编译出`TableStreamOperator`子类，表达式在`processElement`逐行求值 |
 
 表达式落点：投影与过滤列在Calc算子内执行；同一表达式出现在JOIN条件里在StreamExecJoin算子内执行，出现在聚合参数里在StreamExecGroupAggregate算子内执行。非确定函数（RAND、RAND_INTEGER、UUID、CURRENT_ROW_TIMESTAMP）规划期既不常量折叠也不跨算子移动。
@@ -165,7 +165,7 @@
 | UNIX_TIMESTAMP | — | 把时间字符串（可选格式）转换为会话时区下的epoch秒；无参时返回当前epoch秒。 | [UNIX_TIMESTAMP](temporal/UNIX_TIMESTAMP.md) |
 | TO_DATE | — | 把日期字符串（默认格式yyyy-MM-dd）解析为DATE。 | [TO_DATE](temporal/TO_DATE.md) |
 | TO_TIMESTAMP | — | 把时间戳字符串（默认格式yyyy-MM-dd HH:mm:ss）解析为TIMESTAMP，按会话时区解释文本。 | [TO_TIMESTAMP](temporal/TO_TIMESTAMP.md) |
-| TO_TIMESTAMP_LTZ | — | 把按指定精度（0秒、3毫秒、6微秒、9纳秒）的原始epoch值转换为TIMESTAMP WITH LOCAL TIME ZONE。 | [TO_TIMESTAMP_LTZ](temporal/TO_TIMESTAMP_LTZ.md) |
+| TO_TIMESTAMP_LTZ | — | 把按指定精度（1.19.2仅0秒、3毫秒）的原始epoch值转换为TIMESTAMP WITH LOCAL TIME ZONE。 | [TO_TIMESTAMP_LTZ](temporal/TO_TIMESTAMP_LTZ.md) |
 | CURRENT_WATERMARK | — | 返回给定rowtime属性的当前事件时间水位线，类型为TIMESTAMP_LTZ——水位线尚未推进时为NULL；对普通非rowtime列恒为NULL。 | [CURRENT_WATERMARK](temporal/CURRENT_WATERMARK.md) |
 
 ## 条件函数

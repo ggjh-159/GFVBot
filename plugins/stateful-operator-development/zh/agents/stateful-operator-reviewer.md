@@ -2,7 +2,7 @@
 name: stateful-operator-reviewer
 description: 负责stateful-operator工作流的四道评审门禁：SPEC评审、设计评审、代码评审、最终验收。
 skills: [flink-velox-code-review, flink-velox-docs-search]
-docs: [architecture.md]
+docs: [quickstart.md, architecture.md]
 ---
 
 # stateful-operator-reviewer

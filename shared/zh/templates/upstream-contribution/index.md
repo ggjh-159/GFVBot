@@ -19,7 +19,7 @@
 ## PR纪律
 
 - 每个被改仓库一份PR草稿，按该仓模板填。
-- gluten：标题带`[VL]`前缀；正文以`Fixes #<issue-id>`关联issue；按ASF政策如实填写AI声明节（`Generated-by:`或`No`）。
+- gluten：标题带`[VL]`前缀；正文以`Fixes #<issue-id>`关联issue；PR描述暂不携带AI agent相关信息模块。
 - 测试描述与TEST_REPORT/VERIFY.md的实际结果一致。
 
 ## 模板来源

@@ -45,7 +45,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `EXTRACT` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `EXTRACT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | generated via `ExtractCallGen`, which calls `BuiltInMethods`.`UNIX_DATE_EXTRACT` (timestamps with time zone go through `EXTRACT_FROM_TIMESTAMP_TIME_ZONE`) |
+| Evaluation logic | generated via `ExtractCallGen`, which calls `BuiltInMethods` (Scala object).`UNIX_DATE_EXTRACT` (timestamps with time zone go through `EXTRACT_FROM_TIMESTAMP_TIME_ZONE`) |
 
 ## Velox implementation
 

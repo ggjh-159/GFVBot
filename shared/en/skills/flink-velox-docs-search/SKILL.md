@@ -19,7 +19,7 @@ The caller declares the search scope on the input side; this skill never widens 
 ## Local resources, in the order to try
 
 1. Docs units installed under the target project's `docs/gfvbot/` — GFV-distilled architecture, expression cards, internals deep-dives, verification manuals; the first landing point. Grep within the limited scope.
-2. Source code under `<workspace>/repos/` — the ultimate ground truth. See `references/module-map.md` for the repo-to-responsibility map and the branch baselines.
+2. Source code under `<workspace>/repos/` — the ultimate ground truth. See `references/module-map.md` for the repo-to-responsibility map and the branch baselines. Note: repos/ is usually git-ignored by the target project (`.gitignore` or `.git/info/exclude`), and the agent Grep tool honors gitignore by default — it silently returns nothing over repos/. Always search repos/ with Bash `grep -rn` (add `--no-ignore` when using rg).
 3. The target project's own documentation tree — design notes, feature investigations, and troubleshooting records live there and often answer project-specific questions faster than upstream docs.
 4. Velox upstream docs rendered from the velox repo (developers' guide, operators, expressions, functions reference) — grep them inside the repo before going online.
 

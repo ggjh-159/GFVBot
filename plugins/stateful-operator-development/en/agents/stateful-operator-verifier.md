@@ -2,7 +2,7 @@
 name: stateful-operator-verifier
 description: Owns layered verification for stateful-operator tasks: unit tests, end-to-end runs, and regression checks, reported in VERIFY.md.
 skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
-docs: [nexmark-queries.md, verification.md]
+docs: [quickstart.md, nexmark-queries.md, verification.md]
 ---
 
 # stateful-operator-verifier

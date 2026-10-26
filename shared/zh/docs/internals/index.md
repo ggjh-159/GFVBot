@@ -13,7 +13,7 @@ GFV全栈的源码级深入，[架构总览](../architecture.md)里的每个阶�
 
 ## 约定
 
-**代码引用**：提到方法时写作`类#方法`（如`StatefulTask#next`）；提到文件时写作相对仓库根目录的路径（如`gluten-flink/planner/.../StreamExecCalc.java`，`...`表示省略的包路径）。四个源码仓（velox、velox4j、gluten、flink）克隆在工作区`repos/`目录下——在对应仓库内grep符号名即可定位源码。
+**代码引用**：提到方法时写作`类#方法`（如`StatefulTask#next`）；提到文件时写作相对仓库根目录的路径（如`gluten-flink/planner/.../StreamExecCalc.java`，`...`表示省略的包路径）。四个源码仓（velox、velox4j、gluten、flink）克隆在工作区`repos/`目录下——在对应仓库内grep符号名即可定位源码（repos/通常被项目git忽略，用Bash的`grep -rn`检索；Agent的Grep工具默认尊重gitignore，对repos/静默返回空）。
 
 **不使用行号**：源码改动后行号随即失效，类名与方法名则通常保持不变。文中一律以符号名定位源码，保证文档在代码重构后仍然可用。
 

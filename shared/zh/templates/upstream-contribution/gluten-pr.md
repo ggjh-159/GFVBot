@@ -9,7 +9,3 @@
 ## How was this patch tested?
 
 <测试方式与结果，新增测试须列出；与TEST_REPORT/VERIFY.md一致。>
-
-## Was this patch authored or co-authored using generative AI tooling?
-
-<AI辅助则填`Generated-by: <工具名与版本>`，否则填`No`——ASF政策要求如实填写。>

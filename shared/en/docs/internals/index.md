@@ -13,7 +13,7 @@ Source-level deep dives into the GFV stack, one stage of the [architecture overv
 
 Conventions across the series:
 
-**Code references**: methods are written `Class#method` (e.g. `StatefulTask#next`); files are written as paths relative to the repo root (e.g. `gluten-flink/planner/.../StreamExecCalc.java`, where `...` stands for the omitted package directories). The four source repos (velox, velox4j, gluten, flink) are cloned under the workspace's `repos/` directory — grep a symbol inside the matching repo to locate its source.
+**Code references**: methods are written `Class#method` (e.g. `StatefulTask#next`); files are written as paths relative to the repo root (e.g. `gluten-flink/planner/.../StreamExecCalc.java`, where `...` stands for the omitted package directories). The four source repos (velox, velox4j, gluten, flink) are cloned under the workspace's `repos/` directory — grep a symbol inside the matching repo to locate its source (repos/ is usually git-ignored by the project: search it with Bash `grep -rn`; the agent Grep tool honors gitignore by default and silently returns nothing over repos/).
 
 **No line numbers**: line numbers go stale as soon as the source changes, while class and method names usually survive. Everything here is anchored by symbol name, so the pages remain valid across refactors.
 

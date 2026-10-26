@@ -205,6 +205,8 @@ cmd_list() {
       *) shift ;;
     esac
   done
+  require_jq   # records and manifests are read through jq; a missing jq
+               # would render every plugin "not installed" — fail loudly
   local records_dir="$target/.gfvbot/records"
 
   # collect installed rows
@@ -404,21 +406,35 @@ cmd_env_init() {
   exec bash "$setup" --target "$target"
 }
 
+require_jq() {  # clone/list hard-depend on jq for .gfvbot/env.json and the
+                # install records; a missing jq must fail loudly here — the
+                # silent alternative is a clone that reports success while
+                # nothing got recorded. No self-install: package installs are
+                # env-init's job, not a side effect of clone.
+  command -v jq >/dev/null 2>&1 && return 0
+  echo "$(t err_no_jq)" >&2
+  exit 1
+}
+
 record_repo() {  # <name> <dir> <url> <env.json> — upsert one repos entry;
                  # skills read these for tool invocation and code search.
                  # url is the source actually cloned from (a personal fork
                  # under --fork); upstream and main_branch are the stable GFV
                  # baseline facts from the table, not volatile git state.
   local name=$1 dir=$2 url=$3 f=$4 entry
+  command -v jq >/dev/null 2>&1 || { echo "$(t err_no_jq)" >&2; exit 1; }
   dir=$(cd "$dir" 2>/dev/null && pwd) || return 0
   entry=$(jq -cn --arg p "$dir" --arg u "$url" \
     --arg up "$(repo_url "$name" "")" --arg b "$(repo_branch "$name")" \
     '{path:$p, url:$u, upstream:$up, main_branch:$b, ok:true}')
   mkdir -p "$(dirname "$f")"
   if [ -f "$f" ]; then
-    jq --arg n "$name" --argjson e "$entry" '.repos[$n] = $e' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    jq --arg n "$name" --argjson e "$entry" '.repos[$n] = $e' "$f" > "$f.tmp" \
+      && mv "$f.tmp" "$f" \
+      || { rm -f "$f.tmp"; echo "$(t err_env_record "$f")" >&2; exit 1; }
   else
-    jq -cn --arg n "$name" --argjson e "$entry" '{repos: {($n): $e}}' > "$f"
+    jq -cn --arg n "$name" --argjson e "$entry" '{repos: {($n): $e}}' > "$f" \
+      || { echo "$(t err_env_record "$f")" >&2; exit 1; }
   fi
 }
 
@@ -443,6 +459,7 @@ cmd_clone() {
     for e in "${GFVBOT_REPOS[@]}"; do repos+=("${e%%|*}"); done
   fi
   ensure_git || { echo "$(t err_no_git)" >&2; exit 1; }
+  require_jq   # before any clone: fail fast, not after 800MB of velox
 
   local root="$target/repos" name url branch dest FAIL=0 failed="" recorded=0
   local envjson="$target/.gfvbot/env.json"

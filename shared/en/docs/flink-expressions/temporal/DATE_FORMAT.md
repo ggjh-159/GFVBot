@@ -45,7 +45,7 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 |---|---|
 | Parser recognition | the `DATE_FORMAT` entry in `FlinkSqlOperatorTable` |
 | Definition and type inference | the `DATE_FORMAT` entry in `BuiltInFunctionDefinitions` (SCALAR) |
-| Evaluation logic | static methods of `BuiltInMethods` (direct call via `MethodCallGen`) |
+| Evaluation logic | static methods of `BuiltInMethods` (Scala object) (direct call via `MethodCallGen`) |
 
 ## Velox implementation
 

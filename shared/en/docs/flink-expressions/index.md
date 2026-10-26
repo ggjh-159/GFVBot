@@ -25,7 +25,7 @@ An expression is not an operator: it never runs on its own, it is compiled *into
 | 3 Convert | `SqlNodeToOperationConversion` -> `FlinkPlannerImpl` (`SqlToRelConverter` + `SqlNodeToRexConverter`) | the SqlNode becomes a RexNode inside a projection/filter; IN and BETWEEN are rewritten into SEARCH (SARG) RexCalls, OVERLAPS is expanded by `TemporalOverlapsConverter` |
 | 4 Optimize | `FlinkLogicalRules` / `FlinkStreamPhysicalRules` | generic moves only: filter/project push-down, `CalcMergeRule`, constant folding of fully literal subtrees by `ExpressionReducer` |
 | 5 ExecNode | `StreamExecCalc` (extends `CommonExecCalc`) | the Calc carrying the expression enters the physical plan as an ExecNode |
-| 6 Codegen | `CalcCodeGenerator` -> `ExprCodeGenerator` | every leaf call is turned into Java source through one of three carrier families: inlined operator code (`ScalarOperatorGens`), helper calls (`MethodCallGen` -> `BuiltInMethods`, `StringCallGen` -> `SqlFunctionUtils` / `BinaryStringDataUtil`), or `ScalarFunctionCallGen` invoking a `flink-table-runtime` `eval()` implementation class |
+| 6 Codegen | `CalcCodeGenerator` -> `ExprCodeGenerator` | every leaf call is turned into Java source through one of three carrier families: inlined operator code (`ScalarOperatorGens`), helper calls (`MethodCallGen` -> `BuiltInMethods` (Scala object), `StringCallGen` -> `SqlFunctionUtils` / `BinaryStringDataUtil`), or `ScalarFunctionCallGen` invoking a `flink-table-runtime` `eval()` implementation class |
 | 7 Execute | `CodeGenOperatorFactory` | Janino compiles a `TableStreamOperator` subclass; the expression is evaluated per row in `processElement` |
 
 Where expressions end up: projection and filter columns run inside the Calc operator; the same expression in a join condition runs inside the StreamExecJoin operator, and in an aggregate argument inside the StreamExecGroupAggregate operator. Non-deterministic functions (RAND, RAND_INTEGER, UUID, CURRENT_ROW_TIMESTAMP) are neither constant-folded nor moved across operators during planning.
@@ -165,7 +165,7 @@ Each expression's doc ends with two sections: "Source locations" gives the Flink
 | UNIX_TIMESTAMP | — | Converts a timestamp string (with optional format) to epoch seconds in the session time zone; with no arguments it returns the current epoch seconds. | [UNIX_TIMESTAMP](temporal/UNIX_TIMESTAMP.md) |
 | TO_DATE | — | Parses a date string (default format yyyy-MM-dd) into a DATE. | [TO_DATE](temporal/TO_DATE.md) |
 | TO_TIMESTAMP | — | Parses a timestamp string (default format yyyy-MM-dd HH:mm:ss) into TIMESTAMP, interpreting the text in the session time zone. | [TO_TIMESTAMP](temporal/TO_TIMESTAMP.md) |
-| TO_TIMESTAMP_LTZ | — | Converts a raw epoch value with the given precision (0 seconds, 3 millis, 6 micros, 9 nanos) into TIMESTAMP WITH LOCAL TIME ZONE. | [TO_TIMESTAMP_LTZ](temporal/TO_TIMESTAMP_LTZ.md) |
+| TO_TIMESTAMP_LTZ | — | Converts a raw epoch value with the given precision (1.19.2 supports only 0 seconds and 3 millis) into TIMESTAMP WITH LOCAL TIME ZONE. | [TO_TIMESTAMP_LTZ](temporal/TO_TIMESTAMP_LTZ.md) |
 | CURRENT_WATERMARK | — | Returns the current event-time watermark for the given rowtime attribute as TIMESTAMP_LTZ — NULL before any watermark has passed; over a plain non-rowtime column it always evaluates to NULL. | [CURRENT_WATERMARK](temporal/CURRENT_WATERMARK.md) |
 
 ## Conditional

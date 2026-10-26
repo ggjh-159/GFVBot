@@ -45,7 +45,7 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 |---|---|
 | 解析识别 | `FlinkSqlOperatorTable`的`HEX`条目 |
 | 函数定义与类型推导 | `BuiltInFunctionDefinitions`的`HEX`条目（SCALAR） |
-| 求值逻辑 | 经`MethodCallGen`直调`BuiltInMethods`的`HEX_STRING`/`HEX_LONG` |
+| 求值逻辑 | 经`MethodCallGen`直调`BuiltInMethods`（Scala object）的`HEX_STRING`/`HEX_LONG` |
 
 ## velox实现
 

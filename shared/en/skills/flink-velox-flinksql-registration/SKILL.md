@@ -11,6 +11,8 @@ How a Flink-semantics function is registered as a first-class velox function und
 
 Every new GFV expression function is implemented and registered under the **flinksql namespace**. Reusing a spark/presto registration (`velox/functions/sparksql/`, `velox/functions/prestosql/`) as the runtime implementation is forbidden — spark/presto names may be consulted as semantic references only. The existing codebase still reuses spark/presto registrations for some mapped expressions; that is transitional state, not a pattern to follow.
 
+Expression implementations prefer reusing existing velox libraries/classes, including existing function implementations — when semantics match, the flinksql registration references them directly, no rewrite needed; self-write only when reuse does not hold (no such facility, or the semantic comparison diverges). Modifying an existing expression implementation is forbidden — behavior, signature, and structure all stay untouched; divergent semantics go through extension or addition only (new overloads, new registration entries, new files); reusing existing code directly is allowed.
+
 ## What lives where
 
 | Piece | Location (under the velox repo) |
@@ -46,3 +48,5 @@ Registering the velox function is necessary but not sufficient — the Flink cal
 - [ ] Loader prefix verified against velox4j call sites
 - [ ] Gluten mapping entry added/updated; smoke SQL runs on GFV
 - [ ] No spark/presto registration reused as the runtime path
+- [ ] Existing velox libraries/classes reused in preference (when self-writing, state the reason: no such facility, or semantic mismatch)
+- [ ] No existing expression implementation modified (diff contains only new files/entries/overloads; existing classes only referenced)

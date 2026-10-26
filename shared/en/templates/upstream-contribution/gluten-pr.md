@@ -9,7 +9,3 @@
 ## How was this patch tested?
 
 <How the changes were tested; list new tests; must match TEST_REPORT / VERIFY.md.>
-
-## Was this patch authored or co-authored using generative AI tooling?
-
-<If AI tooling was used, write `Generated-by: <tool name and version>`; otherwise write `No` — ASF policy requires truthful disclosure.>
