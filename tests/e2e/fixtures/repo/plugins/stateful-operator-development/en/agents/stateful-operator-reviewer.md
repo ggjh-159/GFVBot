@@ -8,4 +8,6 @@ docs:
   - stateful-arch.md
 ---
 
+# stateful-operator-reviewer
+
 E2E fixture agent body (en).

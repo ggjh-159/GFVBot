@@ -231,11 +231,16 @@ install_one() {
 
   # language switch: the recorded files are ours, and their content is the
   # other language's — remove them first so re-landing is a clean overwrite
-  # instead of a .gfvbot.bak backup per file
+  # instead of a .gfvbot.bak backup per file. The CC bridge files are exempt:
+  # they regenerate by overwrite, and keeping the previous bridge card lets
+  # the version logic see the content change and refresh the CLI cache
   if [ "$state" = UPDATE ] && [ "$old_lang" != "$CONTENT_LANG" ]; then
     local f
     for f in "${old_files[@]:-}"; do
       [ -n "$f" ] || continue
+      case "$f" in
+        */.gfvbot/marketplace/*) continue ;;
+      esac
       if [ -e "$f" ] || [ -L "$f" ]; then
         if [ -n "$DRY_RUN" ]; then
           echo "  $(t dry_remove_stale "$f")"
@@ -273,7 +278,12 @@ install_one() {
   if [ -z "$DRY_RUN" ]; then
     local f hc=0
     for f in "${INSTALLED_FILES[@]:-}"; do
-      [ -n "$f" ] && { [ -e "$f" ] || { err "$(t err_health_missing "$f")"; hc=1; }; }
+      [ -n "$f" ] || continue
+      # bridge card may have been dropped after failed CLI registration —
+      # its absence is the retry signal for the skip-path self-heal, not a
+      # health failure
+      case "$f" in */.gfvbot/marketplace/*) continue ;; esac
+      [ -e "$f" ] || { err "$(t err_health_missing "$f")"; hc=1; }
     done
     if [ "$hc" = 0 ]; then
       ok "$(t msg_health_ok "$p" "${#INSTALLED_FILES[@]}")"

@@ -81,6 +81,20 @@ rm_path() {  # <path> <label>
   fi
 }
 
+# does any OTHER project still hold an install from our CC marketplace?
+# (`claude plugin marketplace remove` is global by name; guard before drop.
+# GFVBOT_CC_REGISTRY overrides the registry path for tests.)
+cc_registry_has_foreign() {
+  local reg="${GFVBOT_CC_REGISTRY:-$HOME/.claude/plugins/installed_plugins.json}"
+  [ -f "$reg" ] || return 1
+  jq -r --arg mkt "$MKT_NAME" --arg self "$TARGET" '
+    .plugins | to_entries[]
+    | select(.key | endswith("@" + $mkt))
+    | .value[] | select(.scope == "project" and (.projectPath // "") != "" and .projectPath != $self)
+    | .projectPath
+  ' "$reg" 2>/dev/null | grep -q .
+}
+
 
 
 # ---------------------------------------------------------------------------
@@ -278,8 +292,77 @@ for rec in "${UNINSTALL[@]}"; do
     find "$TARGET/docs/gfvbot/$p" -depth -type d -empty -delete 2>/dev/null
   fi
 
+  # 5. per-plugin agents dir prune — agents land subfoldered per plugin; the
+  #    file removal above empties it, drop the folder so multi-plugin installs
+  #    don't accumulate empty agent subfolders between uninstalls
+  agents_dir=""
+  case "$tool" in
+    claude)   agents_dir="$TARGET/.claude/agents/$p" ;;
+    opencode) agents_dir="$TARGET/.opencode/agents/$p" ;;
+  esac
+  if [ -z "$DRY_RUN" ] && [ -n "$agents_dir" ] && [ -d "$agents_dir" ]; then
+    find "$agents_dir" -depth -type d -empty -delete 2>/dev/null
+  fi
+
+  # 6. CC plugin channel (claude only, bridged installs only): unregister
+  #    the plugin from the claude CLI; the bridge files themselves go with
+  #    the record's file list, the manifest is rebuilt after the loop.
+  #    GFVBOT_NO_CC_BRIDGE skips the CLI (manual mode: files only)
+  if [ "$tool" = claude ] && grep -q '/\.gfvbot/marketplace/' "$rec"; then
+    if [ -n "$DRY_RUN" ] || [ -n "${GFVBOT_NO_CC_BRIDGE:-}" ]; then
+      echo "  $(t dry_bridge_unreg "$p")"
+    elif command -v claude >/dev/null 2>&1 \
+         && timeout -k 2 15 claude plugin marketplace list >/dev/null 2>&1; then
+      bout=$( cd "$TARGET" && timeout -k 3 30 claude plugin uninstall "$p@$MKT_NAME" --scope project </dev/null 2>&1 )
+      if [ $? -eq 0 ] || printf '%s' "$bout" | grep -q 'not found'; then
+        ok "$(t msg_bridge_unreg "$p")"
+      else
+        warn "$(t warn_bridge_unreg "$p" "$p")"
+        printf '%s\n' "$bout" | sed 's/^/    /'
+      fi
+    else
+      warn "$(t warn_no_cc_cli)"
+    fi
+  fi
+
   rm_path "$rec" "$(t lbl_record)"
 done
+
+# ---------------------------------------------------------------------------
+# CC bridge manifest rebuild — surviving bridge dirs only; an empty bridge
+# unregisters the marketplace and drops the tree (.gfvbot/ itself may stay
+# alive via config/env, the bridge must not survive stale)
+# ---------------------------------------------------------------------------
+if [ -d "$TARGET/.gfvbot/marketplace" ]; then
+  bridge_n=-1
+  if [ -n "$DRY_RUN" ]; then
+    echo "  $(t dry_bridge "$TARGET/.gfvbot/marketplace/.claude-plugin/marketplace.json")"
+  else
+    find "$TARGET/.gfvbot/marketplace" -mindepth 1 -maxdepth 2 -depth -type d -empty -delete 2>/dev/null
+    bridge_n=$(bridge_manifest_build "$TARGET/.gfvbot/marketplace")
+  fi
+  if [ "$bridge_n" = 0 ]; then
+    if [ -n "$DRY_RUN" ]; then
+      echo "  $(t dry_bridge_mkt_rm)"
+    else
+      # `marketplace remove` is global by name: one call from any project
+      # wipes the registry entries of every project using the marketplace.
+      # Only drop it when no other project still holds an install.
+      # GFVBOT_NO_CC_BRIDGE skips the CLI (manual mode unregisters itself)
+      if [ -n "${GFVBOT_NO_CC_BRIDGE:-}" ]; then
+        :
+      elif cc_registry_has_foreign; then
+        warn "$(t warn_bridge_mkt_foreign)"
+      elif command -v claude >/dev/null 2>&1; then
+        ( cd "$TARGET" && timeout -k 3 30 claude plugin marketplace remove "$MKT_NAME" </dev/null ) >/dev/null 2>&1 \
+          && ok "$(t msg_bridge_mkt_rm)" || true
+      fi
+      rm -rf "$TARGET/.gfvbot/marketplace"
+    fi
+  elif [ "$bridge_n" -gt 0 ]; then
+    ok "$(t msg_bridge_mkt "$bridge_n")"
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # territory reclaim — per tool: the last record of a tool takes the tool's

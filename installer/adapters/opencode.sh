@@ -3,7 +3,7 @@
 #
 # Layout:
 #   skills        → .opencode/skills/<name>/
-#   agents        → .opencode/agents/<name>.md
+#   agents        → .opencode/agents/<plugin>/<name>.md (per-plugin subfolder)
 #   workflow      → .opencode/gfvbot/index.md (per-plugin sections)
 #   entry file    → AGENTS.md single anchor, body is a full copy of the index
 #                   (AGENTS.md has no @import mechanism, so the index content
@@ -22,7 +22,7 @@ adapter_install() {
   done < <(shared_skills "$m")
 
   while IFS= read -r u; do
-    [ -n "$u" ] && idem_install "$PLUGINS_DIR/$p/$CONTENT_LANG/agents/$u.md" "$t/.opencode/agents/$u.md"
+    [ -n "$u" ] && idem_install "$PLUGINS_DIR/$p/$CONTENT_LANG/agents/$u.md" "$t/.opencode/agents/$p/$u.md"
   done < <(jq -r '.agents[]? // empty' "$m")
 
   install_docs_templates "$p" "$m" "$t"
