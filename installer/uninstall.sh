@@ -63,6 +63,10 @@ done
 
 [ "${#PLUGINS[@]}" -gt 0 ] || die "$(t err_no_plugin_given)"
 TARGET="${TARGET:-$PWD}"
+# Same canonicalization as install.sh: record paths and the CLAUDE.md/
+# AGENTS.md comparisons key off the target spelling — one spelling regardless
+# of how --target was passed.
+TARGET="$(realpath -m -- "$TARGET")"
 RECORDS_DIR="$TARGET/.gfvbot/records"
 [ -d "$RECORDS_DIR" ] || die "$(t err_no_records "$TARGET")"
 
