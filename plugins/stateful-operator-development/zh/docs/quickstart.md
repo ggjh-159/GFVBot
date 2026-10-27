@@ -8,6 +8,8 @@ gfvbot clone                                   # 四仓克隆到repos/
 gfvbot env && gfvbot env-init                  # 环境扫描与补齐
 ```
 
+装完（或重装后）在项目目录**新开会话**再跑任务：agents只在会话启动时加载，已开的会话看不到新落的`.claude/agents/`；`/agents`能列出5个`stateful-operator-*`即就绪。
+
 首次GFV构建与集群启动由工作流接管：implement阶段走flink-velox-build技能完成编译、部署jars并重启集群，任务前无需手工编译。
 
 实现契约先行：spec与设计阶段全程对照`docs/gfvbot/shared/stateful-operator-implementation.md`——后端保证、状态句柄选型、生命周期范式（六步建后端、七步addInput）与陷阱清单。
