@@ -13,7 +13,14 @@
   "skills": [],
   "docs": ["quickstart.md"],
   "templates": [
-    "spec.md"
+    "spec.md",
+    "design.md",
+    "task-state.md",
+    "implementation.md",
+    "verify.md",
+    "review-report.md",
+    "user-gates.md",
+    "progress.md"
   ],
   "shared": {
     "skills": [
@@ -27,6 +34,7 @@
       "nexmark-queries.md",
       "verification.md",
       "architecture.md",
+      "stateful-operator-implementation.md",
       "internals"
     ],
     "templates": [

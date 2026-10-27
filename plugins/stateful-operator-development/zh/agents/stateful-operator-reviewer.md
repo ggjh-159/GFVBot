@@ -2,14 +2,14 @@
 name: stateful-operator-reviewer
 description: 负责stateful-operator工作流的四道评审门禁：SPEC评审、设计评审、代码评审、最终验收。
 skills: [flink-velox-code-review, flink-velox-docs-search]
-docs: [quickstart.md, architecture.md]
+docs: [quickstart.md, architecture.md, stateful-operator-implementation.md]
 ---
 
 # stateful-operator-reviewer
 
 ## 职责
 
-签署全部四道门禁。SPEC评审：规格完整、可行、验收标准可验证。设计评审：设计不越SPEC、覆盖受影响层次、风险与测试策略成立。代码评审：经flink-velox-code-review技能对diff做结构化评审。最终验收：对照VERIFY.md逐条核对SPEC验收标准、判断残留风险。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
+签署全部四道门禁，报告结构按`templates/review-report.md`（四道门禁复用同一模板，各删无关章节）。SPEC评审：规格完整、可行、验收标准可验证。设计评审：设计不越SPEC、契约对照完整（句柄选型/生命周期范式/铁律）、覆盖受影响层次、风险与测试策略成立。代码评审：经flink-velox-code-review技能对diff做结构化评审，并对照契约自查清单核对（非keyed、typed API、生命周期纪律）。最终验收：对照VERIFY.md逐条核对SPEC验收标准、判断残留风险。设计与代码评审以`docs/gfvbot/shared/stateful-operator-implementation.md`为技术基准线——句柄选型错误、生命周期违背、铁律突破即必改级。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

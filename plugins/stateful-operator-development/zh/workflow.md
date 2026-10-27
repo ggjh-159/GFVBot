@@ -56,25 +56,25 @@ stages:
 
 ### Spec
 
-architect把任务描述转成规格合约，由插件SPEC模板驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。
+architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。
 
 门禁：reviewer在SPEC_REVIEW.md上签`pass`或`fail`——没有第三种；`fail`必须给出具体修改意见。`not feasible`结论终止或降级任务。`fail`打回architect修订SPEC（原地刷新后重审）。
 
 ### Design
 
-architect在已批准的SPEC内产出设计：问题陈述、范围与非目标、受影响模块与文件、类与API变更、执行与数据流、兼容与回归风险、测试策略。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。
+architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入、现状调研（planner分派链、既有节点类、可复用设施）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流、checkpoint语义、测试策略、风险对照陷阱表。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend六步、addInput七步范式与陷阱清单逐项对照。
 
-门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
+门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（分点、单点一事实、无散文段）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
 
 ### Implement
 
-developer按设计实现、自编译、过格式、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果记进IMPLEMENTATION.md。
+developer按设计实现、自编译、过格式、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
 
 门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。
 
 ### Verify
 
-verifier跑分层验证：单测、对验收标准的端到端运行、共享组件回归检查。端到端按flink-velox-e2e-verify技能执行：用例与证据落项目根`e2e/`证据树、全量结果汇总落`e2e/verify/RESULTS.md`，VERIFY.md引用其路径与结论。VERIFY.md记录每条命令及结果、覆盖声明、性能与回归状态——以及每个失败的症状、完整错误日志、复现步骤、环境、初判分析，让developer不用再问上下文就能开修。
+verifier跑分层验证：单测、对验收标准的端到端运行、共享组件回归检查。端到端按flink-velox-e2e-verify技能执行：用例与证据落项目根`e2e/`证据树、全量结果汇总落`e2e/verify/RESULTS.md`，VERIFY.md引用其路径与结论。VERIFY.md记录每条命令及结果、覆盖声明、性能与回归状态——以及每个失败的症状、完整错误日志、复现步骤、环境、初判分析，让developer不用再问上下文就能开修。VERIFY.md按`templates/verify.md`填写；覆盖声明四选一（build success/targeted tests/partial verification/full verification）如实勾选。
 
 验证裁决只有`pass`或`fail`。verifier绝不把失败归因于既有问题或环境限制就放行；归因由orchestrator与用户裁决。新算子必须至少有一条覆盖核心功能的端到端通过用例。Flink作业只有到FINISHED才算成功。
 
@@ -121,6 +121,8 @@ tasks/<task-name>/
 
 tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作门禁依据，随时可清理
 ```
+
+产物由插件模板初始化：SPEC/DESIGN/IMPLEMENTATION/VERIFY/TASK_STATE/评审报告分别用`templates/`下的spec.md、design.md、implementation.md、verify.md、task-state.md、review-report.md，USER_GATES/PROGRESS用user-gates.md、progress.md；评审报告模板四道门禁复用，各删无关章节。
 
 e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录下——SQL表达验证范围、输出与对比是运行证据，跨任务沉淀为回归用例库；全量结果汇总在`e2e/verify/RESULTS.md`（每轮原地刷新），VERIFY.md只引用其路径与结论。
 

@@ -2,7 +2,7 @@
 name: stateful-operator-architect
 description: 负责stateful-operator任务的SPEC（含可行性评估）、设计与最终总结。
 skills: [flink-velox-docs-search]
-docs: [quickstart.md, architecture.md, nexmark-queries.md]
+docs: [quickstart.md, architecture.md, stateful-operator-implementation.md, nexmark-queries.md]
 ---
 
 # stateful-operator-architect
