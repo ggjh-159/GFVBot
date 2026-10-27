@@ -12,6 +12,7 @@ File by file, mapping one-to-one to §4–§6 of `DESIGN.md`:
 | velox | `velox/functions/flinksql/Register.cpp` | registration entry | §4 |
 | velox | `velox/functions/flinksql/CMakeLists.txt` | build entry | §4 |
 | velox | `velox/functions/flinksql/tests/<Test>.cpp` | unit tests | §7 |
+| velox4j | `src/test/.../functions/<Function>Test.java` | call-chain tests (EvaluationTest-style harness, FLINK preset) | §7 |
 | gluten | `.../RexCallConverterFactory.java` | mapping entry | §5 |
 
 Changes beyond the design impact list: <none / justify each — the code audit scrutinizes this row>
@@ -32,6 +33,7 @@ Changes beyond the design impact list: <none / justify each — the code audit s
 | Type matrix | | | |
 | NULL / boundary | | | |
 | Special scenarios | | | |
+| velox4j call chain (via `mvn test`, pinning the JNI path) | | | |
 
 Mapping to the design §7 matrix: <every entry matched / missing N, why>
 

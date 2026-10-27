@@ -17,7 +17,7 @@ stages:
 
 ## 范围
 
-覆盖一个Flink标量表达式在GFV栈上的端到端接入：velox侧C++实现（在flinksql命名空间下注册）、gluten planner映射、测试金字塔（单测、轻量e2e、全量双跑e2e）。不在范围内：状态算子、聚合函数、性能调优（归其他插件管）。
+覆盖一个Flink标量表达式在GFV栈上的端到端接入：velox侧C++实现（在flinksql命名空间下注册）、gluten planner映射、测试金字塔（velox C++单测、velox4j调用链单测、轻量e2e、全量双跑e2e）。不在范围内：状态算子、聚合函数、性能调优（归其他插件管）。
 
 每个任务的铁律：
 
@@ -70,7 +70,7 @@ architect按DESIGN模板（`templates/design.md`）填写。必做动作：
 
 ### Implement
 
-developer按已通过的设计编码：velox函数+flinksql注册+CMake+单测，gluten映射条目。构建部署只走flink-velox-build技能（绝不跳过C++构建）；单测只走flink-velox-unit-test；然后在GFV集群上做轻量e2e自测（自构造输入、print sink、验证脚本）。一切记录进IMPLEMENTATION.md，包括超出设计影响清单的改动（超范围改动是审计的致命发现项）。
+developer按已通过的设计编码：velox函数+flinksql注册+CMake+单测、velox4j调用链单测（EvaluationTest式harness、FLINK preset），gluten映射条目。构建部署只走flink-velox-build技能（绝不跳过C++构建）；单测只走flink-velox-unit-test；然后在GFV集群上做轻量e2e自测（自构造输入、print sink、验证脚本）。一切记录进IMPLEMENTATION.md，包括超出设计影响清单的改动（超范围改动是审计的致命发现项）。
 
 门禁：reviewer产出CODE_AUDIT（B节：与设计一致性、文档与实现同步、安全性、单测对设计矩阵的完整性、代码格式、更简/更优写法、冗余/可扩展性/可读性）。通过+用户门禁2放行交付。
 

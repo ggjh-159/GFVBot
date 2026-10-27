@@ -17,7 +17,7 @@ stages:
 
 ## Scope
 
-Covers one Flink scalar expression end to end across the GFV stack: the velox C++ implementation registered under the flinksql namespace, the gluten planner mapping, and the test pyramid (unit tests, lightweight e2e, full dual-run e2e). Out of scope: stateful operators, aggregate functions, performance tuning (other plugins own those).
+Covers one Flink scalar expression end to end across the GFV stack: the velox C++ implementation registered under the flinksql namespace, the gluten planner mapping, and the test pyramid (velox C++ unit tests, velox4j call-chain tests, lightweight e2e, full dual-run e2e). Out of scope: stateful operators, aggregate functions, performance tuning (other plugins own those).
 
 Standing rules for every task:
 
@@ -70,7 +70,7 @@ Gate: the reviewer produces DESIGN_AUDIT (audit-report template, section A: sche
 
 ### Implement
 
-The developer codes per the approved design: velox function + flinksql registration + CMake + unit tests, gluten mapping entry. Build and deploy only via the flink-velox-build skill (never skip the C++ build); unit tests only via flink-velox-unit-test; then a lightweight e2e self-check (self-constructed input, print sink, verify script) on the GFV cluster. Records everything in IMPLEMENTATION.md, including any change beyond the design's impact list (out-of-scope changes are a critical audit finding).
+The developer codes per the approved design: velox function + flinksql registration + CMake + unit tests, velox4j call-chain tests (EvaluationTest-style harness, FLINK preset), gluten mapping entry. Build and deploy only via the flink-velox-build skill (never skip the C++ build); unit tests only via flink-velox-unit-test; then a lightweight e2e self-check (self-constructed input, print sink, verify script) on the GFV cluster. Records everything in IMPLEMENTATION.md, including any change beyond the design's impact list (out-of-scope changes are a critical audit finding).
 
 Gate: the reviewer produces CODE_AUDIT (section B: design consistency, documentation synced with implementation, security, unit-test completeness vs the design matrix, code format, simpler/more efficient alternatives, redundancy/extensibility/readability). Pass + user gate 2 releases delivery.
 
