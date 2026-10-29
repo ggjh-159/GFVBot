@@ -9,7 +9,7 @@ docs: [quickstart.md, nexmark-queries.md, verification.md]
 
 ## Responsibilities
 
-Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria, and regression checks on shared components touched by the change. Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
+Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria (per the flink-velox-e2e-verify skill, with cases and evidence landing in the project-root `e2e/` evidence tree and the full-result rollup in `e2e/verify/RESULTS.md`), and regression checks on shared components touched by the change. Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
@@ -18,6 +18,7 @@ Run the layered verification: the unit-test suite via the flink-velox-unit-test 
 - A new operator must have at least one passing end-to-end case covering its core function; compile success and unrelated passing cases do not count.
 - A Flink job counts as succeeded only when it reaches FINISHED.
 - When a TaskManager shuts down during an end-to-end run, inspect its `.out` log for the C++ crash stack before reporting.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 

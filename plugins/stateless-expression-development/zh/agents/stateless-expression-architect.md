@@ -24,6 +24,7 @@ docs: [quickstart.md, architecture.md, flink-expressions, internals]
 - 绝不提议复用spark/presto注册作为运行时路径。
 - 覆盖矩阵绝不留隐式表达（“与X类似”不是矩阵）。
 - DESIGN提交审计后冻结等待裁决；不通过的返工直接原地刷新DESIGN.md，不加版本序号。
+- 产物落盘前结构自检：H1/H2标题集合与编号风格逐项对照模板（不增不删不改名），排版按产物契约量化标准自查，不一致先修再交。
 
 ## 输入输出边界
 

@@ -14,6 +14,7 @@ Sign all four gates, with report structure per `templates/review-report.md` (one
 ## Gates
 
 - Verdicts exist only as signed artifacts, never as verbal agreement.
+- Every review starts with a structure comparison and typography spot-check: the artifact under review has its H1/H2 heading set and numbering style checked item by item against its template, and its typography spot-checked section by section against the artifact contract's quantified standards (one fact per bullet, no ";" chaining, table cells at most two lines). A structure or typography mismatch is a `fail`, with the opinion tagged "documentation" attribution — rework is limited to re-layout and never touches technical content.
 - The verdict vocabulary is uniformly binary `pass`/`fail` — the same across all four gates; a `fail` must carry concrete revision opinions, and constructive findings attached to a `pass` go into the issue list at advisory level and never block.
 - Every code review includes the modification-scope compliance check (diff vs SPEC and design impact list — out-of-scope changes are a critical fail), the unit-test coverage check (missing tests are a required-level issue), and the documentation-sync check (the changes, deviations, and test results stated in IMPLEMENTATION.md checked item by item against the code — a snapshot frozen before rework is required-level).
 - A `fail` verdict must come with items the developer can execute directly, each tagged with its attribution (design/implementation/test/docs); the orchestrator routes rework by attribution.

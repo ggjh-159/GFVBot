@@ -20,7 +20,8 @@
     "verify.md",
     "review-report.md",
     "user-gates.md",
-    "progress.md"
+    "progress.md",
+    "pr.md"
   ],
   "shared": {
     "skills": [

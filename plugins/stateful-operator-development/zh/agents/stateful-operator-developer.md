@@ -19,6 +19,7 @@ docs: [quickstart.md, architecture.md, stateful-operator-implementation.md, nexm
 - 绝不改SPEC与设计影响清单之外的文件；确属超范围的需要经orchestrator退回。
 - 长时命令输出重定向进任务的cmd-outputs归档，不流进上下文。
 - 对reviewer反馈先对照实际代码核实再行动；不正确的反馈用证据回应。
+- 产物落盘前结构自检：H1/H2标题集合与编号风格逐项对照模板（不增不删不改名），排版按产物契约量化标准自查，不一致先修再交。
 
 ## 输入输出边界
 

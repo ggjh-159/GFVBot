@@ -36,6 +36,16 @@ stages:
 | stateful-operator-reviewer | 负责全部评审门禁：SPEC评审、设计评审、代码评审、最终验收 |
 | stateful-operator-verifier | 负责验证：单测、端到端运行、回归检查 |
 
+## 运行拓扑
+
+主会话逐段推进工作流，一段=从当前状态推进到下一个停点（用户门禁、阻塞、全部完成）：
+
+- 主会话前台调用orchestrator并等待返回；orchestrator对owner、reviewer同样只做前台Agent工具调用，禁止`run_in_background`——后台子任务随父代理返回即被回收，等于无声丢弃；禁止降级为OS子进程加轮询等待——僵尸进程会被`kill -0`误判存活。前台Agent调用不可用时立即返回上报，不用即兴替代方案续跑。
+- 派发留痕：派发意图（交给谁、预期产物）先落`PROGRESS.md`一行再派发，恢复断点与静默判定都以它为据；orchestrator每次返回前把下一步动作写进`TASK_STATE.md`。
+- orchestrator到停点即返回：用户门禁处带回决策点清单，阻塞处带回阻塞汇报，由主会话转呈用户；用户答复落`USER_GATES.md`后主会话再次唤起orchestrator续跑。orchestrator不在回合内等待用户答复。
+- 唤起orchestrator的prompt带任务描述、目标项目根、本次推进目标；orchestrator被唤起先读`TASK_STATE.md`恢复。跨段连续性只由TASK_STATE.md与任务产物承载，不依赖Agent实例存续。
+- 看门狗是主会话职责——orchestrator不运行时无人核查：主会话用定时任务每15~20分钟核查PROGRESS.md与TASK_STATE的更新时间，静默超阈值即上报用户并干预（问询或重派）；每条状态行以"下次核查约HH:MM"收尾，让静默边界可预期；隔夜等跨会话场景须用持久化定时或用户侧外部监控，会话级定时随会话关闭消失。
+
 ## 前置条件
 
 环境就绪是CLI的事，不是Agent阶段。任务开始前，orchestrator在目标项目跑`gfvbot env`；缺依赖转`gfvbot env-init`，缺源码仓转`gfvbot clone`。扫描通过或用户接受缺口后，任务进入spec阶段。
@@ -64,7 +74,7 @@ architect把任务描述转成规格合约，由插件模板`templates/spec.md`�
 
 architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入、现状调研（planner分派链、既有节点类、可复用设施）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流、checkpoint语义、测试策略、风险对照陷阱表。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend六步、addInput七步范式与陷阱清单逐项对照。
 
-门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（分点、单点一事实、无散文段）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
+门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
 
 ### Implement
 
@@ -119,10 +129,13 @@ tasks/<task-name>/
   verifier/     VERIFY.md, RETROSPECTIVE.md
   upstream/     社区issue/PR草稿（按shared upstream-contribution模板，经用户确认后提交）
 
+tmp/<task-name>/dispatch/        派发简报：每份派发落一份（owner、目标产物、必读锚点、纪律）
 tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作门禁依据，随时可清理
 ```
 
-产物由插件模板初始化：SPEC/DESIGN/IMPLEMENTATION/VERIFY/TASK_STATE/评审报告分别用`templates/`下的spec.md、design.md、implementation.md、verify.md、task-state.md、review-report.md，USER_GATES/PROGRESS用user-gates.md、progress.md；评审报告模板四道门禁复用，各删无关章节。
+产物由插件模板初始化：SPEC/DESIGN/IMPLEMENTATION/VERIFY/TASK_STATE/评审报告分别用`templates/`下的spec.md、design.md、implementation.md、verify.md、task-state.md、review-report.md，PR用pr.md，USER_GATES/PROGRESS用user-gates.md、progress.md；评审报告模板四道门禁复用，各删无关章节。有模板的产物H1/H2标题集合与编号风格照模板逐字一致——不增、不删、不改名；owner落盘前结构自检，reviewer每道评审先做结构对照，不符即`fail`按"文档"归属返工。
+
+排版纪律（任务树全部产物适用，评审必检）：一个bullet只说一个事实，禁止用"；"串联第二个事实；表格单元格只放事实与锚点、不超过两行，推理过程移独立行；段落单行流动文本不硬换行。返工路由横向覆盖：某产物因问题X被退回时，orchestrator必须扫描同门禁全部呈报产物与任务树既有产物是否存在同类X，一并路由整改——只改被点名的一份不算完成。
 
 e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录下——SQL表达验证范围、输出与对比是运行证据，跨任务沉淀为回归用例库；全量结果汇总在`e2e/verify/RESULTS.md`（每轮原地刷新），VERIFY.md只引用其路径与结论。
 
@@ -130,7 +143,7 @@ e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录�
 
 TASK_STATE.md是上下文恢复锚点。orchestrator在每次阶段流转时维护它：任务描述、当前阶段、各阶段状态、决策、用户约束、已知风险。每个Agent在启动与上下文压缩后都读它。
 
-进度跟进：owner agent每到一个里程碑（读完关键参考、草拟完一节、跑完一轮构建）向`PROGRESS.md`追加一行：时间、agent、一句话。orchestrator派发时说明交给谁、预期产出什么，owner返回后立即汇报并更新TASK_STATE.md；PROGRESS.md长时间静默时主动核查、必要时重派——进展感知是协调者的职责，不是用户的。用户随时`tail -f tasks/<task-name>/PROGRESS.md`感知进展。
+进度跟进：owner agent每到一个里程碑（读完关键参考、草拟完一节、跑完一轮构建）向`PROGRESS.md`追加一行：时间、agent、一句话——时间戳必须取`date +%F %T`实测输出，禁止估算，会话上下文携带的"当前时间"是陈旧快照，同样不可作判定依据。orchestrator派发时说明交给谁、预期产出什么，owner返回后立即汇报并更新TASK_STATE.md；owner返回而产物未落即派发失败，立即核查重派——回合内的进展核查是orchestrator职责，跨时段的静默看护是主会话职责（见运行拓扑）。用户随时`tail -f tasks/<task-name>/PROGRESS.md`感知进展。
 
 命令输出归档：长时命令（编译、测试运行）输出重定向或tee到`tmp/<task-name>/logs/cmd-outputs/`，起描述性文件名；作业提交与崩溃现场进`tmp/<task-name>/logs/jobs/`。重跑命令前先读归档；只有输入变了才重跑。报告引用这些路径作为依据，但logs本身是临时产物——随时可清理，不裁决门禁。
 
@@ -144,7 +157,12 @@ TASK_STATE.md是上下文恢复锚点。orchestrator在每次阶段流转时维�
 | 2 | 代码评审通过后 | 验证开始前 |
 | 3 | 验收通过后 | retro开始前 |
 
-每个暂停处orchestrator把受审报告连同**关键决策点清单**呈给用户逐条确认：清单条目从受审产物及其模板章节抽取（如设计评审后：语义映射方式、复用决策、可行性约束、测试策略、风险接受），每条带四要素——决策内容（可判定的取值，"合理/适中"不算）、依据来源（产物哪一节）、归属（异议时退回哪个阶段）、确认/异议选项；只取产物已有内容，不向用户索要产物未定义的字段。用户答复逐条原文追加落`USER_GATES.md`；全部确认才放行，有异议的条目按归属路由给owner Agent返工，受影响产物原地刷新、对应评审从该阶段重跑。orchestrator不自己回答技术问题。
+每个暂停处的呈报与确认按以下机制执行：
+
+- **呈报四段**：①材料清单与阅读顺序（受审产物**全文**逐一列出——inline给出或给路径与阅读指引，"已提供全文"是放行前置自检项）；②决策点清单（见下）；③答复指引——用户只需逐条答"确认/异议＋意见"，格式整理由主会话承担；④禁止引用未呈报的清单编号。
+- **决策点清单**：条目从受审产物及其模板章节抽取（如设计评审后：语义映射方式、复用决策、可行性约束、测试策略、风险接受），**范围外排除项与正向决策同等呈报义务**——每条排除带理由与依据来源。每条带四要素——决策内容（可判定的取值，"合理/适中"不算）、依据来源（产物哪一节）、归属（异议时退回哪个阶段）、确认/异议选项；只取产物已有内容，不向用户索要产物未定义的字段。
+- **逐条交互**：决策点一次呈一条，用户答复后才呈下一条——禁止一次性全量倾倒，也禁止把多条合并成组降低确认摩擦；产物全文阅读与逐条确认解耦，用户说"看DESIGN"即单独呈全文。
+- **落盘与放行**：用户答复逐条原文追加落`USER_GATES.md`；TASK_STATE门禁行记录呈报形态（全文/仅清单）备审计；全部确认才放行，有异议的条目按归属路由给owner Agent返工，受影响产物原地刷新、对应评审从该阶段重跑。orchestrator不自己回答技术问题。
 
 ## 横切纪律
 
@@ -152,4 +170,4 @@ TASK_STATE.md是上下文恢复锚点。orchestrator在每次阶段流转时维�
 
 辩证评审处理：architect与developer对reviewer反馈先对照实际代码与设计核实再行动。正确的接受并修复；不正确的用具体证据回应——文件路径、行号、设计章节。无证据的驳回，以及“以后再说”“超范围了”这类推诿，一律禁止；真正的范围争议交orchestrator。
 
-Agent复用：orchestrator优先复用同名Agent再拉新，上下文累积不重置。
+Agent派发：每次派发都是全新实例；orchestrator在派发prompt里点名该owner本次要读与要写的产物，上下文恢复靠TASK_STATE.md与已有产物，不靠实例存续。

@@ -18,6 +18,7 @@ Produce the specification contract from the task description, driven by the plug
 - Constraints from a `feasible with constraints` or `feasible with upstream dependency` conclusion must be written into the design's risk analysis.
 - Every design claim cites concrete paths, class names, or commands.
 - Verify reviewer feedback against actual code and design before acting; incorrect feedback is answered with evidence, never ignored.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 
