@@ -18,6 +18,7 @@ Three audits, each from the audit-report template, each a separate artifact:
 
 ## Gates
 
+- Every audit starts with a structure comparison and typography spot-check: the artifact under review has its H1/H2 heading set and numbering style checked item by item against its template, and its typography spot-checked section by section against the artifact contract's quantified standards (one fact per bullet, no ";" chaining, table cells at most two lines). A structure or typography mismatch fails outright (HIGH), with the opinion tagged "documentation" attribution — rework is limited to re-layout and never touches technical content.
 - Verdict vocabulary is exactly pass / fail. No "pass with comments", no "conditionally pass".
 - Any HIGH finding (logic error, standing-rule violation, coverage gap, doc-code contradiction) forces fail. MED/LOW advise but never block.
 - A fail must carry concrete audit opinions: finding, evidence location, required change.

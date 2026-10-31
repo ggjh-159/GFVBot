@@ -105,6 +105,11 @@ fi
 
 TARGET="${TARGET:-$PWD}"
 [ -d "$TARGET" ] || die "$(t err_target_missing "$TARGET")"
+# Records, stale cleanup, and the health check compare landing paths as
+# strings. Canonicalize the target once so a relative --target in one run and
+# an absolute one in the next produce a single spelling — mixed spellings
+# made every recorded file look stale and wiped the whole install.
+TARGET="$(realpath -m -- "$TARGET")"
 
 if [ -n "$ALL" ]; then
   PLUGINS=()
@@ -195,14 +200,29 @@ install_one() {
   if [ -f "$rec" ]; then
     old_entry=$(jq -r '.entry_created' "$rec")
     old_lang=$(jq -r '.lang // ""' "$rec")
+    mapfile -t old_files < <(jq -r '.files[]' "$rec")
+    # legacy records may carry non-canonical spellings; make them comparable
+    # with this run's absolute INSTALLED_FILES (-m: path need not exist)
+    local i
+    for i in "${!old_files[@]}"; do
+      [ -n "${old_files[$i]}" ] && old_files[$i]=$(realpath -m -- "${old_files[$i]}")
+    done
     if [ "$(jq -r '.fingerprint' "$rec")" = "$fp" ] \
        && [ "$(jq -r '.link' "$rec")" = "$cur_link" ] \
        && [ "$old_lang" = "$CONTENT_LANG" ]; then
-      ok "$(t msg_skip "$p")"
-      return 0
+      # self-heal: a prior run may have died after record_write with its
+      # files gone (health-check die, external deletion). Recorded files
+      # missing means re-install, not skip.
+      local f broken=0
+      for f in "${old_files[@]:-}"; do
+        [ -n "$f" ] && { [ -e "$f" ] || { broken=1; break; } }
+      done
+      if [ "$broken" = 0 ]; then
+        ok "$(t msg_skip "$p")"
+        return 0
+      fi
     fi
     state=UPDATE
-    mapfile -t old_files < <(jq -r '.files[]' "$rec")
   fi
 
   step "$(t step_install "$p" "$state" "$TOOL" "$TARGET" "$CONTENT_LANG")${LINK_MODE:+$(t link_mode_suffix)}"
@@ -211,11 +231,16 @@ install_one() {
 
   # language switch: the recorded files are ours, and their content is the
   # other language's — remove them first so re-landing is a clean overwrite
-  # instead of a .gfvbot.bak backup per file
+  # instead of a .gfvbot.bak backup per file. The CC bridge files are exempt:
+  # they regenerate by overwrite, and keeping the previous bridge card lets
+  # the version logic see the content change and refresh the CLI cache
   if [ "$state" = UPDATE ] && [ "$old_lang" != "$CONTENT_LANG" ]; then
     local f
     for f in "${old_files[@]:-}"; do
       [ -n "$f" ] || continue
+      case "$f" in
+        */.gfvbot/marketplace/*) continue ;;
+      esac
       if [ -e "$f" ] || [ -L "$f" ]; then
         if [ -n "$DRY_RUN" ]; then
           echo "  $(t dry_remove_stale "$f")"
@@ -253,7 +278,12 @@ install_one() {
   if [ -z "$DRY_RUN" ]; then
     local f hc=0
     for f in "${INSTALLED_FILES[@]:-}"; do
-      [ -n "$f" ] && { [ -e "$f" ] || { err "$(t err_health_missing "$f")"; hc=1; }; }
+      [ -n "$f" ] || continue
+      # bridge card may have been dropped after failed CLI registration —
+      # its absence is the retry signal for the skip-path self-heal, not a
+      # health failure
+      case "$f" in */.gfvbot/marketplace/*) continue ;; esac
+      [ -e "$f" ] || { err "$(t err_health_missing "$f")"; hc=1; }
     done
     if [ "$hc" = 0 ]; then
       ok "$(t msg_health_ok "$p" "${#INSTALLED_FILES[@]}")"

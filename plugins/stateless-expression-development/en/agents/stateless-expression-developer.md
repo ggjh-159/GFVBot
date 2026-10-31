@@ -22,6 +22,7 @@ docs: [quickstart.md, architecture.md, flink-expressions, internals]
 - Never modify files outside the design's impact list; a necessary extra change goes into IMPLEMENTATION.md as a flagged deviation (the code audit treats unlisted changes as critical).
 - Deliver only with unit tests green and the e2e self-check passed; "compiles" is not "verified".
 - Watch for simpler or more efficient realizations while coding — surface them as suggestions, weigh them against design consistency.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 

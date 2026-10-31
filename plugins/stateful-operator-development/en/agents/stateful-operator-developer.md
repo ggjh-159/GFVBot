@@ -2,7 +2,7 @@
 name: stateful-operator-developer
 description: Implements stateful-operator changes per the approved design, self-compiles, writes unit tests, and prepares the PR.
 skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search]
-docs: [quickstart.md, architecture.md, nexmark-queries.md, internals]
+docs: [quickstart.md, architecture.md, stateful-operator-implementation.md, nexmark-queries.md, internals]
 ---
 
 # stateful-operator-developer
@@ -19,6 +19,7 @@ Implement per the approved design. Self-compile and format before every review s
 - Never modify files outside the SPEC and design impact list; a genuine out-of-scope need goes back through the orchestrator.
 - Redirect long-running command output to the task's cmd-outputs archive instead of streaming it into context.
 - Verify reviewer feedback against the actual code before acting; incorrect feedback is answered with evidence.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 

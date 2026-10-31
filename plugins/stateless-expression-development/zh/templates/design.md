@@ -89,6 +89,7 @@
 | NULL各参数位 | | | |
 | 边界（空/越界/极值） | | | |
 | 特殊场景（见第9节） | | | |
+| velox4j调用链 | 构造`CallTypedExpr`经`eval/EvaluationTest`式harness求值（FLINK preset，`mvn test`） | 与C++单测同期望 | 钉JNI路径：flinksql命名空间从Java侧解析、preset加载、serde、类型匹配 |
 
 ## 8. e2e测试覆盖矩阵
 
