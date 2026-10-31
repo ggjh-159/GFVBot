@@ -35,11 +35,17 @@
 | Audit item | Ruling | Basis |
 |---|---|---|
 | Within SPEC scope; out-of-scope items written back to SPEC | | |
-| Contract matching complete (handle selection / six-and-seven-step lifecycle / iron rules, DESIGN §3) | | |
+| Contract matching complete (handle selection / five-and-seven-step lifecycle / iron rules, DESIGN §3) | | |
 | Impacted layers complete (velox node/operator/tests, velox4j mirror, gluten override) | | |
 | Cites concrete paths/class names/commands, no generic description | | |
 | Typography discipline met (bullets, one fact per bullet + anchors, no prose) | | |
+| Basis discipline met (a one-line basis per conclusion; "already exists / zero-change" claims verified) | | |
+| Current-state survey honestly graded (half-done/missing items evidenced with file:line, DESIGN §2) | | |
+| Reuse dispositions complete (including "not adopted + reason", DESIGN §2) | | |
+| Alignment list covers every behavior point; alignment-grade wording holds up (trimming carries a ruling basis, DESIGN §5) | | |
 | Risks checked against the contract pitfall table row by row, matching row count (DESIGN §8) | | |
+| Limitations numbered with TODOs; every limitation is an open problem, not final semantics (DESIGN §9) | | |
+| Pending decisions well-formed: self-contained background + comparison table + recommendation + a one-line basis (DESIGN §10) | | |
 | Test strategy holds (unit matrix includes restore/rescale — mandatory for new state layouts, existing suites may serve as evidence for pure reuse; e2e has a baseline) | | |
 
 ## C. Code review (fill in for the code review)

@@ -66,13 +66,13 @@ stages:
 
 ### Spec
 
-architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。
+architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。可行性分析经flink-velox-stateful-spec-analysis技能执行：语义映射×设施供给双维定档、查矩阵得四选一结论；任务级约束只升不降、伴随约束逐条记录，素材按SPEC模板节并入。
 
 门禁：reviewer在SPEC_REVIEW.md上签`pass`或`fail`——没有第三种；`fail`必须给出具体修改意见。`not feasible`结论终止或降级任务。`fail`打回architect修订SPEC（原地刷新后重审）。
 
 ### Design
 
-architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入、现状调研（planner分派链、既有节点类、可复用设施）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流、checkpoint语义、测试策略、风险对照陷阱表。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend六步、addInput七步范式与陷阱清单逐项对照。
+architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入（公式定位）、现状调研（翻译链三段诚实分级＋复用处置枚举）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流（含对齐清单）、checkpoint语义、测试策略、风险对照陷阱表、限制清单、待裁决项。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend五步、addInput七步范式与陷阱清单逐项对照。设计素材经flink-velox-stateful-design-analysis技能产出：机制级语义深化、现状三段诚实分级、复用处置枚举、对齐清单、限制清单与待裁决项；每条结论一句依据，待裁决项经用户门禁1逐条裁决后原地回填。
 
 门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
 

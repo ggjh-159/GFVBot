@@ -12,14 +12,14 @@ gfvbot env && gfvbot env-init                  # 环境扫描与补齐
 
 首次GFV构建与集群启动由工作流接管：implement阶段走flink-velox-build技能完成编译、部署jars并重启集群，任务前无需手工编译。
 
-实现契约先行：spec与设计阶段全程对照`docs/gfvbot/shared/stateful-operator-implementation.md`——后端保证、状态句柄选型、生命周期范式（六步建后端、七步addInput）与陷阱清单。
+实现契约先行：spec与设计阶段全程对照`docs/gfvbot/shared/stateful-operator-implementation.md`——后端保证、状态句柄选型、生命周期范式（五步建后端、七步addInput）与陷阱清单。
 
 ## 示例任务：流式去重算子（Deduplication）
 
 一个典型任务——按key去重、仅首条输出（+I），后续重复丢弃，状态用ValueState存已见标记：
 
 1. **SPEC**：填`spec.md`模板，可行性评估第一节，对照实现契约文档逐项核对（ValueState句柄、无partition语义用VoidNamespace）
-2. **设计**：填`design.md`——现状调研（planner分派链、既有节点类）、契约对照（句柄选型、六步/七步落位、非keyed铁律）、受影响三仓文件、单测矩阵（appendOnly/kinds/changelog/snapshot往返/rescale）、风险对照陷阱表
+2. **设计**：填`design.md`——现状调研（翻译链三段分级＋复用处置）、契约对照（句柄选型、五步/七步落位与对齐清单、非keyed铁律）、受影响三仓文件、单测矩阵（appendOnly/kinds/changelog/snapshot往返/rescale）、风险对照陷阱表、限制清单与待裁决项
 3. **SPEC/设计评审**：reviewer按`review-report.md`出具pass/fail；设计通过后用户门禁1放行
 4. **实现**：按设计编码（velox节点＋算子＋planner分支＋单测、velox4j镜像、gluten影子覆盖）；填`implementation.md`（含契约自查清单）；代码评审通过后用户门禁2放行
 5. **验证**：单测（flink-velox-unit-test）＋e2e（flink-velox-e2e-verify，与原生Flink对比changelog）；填`verify.md`；最终验收＋用户门禁3

@@ -29,7 +29,9 @@
       "flink-velox-unit-test",
       "flink-velox-docs-search",
       "flink-velox-code-review",
-      "flink-velox-e2e-verify"
+      "flink-velox-e2e-verify",
+      "flink-velox-stateful-spec-analysis",
+      "flink-velox-stateful-design-analysis"
     ],
     "docs": [
       "nexmark-queries.md",
