@@ -81,18 +81,19 @@ Aggregating回调契约：
 |---|---|---|
 | 构造 | 持节点指针 | 计划约束钉成CHECK（输出schema、不支持的语义） |
 | `initialize()` | 无状态设施（聚合函数经`makeAggregateInfos`） | 不碰state |
-| `initializeStateBackend()` | 建keyed后端（下方六步） | keyed算子专属钩子 |
+| `initializeStateBackend()` | 建keyed后端（下方五步） | keyed算子专属钩子 |
 | `addInput()` | 主流程（下方七步范式） | 事件分派＋业务＋changelog |
 | `close()` | reset句柄/后端/selector，再调基类 | 逆序释放 |
 
-`initializeStateBackend`六步：
+`initializeStateBackend`五步：
 
-1. 从`stateBackend->parameters()`读maxParallelism/startKeyGroup/numKeyGroups；
-2. 构造`HeapKeyedStateBackend<RowContainerStateKey>(spec.keyTypes(), …)`；
-3. `KeySelector(backend->keyIndex(), spec.keyChannels())`绑定key表；
-4. 构造descriptor，`getOrCreateXxxState<N>()`取句柄；
-5. AggregatingState接线：`setAllocator`＋`setOffsets(valueRows->columnAt(i)…)`——必须早于首次`rows()`与restore（miss物化与恢复都建行）；
-6. 调基类实现转发下游。
+1. `createKeyedStateBackend<K>(*stateBackend, spec, memoryPool())`建后端——唯一创建入口，maxParallelism与key-group范围由入口内读task参数；
+2. `KeySelector(backend->keyIndex(), spec.keyChannels())`绑定key表；
+3. 构造descriptor，`getOrCreateXxxState<N>()`取句柄；
+4. AggregatingState接线：`setAllocator`＋`setOffsets(valueRows->columnAt(i)…)`——必须早于首次`rows()`与restore（miss物化与恢复都建行）；
+5. 调基类实现转发下游。
+
+创建入口定义在`state/HeapKeyedStateBackend.h`，是自由模板函数：key类型K（StateKey子类）只有算子能命名，虚函数不能是模板，入口因此不能是`StateBackend`的虚成员——基类上的pre-generic工厂留给未迁移算子。入口按task后端声明类型分派：声明了无引擎的类型（当前ROCKSDB）在算子初始化期即`VELOX_UNSUPPORTED`fail loud，不静默回落heap。
 
 `addInput`七步范式（`GroupAggregator`为范例）：
 
@@ -126,7 +127,7 @@ Aggregating回调契约：
 - 下游用收集型`StatefulOperator`；算子按生产生命周期顺序构造：`initialize()`→`initializeStateBackend()`；
 - 输入三类：appendOnly（无rowKind列）、显式INSERT rowKind、混合kinds；
 - 持久化：`snapshot()`→新算子`restore()`→继续喂数据断言等价；rescale用不同key-group范围恢复部分流；
-- 后端设施单测见`StateBackendTest`、`CheckpointFormatTest`、`StateKeyTest`、`KeySelectorTest`。
+- 后端设施单测见`StateBackendTest`（含创建入口分派）、`CheckpointFormatTest`、`StateKeyTest`、`KeySelectorTest`；checkpoint链路walk（无legacy handler也走全链）见`StatefulOperatorCheckpointTest`。
 
 ## 陷阱
 
@@ -136,6 +137,7 @@ Aggregating回调契约：
 | accumulator写坏或崩溃 | setAllocator/setOffsets晚于首次`rows()`或restore | 建句柄后立刻接线 |
 | 句柄析构踩空 | descriptor闭包持算子裸指针，算子先亡 | close()先reset句柄；被捕获对象生命周期≥句柄 |
 | `VELOX_NYI: … not available on the heap backend` | 走了旧状态API（基类工厂/`StreamOperatorStateHandler`） | 新算子一律用`HeapKeyedStateBackend`模板方法（typed API） |
+| 初始化即`VELOX_UNSUPPORTED: The RocksDB keyed state backend is not implemented` | task后端声明了ROCKSDB，typed创建入口无该引擎 | 现行仅HEAP可用——后端声明不带未实现类型 |
 | 恢复被拒：maxParallelism mismatch | maxParallelism改变即key-group空间改变 | 全生命周期固定 |
 | 恢复被拒：schema或状态不匹配 | 状态未注册先恢复，或schema漂移 | 先注册后恢复；schema演进需版本化 |
 | key列含array/map/row报错 | key相等性只支持定宽标量＋varchar/varbinary | key用标量列或先归约 |

@@ -81,18 +81,19 @@ Aggregating callback contract:
 |---|---|---|
 | constructor | hold the node pointer | pin plan constraints as CHECKs (output schema, unsupported semantics) |
 | `initialize()` | stateless facilities (aggregate functions via `makeAggregateInfos`) | never touch state |
-| `initializeStateBackend()` | build the keyed backend (six steps below) | keyed-operator-only hook |
+| `initializeStateBackend()` | build the keyed backend (five steps below) | keyed-operator-only hook |
 | `addInput()` | main path (seven-step pattern below) | event dispatch+business logic+changelog |
 | `close()` | reset handles/backend/selector, then call the base class | release in reverse order |
 
-Six steps of `initializeStateBackend`:
+Five steps of `initializeStateBackend`:
 
-1. read maxParallelism/startKeyGroup/numKeyGroups from `stateBackend->parameters()`;
-2. construct `HeapKeyedStateBackend<RowContainerStateKey>(spec.keyTypes(), …)`;
-3. `KeySelector(backend->keyIndex(), spec.keyChannels())` binds the key table;
-4. construct the descriptor, `getOrCreateXxxState<N>()` for the handle;
-5. AggregatingState wiring: `setAllocator`+`setOffsets(valueRows->columnAt(i)…)` — strictly before the first `rows()` call and before restore (both miss materialization and restore build rows);
-6. call the base-class implementation to forward downstream.
+1. `createKeyedStateBackend<K>(*stateBackend, spec, memoryPool())` builds the backend — the sole creation entry; maxParallelism and the key-group range are read from task parameters inside the entry;
+2. `KeySelector(backend->keyIndex(), spec.keyChannels())` binds the key table;
+3. construct the descriptor, `getOrCreateXxxState<N>()` for the handle;
+4. AggregatingState wiring: `setAllocator`+`setOffsets(valueRows->columnAt(i)…)` — strictly before the first `rows()` and before restore (both miss materialization and restore build rows);
+5. call the base-class implementation to forward downstream.
+
+The creation entry is defined in `state/HeapKeyedStateBackend.h` as a free template function: the key type K (a StateKey subclass) can only be named by the operator, and virtual functions cannot be templates, so the entry cannot be a virtual member of `StateBackend` — the pre-generic factory on the base class remains for unmigrated operators. The entry dispatches on the task's declared backend type: a declared type with no engine (currently ROCKSDB) fails loud with `VELOX_UNSUPPORTED` at operator initialization, never silently falling back to heap.
 
 Seven-step `addInput` pattern (`GroupAggregator` is the reference):
 
@@ -126,7 +127,7 @@ Model on `velox/experimental/stateful/tests/GroupAggregatorTest.cpp`:
 - downstream is a collecting `StatefulOperator`; construct operators in production lifecycle order: `initialize()`→`initializeStateBackend()`;
 - three input shapes: appendOnly (no rowKind column), explicit INSERT rowKind, mixed kinds;
 - persistence: `snapshot()`→fresh operator `restore()`→keep feeding and assert equivalence; rescale restores a partial range with different key-group bounds;
-- backend facility unit tests live in `StateBackendTest`, `CheckpointFormatTest`, `StateKeyTest`, `KeySelectorTest`.
+- backend facility unit tests live in `StateBackendTest` (including creation-entry dispatch), `CheckpointFormatTest`, `StateKeyTest`, `KeySelectorTest`; the checkpoint chain walk (full chain even without a legacy handler) is covered by `StatefulOperatorCheckpointTest`.
 
 ## Pitfalls
 
@@ -136,6 +137,7 @@ Model on `velox/experimental/stateful/tests/GroupAggregatorTest.cpp`:
 | accumulators corrupted or crash | setAllocator/setOffsets ran after the first `rows()` or restore | wire immediately after creating the handle |
 | handle destructor steps on freed memory | descriptor closures hold the operator's raw pointer, operator died first | close() resets handles first; captured objects outlive handles |
 | `VELOX_NYI: … not available on the heap backend` | went through the old state API (base-class factories/`StreamOperatorStateHandler`) | new operators always use the `HeapKeyedStateBackend` template methods (typed API) |
+| `VELOX_UNSUPPORTED: The RocksDB keyed state backend is not implemented` at initialization | the task backend declaration names ROCKSDB, which the typed creation entry has no engine for | only HEAP is available today — keep types with no engine out of the backend declaration |
 | restore rejected: maxParallelism mismatch | changing maxParallelism changes the key-group space | fix it for the whole lifetime |
 | restore rejected: schema or state mismatch | restore before registration, or schema drift | register before restore; schema evolution needs versioning |
 | key columns with array/map/row error out | key equality supports only fixed-width scalars+varchar/varbinary | use scalar key columns or reduce first |
