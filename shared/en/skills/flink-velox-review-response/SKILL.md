@@ -20,9 +20,8 @@ Three phases cover the full upstream journey of a change set: Phase A submission
 4. **PR description hygiene and dependency disclosure**: no PR description in any repo mentions personal fork names or GFV-related names; multi-repo changes must state companion PR links, the expected commit pairing, and the landing order — a missing dependency note is a standard reviewer deduction.
 5. **Cascade order**: velox → velox4j → gluten; ref / hash / URL change together, then a build confirms. The codeload hash only exists for pushed commits — push velox before updating the pin (details in `references/dependency-cascade.md`).
 6. **Semantic divergences go to the user** (the agent never decides); evidence-first comments get the experiment before the reply.
-7. **Claims match the implementation**: description, reply, and code land together.
-8. **Attribute CI failures first**: known repo-wide systemic failures are not this PR's — cite the existing explanatory comment in the repo; only self-attributed findings go back for a fix.
-9. **Process record**: each round's artifacts stay in the three directories under `tasks/<task-name>/upstream/review-response/` (archive / replies / descriptions) — the process record and the baseline for the next increment, never mixed with retro's issue/PR drafts.
+7. **Claims match the implementation**: description, reply, and code land together; later changes that invalidate the description must update it in sync (Stage 6 covers this — restated here as discipline).
+8. **Process record**: each round's artifacts stay in the three directories under `tasks/<task-name>/upstream/review-response/` (archive / replies / descriptions) — the process record and the baseline for the next increment, never mixed with retro's issue/PR drafts.
 
 ## Phase A — submission prep
 
@@ -58,22 +57,27 @@ Classify each new comment:
 
 ### Stage 3 — fix
 
-Before switching branches: stash unrelated WIP under a semantic name, pop on return (in multi-task parallel, list stashes first). Verification is tiered by semantic impact:
+Before switching branches: stash unrelated WIP under a semantic name, pop on return (in multi-task parallel, list stashes first).
 
-- **L1 (always)**: format + compile per repo. velox `make format-fix CHECK_BASE=gluten-20260829` (pip toolchain and check.py's staged requirement in `references/dependency-cascade.md`); velox4j `mvn spotless:apply` + `mvn test-compile -Dexec.skip=true`; gluten `mvn spotless:apply -pl planner,ut` + planner install + pure-Java tests.
-- **L2 (locally when a build environment exists; otherwise compile-level + CI as backstop, stated in the reply)**: velox flinksql gtest; velox4j invocation tests (need the .so); gluten pure-Java UTs.
-- **L3 (only for runtime semantic changes)**: e2e dual-run per the flink-velox-e2e-verify skill; pure format/test/wording changes skip it.
+**Verification tiers** (chosen by semantic impact; the commands are the only entry):
+
+- **L1 compile + format** (always): velox — `git add -A` first, then `make format-fix CHECK_BASE=gluten-20260829` (check.py rejects unstaged edits); velox4j `mvn spotless:apply` + `mvn test-compile -Dexec.skip=true`; gluten — from the gluten-flink root, `mvn spotless:apply -pl planner,ut` + `mvn install -pl planner -DskipTests`.
+- **L2 unit tests** (hard gate; locally green before pushing):
+  - velox C++: the `flink-velox-unit-test` skill's `bin/run_velox_test.sh velox_functions_flinksql_test`, expecting `100% tests passed`.
+  - velox4j: `mvn test` (cpp-build + full suite) — exit=1 is expected (it aborts at a known pre-existing upstream failure); the pass criteria = `Successfully built velox4j-cpp.` appears + the follow-up `mvn surefire:test@flink-preset-tests` yields `Tests run: 6, Failures: 0`.
+  - gluten: from the gluten-flink root, `mvn test -pl ut -am`, expecting exit=0 fully green; after velox C++ changes, first `mvn install -Dexec.skip=true` in velox4j to deploy the new `.so` into m2.
+- **L3 e2e dual-run** (runtime semantic changes only): per the `flink-velox-e2e-verify` skill; stop the clusters when done.
 
 ### Stage 4 — commit & push
 
-Core rule: **reviewed commits are append-only** — line comments anchor on commit SHA + (path, line); one SHA rewrite breaks the anchor (outdated). Four rules:
+**Across review rounds, append-only** (line comments anchor on commit SHA + (path, line); one SHA rewrite breaks the anchor — outdated). Four rules:
 
-- New content on a reviewed branch = an appended commit; an advanced upstream baseline syncs via **merge** (a clean empty-diff merge commit).
-- rebase / amend only for **unpushed local commits** (the review-fix commit itself, for example); before amending, confirm the target is not a merge commit.
-- When a maintainer explicitly asks for a rebase, comply — authority over anchors.
+- **Cross-round append**: a new review round's response = appended commits on top of existing history; commits the reviewer has already seen are never amended/rebased.
+- **Within-round freedom**: intermediate commits of the current round's response, unseen by the reviewer, may be freely appended or squash-merged into one before pushing (force-with-lease overwrites only this round's own intermediate state, never reviewed history); before amending, confirm the target is not a merge commit.
+- An advanced upstream baseline syncs via **merge** (a clean empty-diff merge commit); when a maintainer explicitly asks for a rebase, comply — authority over anchors.
 - **Sync the fork before pushing**: `git fetch upstream && git merge upstream/<base>` (or GitHub's Sync fork button) — a fork behind upstream imports the conflict straight into the PR.
 
-On push rejection (non-fast-forward), consult the rules above before any force-with-lease. **Track CI after pushing**: query `commits/{sha}/check-runs`; on failure attribute per Discipline 8 first; self-attributed findings return to Stage 3.
+On push rejection (non-fast-forward), consult the rules above before any force-with-lease. **Track CI after pushing**: query `commits/{sha}/check-runs`; on failure, first judge whether this PR introduced it; self-attributed findings return to Stage 3.
 
 ### Stage 5 — reply
 

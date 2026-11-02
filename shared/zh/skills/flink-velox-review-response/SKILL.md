@@ -20,9 +20,8 @@ description: 管理 velox / velox4j / gluten 三仓的上游交互全生命周�
 4. **PR 描述净化与依赖披露**：所有仓的 PR 描述不体现个人 fork 仓名与 GFV 相关名称；多仓改动必须写明 companion PR 链接、预期的 commit 配对、落仓顺序——缺失依赖说明是 reviewer 的标准扣分项。
 5. **级联顺序**：velox → velox4j → gluten；ref / hash / URL 三要素一起改，改完跑构建确认。codeload hash 只对已 push 的 commit 存在，先 push velox 再更新 pin（细节见 `references/dependency-cascade.md`）。
 6. **语义分歧交用户决策**：agent 绝不自行拍板；实证类意见先实验后回复。
-7. **claim 与实现必须一致**：描述、回复、代码三者同步落笔。
-8. **CI 失败先归因**：仓内已知的系统性失败不属本 PR，引用仓内既有说明评论即可；归因本 PR 的才回修。
-9. **过程记录**：每轮的产物留在 `tasks/<task-name>/upstream/review-response/` 的三类目录（archive / replies / descriptions）——过程记录与下一轮增量的基准，不与 retro 的 issue/PR 草稿混放。
+7. **claim 与实现必须一致**：描述、回复、代码三者同步落笔；后续修改导致描述失实时必须同步更新描述（阶段 6 已含，此处为纪律重申）。
+8. **过程记录**：每轮的产物留在 `tasks/<task-name>/upstream/review-response/` 的三类目录（archive / replies / descriptions）——过程记录与下一轮增量的基准，不与 retro 的 issue/PR 草稿混放。
 
 ## Phase A —— 提交准备
 
@@ -58,22 +57,27 @@ description: 管理 velox / velox4j / gluten 三仓的上游交互全生命周�
 
 ### 阶段 3 —— 修复
 
-切分支前：以语义名 stash 无关 WIP，切回后 pop（多任务并行先列 stash 清单再定位）。验证按语义影响面分级：
+切分支前：以语义名 stash 无关 WIP，切回后 pop（多任务并行先列 stash 清单再定位）。
 
-- **L1（永远必做）**：各仓 format + 编译。velox `make format-fix CHECK_BASE=gluten-20260829`（pip 工具链与 check.py 的 staged 要求见 `references/dependency-cascade.md`）；velox4j `mvn spotless:apply` + `mvn test-compile -Dexec.skip=true`；gluten `mvn spotless:apply -pl planner,ut` + planner install + 纯 Java 测试。
-- **L2（有构建环境则本地跑；否则编译级 + CI 兜底并在回复中说明）**：velox flinksql gtest；velox4j invocation 测试（需 .so）；gluten 纯 Java UT。
-- **L3（仅运行时语义变化必做）**：按 flink-velox-e2e-verify skill 执行 e2e dual-run；纯格式/测试/措辞改动跳过。
+**验证分级**（按语义影响面选择，命令为唯一入口）：
+
+- **L1 编译 + format**（永远必做）：velox 先 `git add -A` 再 `make format-fix CHECK_BASE=gluten-20260829`（check.py 拒绝未暂存改动）；velox4j `mvn spotless:apply` + `mvn test-compile -Dexec.skip=true`；gluten 在 gluten-flink 根目录 `mvn spotless:apply -pl planner,ut` + `mvn install -pl planner -DskipTests`。
+- **L2 单元测试**（硬门禁，本地全绿才推送）：
+  - velox C++：`flink-velox-unit-test` skill 的 `bin/run_velox_test.sh velox_functions_flinksql_test`，期望 `100% tests passed`。
+  - velox4j：`mvn test`（cpp-build + 全套件）——exit=1 属预期（中止于已知上游存量失败）；通过标准 = 出现 `Successfully built velox4j-cpp.` + 补跑 `mvn surefire:test@flink-preset-tests` 得 `Tests run: 6, Failures: 0`。
+  - gluten：在 gluten-flink 根目录 `mvn test -pl ut -am`，期望 exit=0 全绿；velox C++ 有改动时先在 velox4j `mvn install -DskipTests` 把新 .so 部署进 m2 再跑。
+- **L3 e2e dual-run**（仅运行时语义变化）：按 `flink-velox-e2e-verify` skill；集群用完即停。
 
 ### 阶段 4 —— 提交与推送
 
-核心：**已 review 的 commit 只追加不重写**——行级评论锚定在 commit SHA + (path, line) 上，SHA 一变锚点即断（outdated）。四条规则：
+**跨检视轮次只追加不重写**（行级评论锚定在 commit SHA + (path, line) 上，SHA 一变锚点即断 outdated）。四条规则：
 
-- 已 review 分支上的新内容 = 追加 commit；上游基线前进时用 **merge** 同步（干净的空 diff merge commit）。
-- rebase / amend 仅限**未 push 的本地 commit**（如检视修复 commit 本身）；amend 前确认目标不是 merge commit。
-- 维护者明确要求 rebase 时遵从——权威优先于锚点。
+- **跨轮追加**：新检视意见的响应 = 在既有历史上追加 commit；上一轮已被 reviewer 看过的 commit 永不 amend/rebase。
+- **轮内自由**：本轮响应未被 reviewer 再看的中间迭代 commit，可自由追加或覆盖式合并成一个再 push（force-with-lease 覆盖的只是本轮自己的中间态，不触碰已 review 历史）；amend 前确认目标不是 merge commit。
+- 上游基线前进时用 **merge** 同步（干净的空 diff merge commit）；维护者明确要求 rebase 时遵从——权威优先于锚点。
 - **push 前先 sync fork**：`git fetch upstream && git merge upstream/<base>`（或 GitHub 页面 Sync fork），fork 落后上游会直接把冲突引进 PR。
 
-push 被拒（non-fast-forward）时按上述规则判断是否允许 force-with-lease。**推送后跟踪 CI**：查 `commits/{sha}/check-runs`；失败先按纪律 8 归因；归因本 PR 的回到阶段 3 修复。
+push 被拒（non-fast-forward）时按上述规则判断是否允许 force-with-lease。**推送后跟踪 CI**：查 `commits/{sha}/check-runs`；失败先判断是否本 PR 引入；归因本 PR 的回到阶段 3 修复。
 
 ### 阶段 5 —— 回复
 
