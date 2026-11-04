@@ -15,7 +15,7 @@
 | Formula | <new operator> = the `GroupAggregator` skeleton + <one line on the delta> |
 | SPEC | `tasks/<task-name>/architect/SPEC.md` |
 | Implementation contract | `docs/gfvbot/shared/stateful-operator-implementation.md` |
-| Reference operator | `GroupAggregator` (`velox/experimental/stateful/agg/`) |
+| Reference operator | `GroupAggregator` (implementation excerpts in `docs/gfvbot/shared/stateful-operator-implementation.md`) |
 
 ## 2. Current-state survey
 
@@ -84,7 +84,7 @@ Semantic gap: <one sentence on the gap between Flink semantics and the velox sta
 
 ## 7. Test strategy
 
-### 7.1 Unit-test matrix (model on the `GroupAggregatorTest` fixture)
+### 7.1 Unit-test matrix (model on the `GroupAggregatorTest` fixture; excerpt in `docs/gfvbot/shared/stateful-operator-implementation.md`)
 
 | Case | Input | Expected | Coverage intent |
 |---|---|---|---|

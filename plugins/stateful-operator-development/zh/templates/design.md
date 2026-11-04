@@ -15,7 +15,7 @@
 | 公式 | <新算子>＝`GroupAggregator`骨架＋<增量维度一句话> |
 | SPEC | `tasks/<task-name>/architect/SPEC.md` |
 | 实现契约 | `docs/gfvbot/shared/stateful-operator-implementation.md` |
-| 参照算子 | `GroupAggregator`（`velox/experimental/stateful/agg/`） |
+| 参照算子 | `GroupAggregator`（实现摘录见`docs/gfvbot/shared/stateful-operator-implementation.md`） |
 
 ## 2. 现状调研
 
@@ -84,7 +84,7 @@
 
 ## 7. 测试策略
 
-### 7.1 单元测试矩阵（参照`GroupAggregatorTest`fixture）
+### 7.1 单元测试矩阵（参照`GroupAggregatorTest`fixture，摘录见`docs/gfvbot/shared/stateful-operator-implementation.md`）
 
 | 用例 | 输入 | 期望 | 覆盖意图 |
 |---|---|---|---|

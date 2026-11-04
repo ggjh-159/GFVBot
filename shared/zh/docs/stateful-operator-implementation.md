@@ -85,6 +85,22 @@ Aggregating回调契约：
 | `addInput()` | 主流程（下方七步范式） | 事件分派＋业务＋changelog |
 | `close()` | reset句柄/后端/selector，再调基类 | 逆序释放 |
 
+范本摘录（`GroupAggregator::initialize`，聚合设施属无状态阶段）：
+
+```cpp
+void GroupAggregator::initialize() {
+  StatefulOperator::initialize();
+  const auto& handler = *node_->aggregation();
+  aggregates_ = makeAggregateInfos(
+      handler.aggregates(),
+      handler.inputType(),
+      handler.outputType(),
+      numKeys_,
+      op()->operatorCtx()->driverCtx()->queryConfig(),
+      memoryPool());
+}
+```
+
 `initializeStateBackend`五步：
 
 1. `createKeyedStateBackend<K>(*stateBackend, spec, memoryPool())`建后端——唯一创建入口，maxParallelism与key-group范围由入口内读task参数；
@@ -92,6 +108,54 @@ Aggregating回调契约：
 3. 构造descriptor，`getOrCreateXxxState<N>()`取句柄；
 4. AggregatingState接线：`setAllocator`＋`setOffsets(valueRows->columnAt(i)…)`——必须早于首次`rows()`与restore（miss物化与恢复都建行）；
 5. 调基类实现转发下游。
+
+范本摘录（`GroupAggregator::initializeStateBackend`）：
+
+```cpp
+void GroupAggregator::initializeStateBackend(StateBackend* stateBackend) {
+  const auto& spec = *node_->keyedStateSpec();
+  keyedBackend_ = createKeyedStateBackend<RowContainerStateKey>(
+      *stateBackend, spec, memoryPool());
+  keySelector_ = std::make_unique<KeySelector>(
+      keyedBackend_->keyIndex(), spec.keyChannels());
+
+  std::vector<exec::Accumulator> accumulators;
+  accumulators.reserve(aggregates_.size());
+  for (const auto& aggregate : aggregates_) {
+    accumulators.emplace_back(
+        aggregate.function.get(), aggregate.intermediateType);
+  }
+  AggregatingStateDescriptor descriptor(
+      "group-agg-accumulators",
+      std::move(accumulators),
+      [this](char** rows, size_t numRows) { initializeRows(rows, numRows); },
+      [this](char* row, const std::vector<VectorPtr>& columns) {
+        mergeRow(row, columns);
+      },
+      memoryPool());
+  state_ =
+      keyedBackend_->getOrCreateAggregatingState<VoidNamespace>(descriptor);
+
+  // Wire before the first rows() call (and before restore, which also
+  // materializes rows): the aggregate functions must write the offsets the
+  // value container actually laid out.
+  auto* valueRows = state_->valueRows();
+  for (size_t i = 0; i < aggregates_.size(); ++i) {
+    auto& function = aggregates_[i].function;
+    function->setAllocator(&valueRows->stringAllocator());
+    const auto rowColumn = valueRows->columnAt(static_cast<int32_t>(i));
+    function->setOffsets(
+        rowColumn.offset(),
+        rowColumn.nullByte(),
+        rowColumn.nullMask(),
+        rowColumn.initializedByte(),
+        rowColumn.initializedMask(),
+        valueRows->rowSizeOffset());
+  }
+
+  StatefulOperator::initializeStateBackend(stateBackend);
+}
+```
 
 创建入口定义在`state/HeapKeyedStateBackend.h`，是自由模板函数：key类型K（StateKey子类）只有算子能命名，虚函数不能是模板，入口因此不能是`StateBackend`的虚成员——基类上的pre-generic工厂留给未迁移算子。入口按task后端声明类型分派：声明了无引擎的类型（当前ROCKSDB）在算子初始化期即`VELOX_UNSUPPORTED`fail loud，不静默回落heap。
 
@@ -104,6 +168,37 @@ Aggregating回调契约：
 5. changelog规划：新key发+I；值变发(-U＋)+U（-U仅当计划要求update-before）；未变不输出；
 6. 组装`StreamRecord`（key列按发射索引从keyRowContainer提取，值列按kind选前后镜像）→`pushOutput`；
 7. 批边界`keyedBackend_->advance()`。
+
+范本摘录（`GroupAggregator::addInput`；`resolveKeys`＝第2/3步、`accumulateInput`＝第4步、`planEmission`＝第5步、`buildEmitRecord`＝第6步）：
+
+```cpp
+void GroupAggregator::addInput(StreamElementPtr input) {
+  auto record = std::static_pointer_cast<StreamRecord>(input);
+  checkInputRowKinds(*record);            // 1. cast＋rowKind校验
+  const auto& inputVector = record->record();
+  const auto numRows = inputVector->size();
+  if (numRows == 0) {
+    return;
+  }
+
+  const auto numDistinct = resolveKeys(inputVector);  // 2/3. probe＋状态行解析
+
+  // Previous final values, before this batch accumulates.
+  const auto prevValues = extractFinalValues(stateRows_.data(), numDistinct);
+
+  accumulateInput(inputVector, numRows);  // 4. 业务逻辑原地更新
+
+  const auto newValues = extractFinalValues(stateRows_.data(), numDistinct);
+  planEmission(prevValues, newValues);    // 5. changelog规划
+
+  if (!emitRowKeys_.empty()) {
+    pushOutput(buildEmitRecord(prevValues, newValues));  // 6. 组装＋输出
+  }
+
+  // Batch boundary: reclaim key rows no state entry references any more.
+  keyedBackend_->advance();              // 7. 批边界回收
+}
+```
 
 水位线默认级联即可；仅事件时间算子（窗口类）需要覆写`processWatermark`。
 
@@ -121,7 +216,32 @@ Aggregating回调契约：
 
 ### 6 测试
 
-参照`velox/experimental/stateful/tests/GroupAggregatorTest.cpp`：
+fixture摘录（`GroupAggregatorTest`，`SetUp`核心）：
+
+```cpp
+class GroupAggregatorTest : public exec::test::OperatorTestBase {
+ protected:
+  void SetUp() override {
+    OperatorTestBase::SetUp();
+    aggregate::prestosql::registerAllAggregateFunctions();
+    // Flink的avg语义覆盖presto基线（overwrite注册）
+    aggregate::flinksql::registerAggregateFunctions();
+
+    core::PlanFragment planFragment;  // 一个ValuesNode即可
+    executor_ = std::make_shared<folly::CPUThreadPoolExecutor>(1);
+    task_ = exec::Task::create(
+        "GroupAggregatorTest_task", std::move(planFragment), 0,
+        core::QueryCtx::create(executor_.get()),
+        exec::Task::ExecutionMode::kParallel);
+    driver_ = exec::Driver::testingCreate();
+    driverCtx_ = std::make_unique<exec::DriverCtx>(task_, 0, 0, 0, 0);
+    driverCtx_->driver = driver_.get();
+
+    taskBackend_ = std::make_unique<HashMapStateBackend>(
+        std::make_shared<const KeyedStateBackendParameters>(
+            StateBackendType::HEAP, "job", "group-agg"));
+  }
+```
 
 - fixture：`OperatorTestBase`；注册所需聚合函数；`HashMapStateBackend`＋`KeyedStateBackendParameters`充当task级backend；
 - 下游用收集型`StatefulOperator`；算子按生产生命周期顺序构造：`initialize()`→`initializeStateBackend()`；

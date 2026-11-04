@@ -85,6 +85,22 @@ Aggregating callback contract:
 | `addInput()` | main path (seven-step pattern below) | event dispatch+business logic+changelog |
 | `close()` | reset handles/backend/selector, then call the base class | release in reverse order |
 
+Reference excerpt (`GroupAggregator::initialize`, aggregate facilities belong to the stateless phase):
+
+```cpp
+void GroupAggregator::initialize() {
+  StatefulOperator::initialize();
+  const auto& handler = *node_->aggregation();
+  aggregates_ = makeAggregateInfos(
+      handler.aggregates(),
+      handler.inputType(),
+      handler.outputType(),
+      numKeys_,
+      op()->operatorCtx()->driverCtx()->queryConfig(),
+      memoryPool());
+}
+```
+
 Five steps of `initializeStateBackend`:
 
 1. `createKeyedStateBackend<K>(*stateBackend, spec, memoryPool())` builds the backend — the sole creation entry; maxParallelism and the key-group range are read from task parameters inside the entry;
@@ -92,6 +108,54 @@ Five steps of `initializeStateBackend`:
 3. construct the descriptor, `getOrCreateXxxState<N>()` for the handle;
 4. AggregatingState wiring: `setAllocator`+`setOffsets(valueRows->columnAt(i)…)` — strictly before the first `rows()` and before restore (both miss materialization and restore build rows);
 5. call the base-class implementation to forward downstream.
+
+Reference excerpt (`GroupAggregator::initializeStateBackend`):
+
+```cpp
+void GroupAggregator::initializeStateBackend(StateBackend* stateBackend) {
+  const auto& spec = *node_->keyedStateSpec();
+  keyedBackend_ = createKeyedStateBackend<RowContainerStateKey>(
+      *stateBackend, spec, memoryPool());
+  keySelector_ = std::make_unique<KeySelector>(
+      keyedBackend_->keyIndex(), spec.keyChannels());
+
+  std::vector<exec::Accumulator> accumulators;
+  accumulators.reserve(aggregates_.size());
+  for (const auto& aggregate : aggregates_) {
+    accumulators.emplace_back(
+        aggregate.function.get(), aggregate.intermediateType);
+  }
+  AggregatingStateDescriptor descriptor(
+      "group-agg-accumulators",
+      std::move(accumulators),
+      [this](char** rows, size_t numRows) { initializeRows(rows, numRows); },
+      [this](char* row, const std::vector<VectorPtr>& columns) {
+        mergeRow(row, columns);
+      },
+      memoryPool());
+  state_ =
+      keyedBackend_->getOrCreateAggregatingState<VoidNamespace>(descriptor);
+
+  // Wire before the first rows() call (and before restore, which also
+  // materializes rows): the aggregate functions must write the offsets the
+  // value container actually laid out.
+  auto* valueRows = state_->valueRows();
+  for (size_t i = 0; i < aggregates_.size(); ++i) {
+    auto& function = aggregates_[i].function;
+    function->setAllocator(&valueRows->stringAllocator());
+    const auto rowColumn = valueRows->columnAt(static_cast<int32_t>(i));
+    function->setOffsets(
+        rowColumn.offset(),
+        rowColumn.nullByte(),
+        rowColumn.nullMask(),
+        rowColumn.initializedByte(),
+        rowColumn.initializedMask(),
+        valueRows->rowSizeOffset());
+  }
+
+  StatefulOperator::initializeStateBackend(stateBackend);
+}
+```
 
 The creation entry is defined in `state/HeapKeyedStateBackend.h` as a free template function: the key type K (a StateKey subclass) can only be named by the operator, and virtual functions cannot be templates, so the entry cannot be a virtual member of `StateBackend` — the pre-generic factory on the base class remains for unmigrated operators. The entry dispatches on the task's declared backend type: a declared type with no engine (currently ROCKSDB) fails loud with `VELOX_UNSUPPORTED` at operator initialization, never silently falling back to heap.
 
@@ -104,6 +168,37 @@ Seven-step `addInput` pattern (`GroupAggregator` is the reference):
 5. changelog planning: new key emits +I; changed value emits (-U+)+U (-U only when the plan demands update-before); unchanged emits nothing;
 6. assemble the `StreamRecord` (key columns extracted from keyRowContainer by emit index, value columns pick the before/after mirror per kind)→`pushOutput`;
 7. at the batch boundary, `keyedBackend_->advance()`.
+
+Reference excerpt (`GroupAggregator::addInput`; `resolveKeys` = steps 2/3, `accumulateInput` = step 4, `planEmission` = step 5, `buildEmitRecord` = step 6):
+
+```cpp
+void GroupAggregator::addInput(StreamElementPtr input) {
+  auto record = std::static_pointer_cast<StreamRecord>(input);
+  checkInputRowKinds(*record);            // 1. cast + rowKind validation
+  const auto& inputVector = record->record();
+  const auto numRows = inputVector->size();
+  if (numRows == 0) {
+    return;
+  }
+
+  const auto numDistinct = resolveKeys(inputVector);  // 2/3. probe + state-row resolution
+
+  // Previous final values, before this batch accumulates.
+  const auto prevValues = extractFinalValues(stateRows_.data(), numDistinct);
+
+  accumulateInput(inputVector, numRows);  // 4. business logic updates in place
+
+  const auto newValues = extractFinalValues(stateRows_.data(), numDistinct);
+  planEmission(prevValues, newValues);    // 5. changelog planning
+
+  if (!emitRowKeys_.empty()) {
+    pushOutput(buildEmitRecord(prevValues, newValues));  // 6. assemble + output
+  }
+
+  // Batch boundary: reclaim key rows no state entry references any more.
+  keyedBackend_->advance();              // 7. batch-boundary reclaim
+}
+```
 
 Watermarks cascade by default; only event-time operators (windowing) override `processWatermark`.
 
@@ -121,7 +216,32 @@ Watermarks cascade by default; only event-time operators (windowing) override `p
 
 ### 6 Testing
 
-Model on `velox/experimental/stateful/tests/GroupAggregatorTest.cpp`:
+Fixture excerpt (`GroupAggregatorTest`, `SetUp` core):
+
+```cpp
+class GroupAggregatorTest : public exec::test::OperatorTestBase {
+ protected:
+  void SetUp() override {
+    OperatorTestBase::SetUp();
+    aggregate::prestosql::registerAllAggregateFunctions();
+    // Flink avg semantics overwrite the presto baseline
+    aggregate::flinksql::registerAggregateFunctions();
+
+    core::PlanFragment planFragment;  // a single ValuesNode suffices
+    executor_ = std::make_shared<folly::CPUThreadPoolExecutor>(1);
+    task_ = exec::Task::create(
+        "GroupAggregatorTest_task", std::move(planFragment), 0,
+        core::QueryCtx::create(executor_.get()),
+        exec::Task::ExecutionMode::kParallel);
+    driver_ = exec::Driver::testingCreate();
+    driverCtx_ = std::make_unique<exec::DriverCtx>(task_, 0, 0, 0, 0);
+    driverCtx_->driver = driver_.get();
+
+    taskBackend_ = std::make_unique<HashMapStateBackend>(
+        std::make_shared<const KeyedStateBackendParameters>(
+            StateBackendType::HEAP, "job", "group-agg"));
+  }
+```
 
 - fixture: `OperatorTestBase`; register the needed aggregate functions; `HashMapStateBackend`+`KeyedStateBackendParameters` act as the task-level backend;
 - downstream is a collecting `StatefulOperator`; construct operators in production lifecycle order: `initialize()`→`initializeStateBackend()`;

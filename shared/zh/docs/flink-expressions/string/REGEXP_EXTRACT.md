@@ -50,4 +50,4 @@ GFV实现该函数的velox侧逻辑时，可参考的Flink 1.19.2源码位置：
 
 ## velox实现
 
-GFV已在velox侧实现`regexp_extract`，注册于`velox/functions/flinksql/Register.cpp`（实现于同目录`RegexFunctions.h`）。
+GFV已在velox侧实现`regexp_extract`，注册于`velox/functions/flinksql/registration/StringFunctionsRegistration.cpp`（包裹velox核心`functions/lib/Re2Functions.h`，空匹配返回NULL）。
