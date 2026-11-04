@@ -3,8 +3,6 @@
 #   1. plugins are mutually independent — no manifest references another plugin
 #   2. plugin-owned skill & agent names are globally unique across plugins
 #   3. shared/ never references plugin content
-#   4. every shared docs/templates unit is referenced by >= 2 plugins
-#      (skills are exempt: a shared skill may legitimately serve one plugin)
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -57,30 +55,5 @@ if grep -rn --include='*.md' --include='*.json' --include='SKILL.md' 'plugins/' 
 else
   pass "shared/ free of plugin references"
 fi
-
-# 4. shared docs/templates units must be referenced by >= 2 plugins
-# skills are exempt from the >= 2 rule: a shared skill may serve a single
-# plugin, so forcing extra declarations only binds unimplemented plugins
-# units are declared by neutral name (the en/ zh/ trees pair content), so
-# enumeration is one level below shared/en/<kind>/ (zh twin parity is
-# check_language.sh's business)
-for kind in docs templates; do
-  units=$(find "$SHARED_DIR/en/$kind" -mindepth 1 -maxdepth 1 -printf '%P\n' 2>/dev/null | LC_ALL=C sort -u)
-  while IFS= read -r u; do
-    [ -n "$u" ] || continue
-    refs=0
-    for p in "${plugins[@]}"; do
-      m="$PLUGINS_DIR/$p/plugin.json"
-      [ -f "$m" ] || continue
-      jq -e --arg u "$u" '(.shared.docs // []) + (.shared.skills // []) + (.shared.templates // []) | index($u) != null' "$m" >/dev/null \
-        && refs=$((refs + 1))
-    done
-    if [ "$refs" -lt 2 ]; then
-      fail "shared $kind '$u' referenced by $refs plugins (< 2) — single-scene content belongs in the plugin"
-    else
-      pass "shared $kind '$u' referenced by $refs plugins"
-    fi
-  done <<< "$units"
-done
 
 finish

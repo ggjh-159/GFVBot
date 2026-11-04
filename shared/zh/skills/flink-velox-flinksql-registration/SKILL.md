@@ -17,13 +17,13 @@ description: 在velox的flinksql命名空间下注册Flink语义的表达式函�
 
 | 部件 | 位置（velox仓内） |
 |---|---|
-| 函数实现 | `velox/functions/flinksql/<Function或家族>.h`（简单UDF）或`.cpp`（向量函数） |
-| 注册入口 | `velox/functions/flinksql/Register.cpp`——命名空间`facebook::velox::functions::flinksql`内的`registerFunctions(prefix)` |
-| 头文件 | `velox/functions/flinksql/Register.h` |
+| 函数实现 | `velox/functions/flinksql/<家族>Functions.h`（简单UDF；向量函数的工厂包裹落在对应家族的Registration.cpp） |
+| 注册入口 | `velox/functions/flinksql/registration/RegistrationFunctions.cpp`——命名空间`facebook::velox::functions::flinksql`内的`registerFunctions(prefix)`，按家族拆分`registerXxxFunctions` |
+| 头文件 | `velox/functions/flinksql/registration/RegistrationFunctions.h` |
 | 构建接线 | `velox/functions/flinksql/CMakeLists.txt` |
 | 测试 | `velox/functions/flinksql/tests/`——沿用既有表达式测试样式 |
 
-既有的`regexp_extract`（基于re2，`RegexFunctions.h`）是仓内完整flinksql注册的参照；`velox/experimental/stateful/udf/`下的`count_char`/`extract`/`split_index`展示简单UDF形态。
+完整flinksql注册的参照：简单UDF看`StringFunctions.h`（trim/pad家族）、向量函数看`registration/StringFunctionsRegistration.cpp`里的`regexp_extract`（包裹velox核心`functions/lib/Re2Functions.h`，空匹配返回NULL）；`velox/experimental/stateful/udf/`下的`count_char`/`extract`/`split_index`展示简单UDF形态。
 
 ## 注册机制
 
@@ -42,7 +42,7 @@ description: 在velox的flinksql命名空间下注册Flink语义的表达式函�
 ## 检查清单
 
 - [ ] 实现文件落在`velox/functions/flinksql/`下，命名空间正确
-- [ ] 注册条目进`Register.cpp`，签名显式
+- [ ] 注册条目进对应家族的`registration/*FunctionsRegistration.cpp`，签名显式
 - [ ] `CMakeLists.txt`编译新文件
 - [ ] flinksql单测覆盖类型矩阵与null/边界行为
 - [ ] 对照velox4j调用点核实加载prefix
