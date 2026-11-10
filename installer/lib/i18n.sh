@@ -385,6 +385,8 @@ MSG_EN[msg_setup_already]='already set up (%s contains the gfvbot block)'
 MSG_ZH[msg_setup_already]='已配置过（%s已包含gfvbot块）'
 MSG_EN[msg_setup_added]='added gfvbot block to %s'
 MSG_ZH[msg_setup_added]='已向%s添加gfvbot块'
+MSG_EN[msg_setup_updated]='rewrote gfvbot block in %s (previous install path replaced)'
+MSG_ZH[msg_setup_updated]='已重写%s中的gfvbot块（原安装路径已替换）'
 MSG_EN[msg_setup_next]='restart your shell (or: source %s), then use: gfvbot install <plugin>'
 MSG_ZH[msg_setup_next]='重启shell（或执行source %s）后即可使用: gfvbot install <插件名>'
 
