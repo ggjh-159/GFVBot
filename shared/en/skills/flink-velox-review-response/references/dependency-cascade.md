@@ -44,7 +44,7 @@ While a feature PR is in flight, velox4j's CMakeLists points at the personal for
 sed -i 's/<fork-owner>\/velox/bigo-sg\/velox/' src/main/cpp/CMakeLists.txt   # both lines
 ```
 
-gluten's CI routing follows the same pattern: in `.github/workflows/flink.yml` and `gluten-flink/docs/Flink.md`, the clone line moves from the fork's pin branch to `-b gluten-20260829 https://github.com/bigo-sg/velox4j.git`, and the `git reset --hard <sha>` target moves to the velox4j merge head.
+gluten's velox4j pin is carried by the single file `gluten-flink/velox4j-ref.txt` (merged upstream): the CI workflow (`flink.yml`) and the build guide (`gluten-flink/docs/Flink.md`) both read it via `$(cat .../velox4j-ref.txt)`, so editing one file covers all references. On cascade: the clone line moves from the fork's pin branch to `-b gluten-20260829 https://github.com/bigo-sg/velox4j.git`, and `velox4j-ref.txt` is written with the full upstream merge-head SHA (a codeload existence check is a reasonable pre-write validation).
 
 ## Local format toolchain (velox repo)
 

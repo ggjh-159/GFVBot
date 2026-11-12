@@ -90,7 +90,7 @@ push 被拒（non-fast-forward）时按上述规则判断是否允许 force-with
 ## Phase C —— 合并后级联
 
 - **合并确认**：PR state 转 merged；`Fixes #` 的 issue 是否自动关闭。
-- **级联动作**（见 `references/dependency-cascade.md`）：velox4j ref 指上游合并头、仓 URL 从 fork 切回上游、hash 从上游 codeload 重算；gluten 的 clone 行切上游分支、pin 指合并头。
+- **级联动作**（见 `references/dependency-cascade.md`）：velox4j ref 指上游合并头、仓 URL 从 fork 切回上游、hash 从上游 codeload 重算；gluten 的 clone 行切上游分支、`gluten-flink/velox4j-ref.txt` 更新为合并头。gluten 的 velox4j pin 由 `gluten-flink/velox4j-ref.txt` 单文件承载（flink.yml 与 Flink.md 通过 `$(cat ...)` 读取），更新即编辑该文件——不再逐处改 workflow 与文档。
 - **跨分支受影响检查**：任一仓合并后，检查其它在途分支是否与前进后的上游分叉；受影响分支用 **merge** 同步（保护各自锚点）。
 - **收尾**：archive/ 存档标记闭环；fork 分支保留。
 

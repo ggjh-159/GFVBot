@@ -44,7 +44,7 @@ git add -u && git commit -m "Point the velox ref at the merged upstream revision
 sed -i 's/<fork-owner>\/velox/bigo-sg\/velox/' src/main/cpp/CMakeLists.txt   # 两行
 ```
 
-gluten 的 CI 路由同构：`.github/workflows/flink.yml` 与 `gluten-flink/docs/Flink.md` 中，clone 行从 fork 的 pin 分支切到 `-b gluten-20260829 https://github.com/bigo-sg/velox4j.git`，`git reset --hard <sha>` 目标切到 velox4j 合并头。
+gluten 的 velox4j pin 由 `gluten-flink/velox4j-ref.txt` 单文件承载（已合并入上游）：CI workflow（`flink.yml`）与构建指南（`gluten-flink/docs/Flink.md`）均通过 `$(cat .../velox4j-ref.txt)` 读取该文件，编辑一处即全局生效。级联更新时：clone 行从 fork 的 pin 分支切到 `-b gluten-20260829 https://github.com/bigo-sg/velox4j.git`，`velox4j-ref.txt` 写入 velox4j 合并头全 SHA（可先经 codeload 存在性校验）。
 
 ## 本地格式工具链（velox 仓）
 

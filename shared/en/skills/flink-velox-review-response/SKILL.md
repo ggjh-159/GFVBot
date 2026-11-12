@@ -90,7 +90,7 @@ Check the description against the implementation: tested-section counts, the cla
 ## Phase C — post-merge cascade
 
 - **Merge confirmation**: PR state → merged; did the `Fixes #` issue auto-close.
-- **Cascade actions** (see `references/dependency-cascade.md`): velox4j ref → upstream merge head, repo URL fork → upstream, hash recomputed from the upstream codeload; gluten's clone line switches to the upstream branch, pin to the merge head.
+- **Cascade actions** (see `references/dependency-cascade.md`): velox4j ref → upstream merge head, repo URL fork → upstream, hash recomputed from the upstream codeload; gluten's clone line switches to the upstream branch and `gluten-flink/velox4j-ref.txt` is updated with the merge head. gluten's velox4j pin lives in the single file `gluten-flink/velox4j-ref.txt` (flink.yml and Flink.md read it via `$(cat ...)`) — one edit covers all references; no per-workflow or per-doc pin changes.
 - **Cross-branch impact check**: after any repo merges, check whether other in-flight branches diverged from the advanced upstream; sync affected branches with **merge** (protecting their anchors).
 - **Wrap-up**: mark the archive/ closed; keep fork branches.
 
