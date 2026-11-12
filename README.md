@@ -35,7 +35,7 @@ For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into 
 
 For cases where the feature is correct but performance falls short. The workflow is a loop: run the nexmark benchmark against native Flink to quantify the gap, profile to locate hotspots (on both the C++ and JVM sides), apply the fix, regression-verify, and iterate until the target is met.
 
-## Four steps from a bare machine to AI-assisted coding
+## Five steps from a bare machine to AI-assisted coding
 
 Supported OSes: openEuler, CentOS 7/9, Ubuntu/Debian. Run the steps in order — each one builds on the previous, and together they take you from an empty machine to a working GFV workspace where the AI agent does the coding with you. Every step resumes: detected dependencies are skipped, existing repos and configuration are left untouched, so after an interruption just rerun the same command.
 
@@ -87,6 +87,27 @@ Installs the plugin into the current project — its skills, its docs, and its d
 Content language follows the output language (`gfvbot lang`); override with `--lang en|zh`. Exactly one language lands — no en/zh layer inside the project — and switching language is a reinstall over the top.
 
 Done when `gfvbot list` shows the plugin as installed.
+
+### Step 5: generate the task prompt and start the work
+
+```bash
+gfvbot prompt stateful-operator-development --task "develop a StreamJoin operator for gluten-flink" --tool claude
+```
+
+Calls the local AI agent (`claude` or `opencode`) to fill in the complete prompt (the four elements: goal, verification, acceptance, supplement) from a one-line task description. Output of the command above:
+
+```text
+Develop a `StreamJoin` stateful operator for gluten-flink.
+
+- Goal: equijoin the two streams on the join key and emit the matched rows
+- Verification: run nexmark query `q3` (auction joined with person on seller) on the cluster and compare the output with native Flink
+- Acceptance: changelog correct (+I on match, -U/+U retracting emitted rows when one side updates); no regression on existing queries
+- Supplement: per-side state in MapState keyed by the join key holding arrived rows (no window semantics, VoidNamespace)
+
+Proceed with the installed stateful-operator-development workflow, starting from the SPEC stage.
+```
+
+Paste the generated prompt into a session of the target project's AI agent and send it; the workflow starts from the SPEC stage. Without `--task` the command prints the four-element template for manual filling; `--file <path>` writes the result to a file instead of stdout.
 
 ## Other commands
 

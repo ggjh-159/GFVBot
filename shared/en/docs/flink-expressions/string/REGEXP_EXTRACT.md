@@ -50,4 +50,4 @@ The Flink 1.19.2 source anchors to consult when implementing the velox side of t
 
 ## Velox implementation
 
-GFV already implements `regexp_extract` on the velox side, registered in `velox/functions/flinksql/Register.cpp` (implemented in `RegexFunctions.h` in the same directory).
+GFV already implements `regexp_extract` on the velox side, registered in `velox/functions/flinksql/registration/StringFunctionsRegistration.cpp` (wrapping velox core `functions/lib/Re2Functions.h`, NULL on empty match).

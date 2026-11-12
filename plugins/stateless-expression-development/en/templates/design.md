@@ -89,6 +89,7 @@ Implementation notes (one bullet group per function, at most two lines per bulle
 | NULL in each argument position | | | |
 | Boundaries (empty / out-of-range / extremes) | | | |
 | Special scenarios (see §9) | | | |
+| velox4j call chain | build a `CallTypedExpr` and evaluate it via the `eval/EvaluationTest`-style harness (FLINK preset, `mvn test`) | same expectations as the C++ unit tests | pin the JNI path: flinksql namespace resolution from the Java side, preset loading, serde, type matching |
 
 ## 8. e2e Test Coverage Matrix
 

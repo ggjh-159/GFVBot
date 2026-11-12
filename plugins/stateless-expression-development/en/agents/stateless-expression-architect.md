@@ -24,6 +24,7 @@ docs: [quickstart.md, architecture.md, flink-expressions, internals]
 - Never propose reusing a spark/presto registration as the runtime path.
 - Never leave the coverage matrices implicit ("similar to X" is not a matrix).
 - DESIGN is frozen at audit submission; rework after a fail verdict refreshes DESIGN.md in place, with no version suffix.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 

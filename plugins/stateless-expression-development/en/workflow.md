@@ -17,7 +17,7 @@ stages:
 
 ## Scope
 
-Covers one Flink scalar expression end to end across the GFV stack: the velox C++ implementation registered under the flinksql namespace, the gluten planner mapping, and the test pyramid (unit tests, lightweight e2e, full dual-run e2e). Out of scope: stateful operators, aggregate functions, performance tuning (other plugins own those).
+Covers one Flink scalar expression end to end across the GFV stack: the velox C++ implementation registered under the flinksql namespace, the gluten planner mapping, and the test pyramid (velox C++ unit tests, velox4j call-chain tests, lightweight e2e, full dual-run e2e). Out of scope: stateful operators, aggregate functions, performance tuning (other plugins own those).
 
 Standing rules for every task:
 
@@ -34,6 +34,16 @@ Standing rules for every task:
 | stateless-expression-developer | owns implementation: code, build, unit tests, lightweight e2e self-check |
 | stateless-expression-reviewer | owns the three audit gates: design audit, code audit, result audit |
 | stateless-expression-verifier | owns full dual-run e2e: SQL inventory, changelog fold comparison, TEST_REPORT |
+
+## Running topology
+
+The main session advances the workflow leg by leg, one leg = advancing from the current state to the next stop point (user gate, blocker, or full completion):
+
+- The main session calls the orchestrator in the foreground and waits for its return; the orchestrator likewise makes only foreground Agent tool calls to owners and reviewers — `run_in_background` is forbidden, because background subtasks are reaped the moment their parent agent returns, which amounts to silent disposal; degrading to an OS subprocess plus polling waits is forbidden, because zombie processes get misjudged as alive by `kill -0`. When foreground Agent calls are unavailable, return and report immediately — never improvise a substitute to keep running.
+- Dispatch leaves a trace: the dispatch intent (to whom, expected artifact) lands as one line in `PROGRESS.md` before dispatching; recovery breakpoints and silence detection both key off it; the orchestrator writes the next action into `TASK_STATE.md` before every return.
+- The orchestrator returns at stop points: at user gates it brings back the decision-point checklist, at blockers the blocker report, and the main session relays them to the user; once user replies land in `USER_GATES.md`, the main session wakes the orchestrator again to continue. The orchestrator does not wait for user replies inside its turn.
+- The prompt waking the orchestrator carries the task description, the target project root, and the advancement goal for this leg; on wake the orchestrator reads `TASK_STATE.md` first to recover. Cross-leg continuity is carried only by TASK_STATE.md and the task artifacts, never by agent-instance survival.
+- The watchdog is a main-session duty — nobody checks while the orchestrator is not running: the main session uses a scheduled task every 15–20 minutes to check the update times of PROGRESS.md and TASK_STATE; silence past the threshold is reported to the user with intervention (inquiry or redispatch); every status line ends with "next check around HH:MM" so the silence boundary stays predictable; overnight and other cross-session scenarios require durable scheduling or user-side external monitoring — session-level timers vanish when the session closes.
 
 ## Preconditions
 
@@ -70,7 +80,7 @@ Gate: the reviewer produces DESIGN_AUDIT (audit-report template, section A: sche
 
 ### Implement
 
-The developer codes per the approved design: velox function + flinksql registration + CMake + unit tests, gluten mapping entry. Build and deploy only via the flink-velox-build skill (never skip the C++ build); unit tests only via flink-velox-unit-test; then a lightweight e2e self-check (self-constructed input, print sink, verify script) on the GFV cluster. Records everything in IMPLEMENTATION.md, including any change beyond the design's impact list (out-of-scope changes are a critical audit finding).
+The developer codes per the approved design: velox function + flinksql registration + CMake + unit tests, velox4j call-chain tests (EvaluationTest-style harness, FLINK preset), gluten mapping entry. Build and deploy only via the flink-velox-build skill (never skip the C++ build); unit tests only via flink-velox-unit-test; then a lightweight e2e self-check (self-constructed input, print sink, verify script) on the GFV cluster. Records everything in IMPLEMENTATION.md, including any change beyond the design's impact list (out-of-scope changes are a critical audit finding). Before delivery, prepares PR.md per the PR template (`templates/pr.md`): commit plan, PR description, pre-merge checklist.
 
 Gate: the reviewer produces CODE_AUDIT (section B: design consistency, documentation synced with implementation, security, unit-test completeness vs the design matrix, code format, simpler/more efficient alternatives, redundancy/extensibility/readability). Pass + user gate 2 releases delivery.
 
@@ -96,6 +106,10 @@ Forbidden: implementing before the design audit passes; running full e2e before 
 
 The artifacts under `tasks/<task-name>/` are the single source of truth shared across agents; a verbal conclusion does not exist until written into an artifact. Later stages read artifacts, not chat history.
 
+Artifact structure: templated artifacts (SPEC/DESIGN/IMPLEMENTATION/PR/TEST_REPORT/audit reports/upstream drafts) keep their H1/H2 heading sets and numbering style verbatim against the corresponding template — nothing added, deleted, or renamed. The owner self-checks structure before writing; the reviewer structure-checks first at every audit, and a mismatch is a HIGH that blocks, returned with "documentation" attribution (re-layout only, technical content untouched).
+
+Typography discipline (applies to every artifact in the task tree, checked at every audit): one fact per bullet, never chaining a second fact with ";"; table cells hold facts and anchors only, at most two lines, with reasoning moved to its own line; paragraphs are single-line flowing text without hard wraps. Horizontal rework coverage: when an artifact is returned for defect X, the orchestrator must scan all artifacts presented at the same gate and all existing task-tree artifacts for the same X and route the fixes together — fixing only the named copy does not count as done.
+
 ```text
 tasks/<task-name>/
   TASK_STATE.md                  cross-agent state anchor
@@ -107,6 +121,7 @@ tasks/<task-name>/
   verifier/     TEST_REPORT.md
   upstream/     community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
 
+tmp/<task-name>/dispatch/        dispatch briefs: one per dispatch (owner, target artifact, must-read anchors, discipline)
 tmp/<task-name>/logs/            logs only: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
 ```
 
@@ -114,7 +129,7 @@ The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out
 
 TASK_STATE.md is the single recovery anchor: updated after every stage and every gate verdict. Artifacts are snapshots: rework refreshes existing files in place, and when the described object has changed (code rolled back and relanded, scope redefined) the affected artifacts must be refreshed before the next gate.
 
-Progress tracking: at every milestone (key references read, a section drafted, a build finished) the owner agent appends one line to `PROGRESS.md`: time, agent, one sentence. At dispatch the orchestrator says who takes the stage and what artifact to expect; when the owner returns it reports the outcome immediately and updates TASK_STATE.md; when PROGRESS.md stays silent too long it checks the artifacts and run records and re-dispatches if needed — progress awareness is the orchestrator's duty, not the user's. The user can `tail -f tasks/<task-name>/PROGRESS.md` at any time.
+Progress tracking: at every milestone (key references read, a section drafted, a build finished) the owner agent appends one line to `PROGRESS.md`: time, agent, one sentence — timestamps must come from the measured output of `date +%F %T`; estimates are forbidden, and the "current time" carried in session context is a stale snapshot that likewise cannot serve as a basis. At dispatch the orchestrator says who takes the stage and what artifact is expected; when the owner returns it reports the outcome immediately and updates TASK_STATE.md; an owner returning without its artifact landed is a dispatch failure — verify and re-dispatch at once; intra-turn progress checking is the orchestrator's duty, cross-leg silence watchdogging is the main session's duty (see Running topology). The user can `tail -f tasks/<task-name>/PROGRESS.md` at any time.
 
 Build/test command outputs are redirected into `tmp/<task-name>/logs/cmd-outputs/`, job submissions and crash captures into `tmp/<task-name>/logs/jobs/`; reports cite those paths as evidence, but logs themselves are transient — cleanable anytime, never deciding a gate.
 
@@ -126,8 +141,15 @@ Build/test command outputs are redirected into `tmp/<task-name>/logs/cmd-outputs
 | 2 | after code audit passes | before delivery / full e2e begins |
 | 3 | after result audit passes | before the task is declared complete |
 
-Each user gate runs as follows: the orchestrator presents the audit report together with a **key-decision checklist** for entry-by-entry confirmation. Checklist entries are drawn from the artifact under audit and its template sections (e.g. after the design audit: the reuse decision, the mapping choice, coverage scope, risk acceptance), each carrying four elements — decision content (a decidable value; "reasonable/moderate" does not count), evidence source (which artifact section), attribution (which stage an objection returns to), and a confirm/object choice; entries take only what the artifacts already contain, never fields the artifacts left undefined. User replies are appended verbatim entry by entry to `USER_GATES.md`; release only when every entry is confirmed; contested entries route back for rework by attribution, the affected artifacts refresh in place, and the corresponding audit reruns.
+At each pause the presentation and confirmation follow this mechanism:
+
+- **Four-part presentation**: (1) a material list with reading order (every artifact under review **in full** — inline, or with path and reading guide; "full text provided" is a pre-release self-check item); (2) the decision-point checklist (see below); (3) reply guidance — the user answers only "confirm / object + opinion" per entry, and formatting the exchange is the main session's burden; (4) never cite list numbers that were not presented.
+- **Decision-point checklist**: entries are drawn from the artifact under review and its template sections (e.g. after the design audit: the reuse decision, the mapping choice, coverage scope, risk acceptance); out-of-scope exclusions carry the same reporting duty as positive decisions — every exclusion comes with a reason and an evidence source. Each entry carries four elements — decision content (a decidable value; "reasonable/moderate" does not count), evidence source (which artifact section), attribution (which stage an objection returns to), and a confirm/object choice; entries take only what the artifacts already contain, never fields the artifacts left undefined.
+- **Entry-by-entry interaction**: decision points are presented one at a time, the next only after the user answers — dumping the whole list at once is forbidden, and so is merging entries into groups to lower confirmation friction; reading an artifact in full and confirming entries are decoupled, and a user saying "show me the DESIGN" gets the full text separately.
+- **Landing and release**: user replies are appended verbatim entry by entry to `USER_GATES.md`; the TASK_STATE gate row records the presentation form (full text / checklist only) for audit; release only when every entry is confirmed; contested entries route back to the owning agent for rework by attribution, the affected artifacts refresh in place, and the corresponding audit re-runs. The orchestrator does not answer technical questions itself.
 
 ## Cross-cutting discipline
 
 Context economy: agents load only their bound skills/docs; grep before reading. The reviewer points, never patches. Audits are binary (pass/fail) with mandatory opinions on fail; HIGH findings block, MED/LOW advise. Changelog semantics and comparison standards follow the flink-velox-e2e-verify skill — the verifier never relaxes "exact match".
+
+Agent dispatch: every dispatch is a fresh instance; the orchestrator names in the dispatch prompt which artifacts the owner must read and write this time; context recovery relies on TASK_STATE.md and the existing artifacts, never on instance survival.

@@ -22,6 +22,7 @@ docs: [quickstart.md, verification.md, nexmark-queries.md, flink-expressions]
 - Never excuse a mismatch as environment noise or pre-existing behavior — triage it, then report it.
 - Never relax the comparison standard (no tolerance, no "close enough", no re-running until lucky).
 - A Flink job succeeds only at FINISHED; check the cluster/web UI and TaskManager `.out` for errors and crash stacks.
+- Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 
 ## Input / output boundaries
 

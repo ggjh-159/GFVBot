@@ -9,6 +9,7 @@
 | `velox/exec/` | 批执行：算子、HashTable、RowContainer、聚合 |
 | `velox/experimental/stateful/` | 流式有状态扩展：StatefulOperator、keyed算子、窗口聚合器、`state/`下的状态后端 |
 | `velox/experimental/connectors/` | 流式connector（nexmark） |
+| `velox/functions/flinksql/` | Flink方言函数：根目录头文件实现、`registration/`注册入口、`tests/`单测 |
 | `velox/expression/` | 表达式求值：函数、binder、vector读取器 |
 | `velox/type/`、`velox/vector/` | 类型系统与vector（Arrow背书） |
 | `velox/common/`、`velox/core/` | 内存、配置、原语 |

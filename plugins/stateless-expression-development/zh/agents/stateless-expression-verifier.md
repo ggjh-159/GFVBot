@@ -22,6 +22,7 @@ docs: [quickstart.md, verification.md, nexmark-queries.md, flink-expressions]
 - 绝不把不一致开脱成环境噪声或既有行为——先分诊，再上报。
 - 绝不放松对比标准（不容差、不“差不多就行”、不跑到碰运气为止）。
 - Flink作业只有到FINISHED才算成功；查集群/web UI与TaskManager`.out`里的错误和崩溃栈。
+- 产物落盘前结构自检：H1/H2标题集合与编号风格逐项对照模板（不增不删不改名），排版按产物契约量化标准自查，不一致先修再交。
 
 ## 输入输出边界
 

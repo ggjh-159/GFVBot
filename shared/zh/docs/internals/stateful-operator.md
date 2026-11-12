@@ -16,7 +16,7 @@
 |   | operator_     内嵌的原生exec::Operator                     |     |
 |   |               （FilterProject/TableScan/HashProbe...）     |     |
 |   | targets_      下游壳列表                                   |     |
-|   | stateHandler_ 状态+timer句柄（有状态算子用）                |     |
+|   | stateHandler_ 状态+timer句柄（遗留，typed算子不构造）      |     |
 |   +-----------------------------------------------------------+     |
 |                                                                      |
 |  推进：链头advanceWithFuture                                         |
@@ -53,7 +53,7 @@
 
 ## 阶段3：壳与级联
 
-`StatefulOperator`的三样家当：内嵌原生算子、下游target列表、（有状态算子的）`stateHandler_`。基类虚函数构成流式生命周期API——`initialize`、`isFinished`、`addInput`、`advance`、`advanceWithFuture`、`close`、`finish`、`processWatermark`、`processWatermarkStatus`、`checkWatermarkStatus`、`initializeState`——默认实现全部"委托内嵌算子+递归targets"，纯无状态变换零代码接入。
+`StatefulOperator`的三样家当：内嵌原生算子、下游target列表、`stateHandler_`（遗留——typed算子自建`HeapKeyedStateBackend`后不再构造）。基类虚函数构成流式生命周期API——`initialize`、`isFinished`、`addInput`、`advance`、`advanceWithFuture`、`close`、`finish`、`processWatermark`、`processWatermarkStatus`、`checkWatermarkStatus`、`initializeState`——默认实现全部"委托内嵌算子+递归targets"，纯无状态变换零代码接入。
 
 承重方法是`pushOutput`：非链尾算子的输出直接进`targets_[i]->addInput`+`advance`（递归）；链尾把元素交给task的pendings_。一次推进让数据滚到链尾或停在某个算子里（攒窗口的）——中间不经任何队列。`finish`负责排干：noMoreInput后循环getOutput直到干——窗口算子的最后一批输出在这里flush。多输入水位线合并各输入（合取最小）并在空闲状态变化时补发状态事件，与Flink的combined watermark语义一致。
 
@@ -63,7 +63,7 @@
 
 ## 阶段5：状态与timer
 
-每个算子一个`StreamOperatorStateHandler`，刻意对标Flink同名类。所有状态值都是`RowVectorPtr`——状态存的也是向量，与一切一致。
+keyed状态的新算子不走这一层——typed `HeapKeyedStateBackend`才是现行契约（见[实现指南](../stateful-operator-implementation.md)）。遗留路径：每个算子一个`StreamOperatorStateHandler`，刻意对标Flink同名类。所有状态值都是`RowVectorPtr`——状态存的也是向量，与一切一致。
 
 | API | 形态 | 典型用途 |
 |---|---|---|
@@ -77,7 +77,7 @@
 
 ## 阶段6：checkpoint与RocksDB直通
 
-`StatefulOperator#snapshotState`沿链递归：内嵌算子自己的快照+状态handler的快照+`Snapshotable`内嵌算子的快照；heap后端产出显式快照记录（字符串）收集回Java侧存进Flink state store。`restoreState`与`notifyCheckpointComplete`（sink的commit）对称。
+`StatefulOperator#snapshotState`沿链递归：内嵌算子自己的快照与targets的快照无条件执行；状态handler的快照与`Snapshotable`内嵌算子的快照只在handler存在时执行——typed算子自建后端后handler不再构造，walk不因缺handler而中断（覆盖见`StatefulOperatorCheckpointTest`）。heap后端产出显式快照记录（字符串）收集回Java侧存进Flink state store。`restoreState`与`notifyCheckpointComplete`（sink的commit）对称。
 
 RocksDB路径是有意思的那个：velox不自建RocksDB——**直接用Flink的活实例**。Java侧`WindowAggOperator#initializeState`用反射从Flink的`RocksDBKeyedStateBackend`里挖出native句柄（db对象、读/写选项、列族句柄），连同key/accumulator类型信息打包成`RocksDBKeyedStateBackendParameters`，经`task.initializeState`传下去。C++后端随后读写同一个库。同一份RocksDB里同时有Flink原生状态和velox状态，barrier统一保一致；非RocksDB后端走上面的显式快照路径。
 
