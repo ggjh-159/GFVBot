@@ -60,7 +60,7 @@ Environment readiness is a CLI concern, not an agent stage. Before the task star
 | verify | verifier | acceptance pass against SPEC acceptance criteria | verifier/VERIFY.md, reviewer/REVIEW_GATE.md |
 | retro | architect | all artifacts archived | developer/PR.md, architect/SUMMARY.md, RETROSPECTIVE.md, upstream/ drafts (when involved) |
 
-All artifact paths are relative to `tasks/<task-name>/` under the target project root; `<task-name>` is a stable short identifier chosen at task start.
+All artifact paths are relative to `tasks/<task-name>/` under the target project root; at task start `<task-name>` is taken from the operator name in the task description as a kebab-case short identifier (e.g. `stream-join`) — never named after a dispatch action or stage description — and stays fixed for the whole task.
 
 ## Stage details
 

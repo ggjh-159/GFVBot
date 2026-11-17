@@ -60,7 +60,7 @@ stages:
 | verify | verifier | 对照SPEC验收标准验收通过 | verifier/VERIFY.md、reviewer/REVIEW_GATE.md |
 | retro | architect | 全部产物归档 | developer/PR.md、architect/SUMMARY.md、RETROSPECTIVE.md、upstream/草稿（涉及时） |
 
-产物路径都相对目标项目根的`tasks/<task-name>/`；`<task-name>`是任务启动时选定的稳定短标识。
+产物路径都相对目标项目根的`tasks/<task-name>/`；`<task-name>`在任务启动时从任务描述取算子名定为kebab-case短标识（如`stream-join`），禁止取自派发动作或阶段描述，一经选定全程不变。
 
 ## 阶段细节
 

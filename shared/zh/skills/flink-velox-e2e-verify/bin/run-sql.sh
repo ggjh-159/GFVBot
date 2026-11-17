@@ -36,8 +36,8 @@ while [ "$search_dir" != "/" ]; do
 done
 [ -n "$env_json" ] || { echo "missing .gfvbot/env.json — run 'gfvbot env' first" >&2; exit 1; }
 
-FLINK_HOME="$(jq -r '.FLINK_HOME // empty' "$env_json")"
-[ -n "$FLINK_HOME" ] || { echo "FLINK_HOME not recorded in env.json" >&2; exit 1; }
+FLINK_HOME="$(jq -r '.stack.flink.path // empty' "$env_json")"
+[ -n "$FLINK_HOME" ] || { echo "flink installation not recorded in env.json — run 'gfvbot env'" >&2; exit 1; }
 log_dir="$FLINK_HOME/log"
 mkdir -p "$log_dir"
 
