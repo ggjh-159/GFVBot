@@ -1,5 +1,7 @@
 # SPEC — <task-name>
 
+> Fill in section by section; write "none" for empty items and never delete a section.
+
 ## Task
 
 - task-name:

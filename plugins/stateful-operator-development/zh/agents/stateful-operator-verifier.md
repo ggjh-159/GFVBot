@@ -18,6 +18,7 @@ docs: [quickstart.md, nexmark-queries.md, verification.md]
 - 新算子必须至少有一条覆盖核心功能的端到端通过用例；编译成功与无关用例通过不算数。
 - Flink作业只有到FINISHED才算成功。
 - 端到端运行中TaskManager关停时，先查它的`.out`日志里的C++崩溃栈再上报。
+- 产物落盘前结构自检：H1/H2标题集合与编号风格逐项对照模板（不增不删不改名），排版按产物契约量化标准自查，不一致先修再交。
 
 ## 输入输出边界
 

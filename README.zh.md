@@ -35,7 +35,7 @@ GFV（gluten-flink-velox集成路线）的AI底座。内容按插件组织：一
 
 用于功能已正确但性能未达要求的场景。流程为闭环：运行nexmark基准与原生Flink对比以量化差距→profiling定位热点（C++/JVM两侧）→修改→回归验证，迭代直至达标。
 
-## 四步从裸机到AI辅助编码
+## 五步从裸机到AI辅助编码
 
 支持openEuler、CentOS 7/9与Ubuntu/Debian。按顺序执行以下步骤，完成后即得到可与AI Agent协同开发的GFV工作区。每一步均支持续跑：已探测的依赖自动跳过、已有仓库与配置保持不变，中断后重新运行同一命令即可继续。
 
@@ -87,6 +87,27 @@ gfvbot install stateful-operator-development
 内容语言随输出语言（`gfvbot lang`），`--lang en|zh`可覆盖。安装后只落一种语言、项目内没有en/zh目录层，切换语言即重新安装覆盖。
 
 `gfvbot list`显示该插件已安装即表示成功。
+
+### 第5步：生成任务prompt，发起开发
+
+```bash
+gfvbot prompt stateful-operator-development --task "为gluten-flink开发StreamJoin算子" --tool claude
+```
+
+调用本机AI Agent（`claude`或`opencode`），按一句话任务描述代填出完整prompt（目标、验证、验收、补充四要素）。以上命令的产出：
+
+```text
+为gluten-flink开发`StreamJoin`stateful算子。
+
+- 目标：按join key对两条流做等值内连接，输出匹配结果
+- 验证：在集群上运行nexmark query `q3`（auction按seller连person），与原生Flink对比输出
+- 验收：changelog正确（匹配+I、一侧更新收回已出行-U/+U）；既有query不回归
+- 补充：两侧状态用MapState按join key存已到达记录（无窗口语义，VoidNamespace）
+
+按已安装的stateful-operator-development工作流推进，从SPEC阶段开始。
+```
+
+把生成的prompt粘贴到目标项目的AI Agent会话发送，工作流即从SPEC阶段开始。不带`--task`时直接打印四要素模板手工填写；`--file <路径>`写入文件而非打印。
 
 ## 其他命令
 

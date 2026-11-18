@@ -658,6 +658,37 @@ index_path() {
   esac
 }
 
+# ---------------------------------------------------------------------------
+# CC plugin channel bridge — marketplace manifest
+#
+# One marketplace ("gfvbot") per target under .gfvbot/marketplace/, one
+# plugin entry per bridge dir carrying a card. Shared by the claude
+# adapter (install: entries = every bridged plugin incl. the one landing)
+# and uninstall (regeneration from surviving bridge dirs). Prints the
+# entry count.
+# ---------------------------------------------------------------------------
+MKT_NAME=gfvbot
+
+bridge_manifest_build() {  # <mkt-dir>
+  local mkt=$1 d
+  local -a entries=()
+  for d in "$mkt"/*/; do
+    [ -f "$d/.claude-plugin/plugin.json" ] || continue
+    entries+=("$(jq -c '{name: .name, source: ("./" + .name), description: .description}' "$d/.claude-plugin/plugin.json")")
+  done
+  local arr
+  arr=$(printf '%s\n' "${entries[@]}" | jq -s .)
+  local mf="$mkt/.claude-plugin/marketplace.json"
+  if [ -n "$DRY_RUN" ]; then
+    echo "  $(t dry_bridge "$mf")"
+  else
+    mkdir -p "$mkt/.claude-plugin"
+    jq -n --arg name "$MKT_NAME" --argjson plugins "$arr" \
+      '{name: $name, owner: {name: $name}, plugins: $plugins}' > "$mf"
+  fi
+  echo "${#entries[@]}"
+}
+
 # index file bootstrap: create with a static header on first landing
 ensure_index() {
   local index=$1

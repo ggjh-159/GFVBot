@@ -12,6 +12,7 @@
 | velox | `velox/functions/flinksql/Register.cpp` | 注册条目 | §4 |
 | velox | `velox/functions/flinksql/CMakeLists.txt` | 编译条目 | §4 |
 | velox | `velox/functions/flinksql/tests/<Test>.cpp` | 单测 | §7 |
+| velox4j | `src/test/.../functions/<Function>Test.java` | 调用链单测（EvaluationTest式harness，FLINK preset） | §7 |
 | gluten | `.../RexCallConverterFactory.java` | 映射条目 | §5 |
 
 超出设计影响清单的改动：<无/逐条说明理由（代码审计会重点核查此项）>
@@ -32,6 +33,7 @@
 | 类型矩阵 | | | |
 | NULL/边界 | | | |
 | 特殊场景 | | | |
+| velox4j调用链（经`mvn test`，钉JNI路径） | | | |
 
 与设计§7矩阵的对应：<逐条对上/缺X条，原因>
 

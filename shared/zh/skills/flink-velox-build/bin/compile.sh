@@ -134,10 +134,10 @@ compile_velox4j() {
     # Build the native part against the workspace velox checkout instead of
     # letting CPM fetch a pinned commit: local edits to repos/velox must end
     # up in the produced .so, and the fetch would be a large, failure-prone
-    # download. VELOX4J_BUILD_JOBS bounds compile parallelism: min(32, cores) —
+    # download. VELOX4J_BUILD_JOBS bounds compile parallelism: min(8, cores) —
     # more C++ jobs exhaust memory and starve shared machines.
     export VELOX4J_VELOX_SOURCE_DIR="$VELOX_PATH"
-    export VELOX4J_BUILD_JOBS="${VELOX4J_BUILD_JOBS:-$(( $(nproc) > 32 ? 32 : $(nproc) ))}"
+    export VELOX4J_BUILD_JOBS="${VELOX4J_BUILD_JOBS:-$(( $(nproc) > 8 ? 8 : $(nproc) ))}"
     cd "$VELOX4J_PATH"
     local MVN_COMMON_ARGS=(-Dgpg.skip -Dgpg.skip=true -Dmaven.javadoc.skip=true)
     if [ "${RUN_TESTS}" = "true" ]; then
@@ -163,7 +163,7 @@ install_nexmark() {
     # Scratch space lives inside the project (next to the env archive),
     # never in /tmp — users only look inside the project directory.
     local NEXMARK_TMP
-    NEXMARK_TMP="$(dirname "$ENV_JSON")/.gfvbot/tmp/nexmark-pom"
+    NEXMARK_TMP="$(dirname "$ENV_JSON")/tmp/nexmark-pom"
     rm -rf "$NEXMARK_TMP"
     mkdir -p "$NEXMARK_TMP"
     cd "$NEXMARK_TMP"
