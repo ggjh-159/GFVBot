@@ -56,7 +56,7 @@ Environment readiness is a CLI concern, not an agent stage. Before the task star
 |---|---|---|---|
 | spec | architect | SPEC review approved by reviewer | architect/SPEC.md, reviewer/SPEC_REVIEW.md |
 | design | architect | design review approved, no conflict with SPEC | architect/DESIGN.md, reviewer/DESIGN_REVIEW.md |
-| implement | developer | code review pass | developer/IMPLEMENTATION.md, reviewer/CODE_REVIEW.md |
+| implement | developer | code review pass | developer/IMPLEMENTATION.md, commits/ walkthrough, reviewer/CODE_REVIEW.md |
 | verify | verifier | acceptance pass against SPEC acceptance criteria | verifier/VERIFY.md, reviewer/REVIEW_GATE.md |
 | retro | architect | all artifacts archived | developer/PR.md, architect/SUMMARY.md, RETROSPECTIVE.md, upstream/ drafts (when involved) |
 
@@ -80,7 +80,7 @@ Gate: the reviewer signs DESIGN_REVIEW.md with a binary `pass`/`fail` ruling; th
 
 The developer implements per the design, self-compiles, formats, and writes unit tests. Every new or modified production file must have unit-test coverage of the normal path and boundary conditions; tests must run standalone. The developer records actual changes grouped by module, deviations from the design with reasons, key behavior changes, the list of new tests, test run results, and the contract self-check in IMPLEMENTATION.md (filled per `templates/implementation.md`).
 
-Gate: the reviewer signs CODE_REVIEW.md. The review must include a modification-scope compliance check against the SPEC and design impact list, a unit-test coverage check, and a documentation-sync check (the changes, deviations, and test results stated in IMPLEMENTATION.md checked item by item against the code — a snapshot frozen before rework is required-level); missing tests are a required-level issue. A `fail` returns to the developer with each opinion tagged with its attribution; any fix must pass code review again before verification.
+Gate: the reviewer signs CODE_REVIEW.md. The review must include a modification-scope compliance check against the SPEC and design impact list, a unit-test coverage check, and a documentation-sync check (the changes, deviations, and test results stated in IMPLEMENTATION.md checked item by item against the code — a snapshot frozen before rework is required-level); missing tests are a required-level issue. A `fail` returns to the developer with each opinion tagged with its attribution; any fix must pass code review again before verification. After code review passes and before the user gate 2 presentation, the developer produces the commit walkthrough per the flink-velox-commit-walkthrough skill (directories per repo, one file per commit), presented at gate 2 for human review. Rework fixes for review opinions are amended into the commit that introduced the problem (the id regenerates), never added as separate fix commits — history may be rewritten only while the task branch is unpublished; the walkthrough files refresh in place (names carry no commit id; only a rebase that changes the order renumbers them).
 
 ### Verify
 
@@ -128,6 +128,7 @@ tasks/<task-name>/
   reviewer/     SPEC_REVIEW.md, DESIGN_REVIEW.md, CODE_REVIEW.md, REVIEW_GATE.md
   verifier/     VERIFY.md, RETROSPECTIVE.md
   upstream/     community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
+  commits/      commit walkthrough: <repo>/<seq>-<slug>.md, directories per repo, one file per commit; the sequence follows commit order and is the review order (produced after code review passes, for human review at gate 2)
 
 tmp/<task-name>/dispatch/        dispatch briefs: one per dispatch (owner, target artifact, must-read anchors, discipline)
 tmp/<task-name>/logs/            logs only: cmd-outputs/  jobs/ — never gate evidence, cleanable anytime
@@ -160,6 +161,7 @@ Three pauses are mandatory and cannot be switched off:
 At each pause the presentation and confirmation follow this mechanism:
 
 - **Four-part presentation**: (1) a material list with reading order (every artifact under review **in full** — inline, or with path and reading guide; "full text provided" is a pre-release self-check item); (2) the decision-point checklist (see below); (3) reply guidance — the user answers only "confirm / object + opinion" per entry, and formatting the exchange is the main session's burden; (4) never cite list numbers that were not presented.
+- **Gate-2 addendum, per-commit confirmation**: the commit walkthrough files are listed line by line in sequence order — repo, commit short hash and title, `tasks/<task-name>/commits/<repo>/<file>.md` path — matching the IMPLEMENTATION.md coverage declaration entry for entry. The presentation proceeds commit by commit in sequence order: each file is first presented with a gist line (short hash, title, one-sentence change intent) for the user to verify the file matches the commit, then the file is reviewed and released one by one; gate 2 passes only after every commit is confirmed — preventing a walkthrough-file/commit mismatch from causing a wrong release.
 - **Decision-point checklist**: entries are drawn from the artifact under review and its template sections (e.g. after the design review: the semantic mapping approach, reuse decisions, feasibility constraints, test strategy, risk acceptance); out-of-scope exclusions carry the same reporting duty as positive decisions — every exclusion comes with a reason and an evidence source. Each entry carries four elements — decision content (a decidable value; "reasonable/moderate" does not count), evidence source (which artifact section), attribution (which stage an objection returns to), and a confirm/object choice; entries take only what the artifacts already contain, never fields the artifacts left undefined.
 - **Entry-by-entry interaction**: decision points are presented one at a time, the next only after the user answers — dumping the whole list at once is forbidden, and so is merging entries into groups to lower confirmation friction; reading an artifact in full and confirming entries are decoupled, and a user saying "show me the DESIGN" gets the full text separately.
 - **Landing and release**: user replies are appended verbatim entry by entry to `USER_GATES.md`; the TASK_STATE gate row records the presentation form (full text / checklist only) for audit; release only when every entry is confirmed; contested entries route back to the owning agent for rework by attribution, the affected artifacts refresh in place, and the corresponding review re-runs from that stage. The orchestrator does not answer technical questions itself.

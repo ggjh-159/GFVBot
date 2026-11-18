@@ -56,7 +56,7 @@ stages:
 |---|---|---|---|
 | spec | architect | reviewer批准SPEC评审 | architect/SPEC.md、reviewer/SPEC_REVIEW.md |
 | design | architect | 设计评审批准、与SPEC无冲突 | architect/DESIGN.md、reviewer/DESIGN_REVIEW.md |
-| implement | developer | 代码评审通过 | developer/IMPLEMENTATION.md、reviewer/CODE_REVIEW.md |
+| implement | developer | 代码评审通过 | developer/IMPLEMENTATION.md、commits/commit走读、reviewer/CODE_REVIEW.md |
 | verify | verifier | 对照SPEC验收标准验收通过 | verifier/VERIFY.md、reviewer/REVIEW_GATE.md |
 | retro | architect | 全部产物归档 | developer/PR.md、architect/SUMMARY.md、RETROSPECTIVE.md、upstream/草稿（涉及时） |
 
@@ -80,7 +80,7 @@ architect在已批准的SPEC内按`templates/design.md`产出设计：任务与�
 
 developer按设计实现、自编译、过格式、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
 
-门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。
+门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
 
 ### Verify
 
@@ -128,6 +128,7 @@ tasks/<task-name>/
   reviewer/     SPEC_REVIEW.md, DESIGN_REVIEW.md, CODE_REVIEW.md, REVIEW_GATE.md
   verifier/     VERIFY.md, RETROSPECTIVE.md
   upstream/     社区issue/PR草稿（按shared upstream-contribution模板，经用户确认后提交）
+  commits/      commit走读：<repo>/<序号>-<slug>.md按仓分目录、每commit一份，序号按commit先后即检视顺序（代码评审通过后产出，供门禁2人工检视）
 
 tmp/<task-name>/dispatch/        派发简报：每份派发落一份（owner、目标产物、必读锚点、纪律）
 tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作门禁依据，随时可清理
@@ -160,6 +161,7 @@ TASK_STATE.md是上下文恢复锚点。orchestrator在每次阶段流转时维�
 每个暂停处的呈报与确认按以下机制执行：
 
 - **呈报四段**：①材料清单与阅读顺序（受审产物**全文**逐一列出——inline给出或给路径与阅读指引，"已提供全文"是放行前置自检项）；②决策点清单（见下）；③答复指引——用户只需逐条答"确认/异议＋意见"，格式整理由主会话承担；④禁止引用未呈报的清单编号。
+- **门禁2附加清单与逐commit确认**：commit走读文件按序号顺序逐行列出——仓库、commit短哈希与标题、`tasks/<task-name>/commits/<repo>/<file>.md`路径，与IMPLEMENTATION.md覆盖声明逐条一致。呈报按序号逐commit进行：每份先呈大体内容行（短哈希、标题、变更主旨一句话），用户核对文件与commit对应无误后再检视该文件、逐个确认放行；全部commit确认才过门禁2——防止走读文件与commit错配导致错放行。
 - **决策点清单**：条目从受审产物及其模板章节抽取（如设计评审后：语义映射方式、复用决策、可行性约束、测试策略、风险接受），**范围外排除项与正向决策同等呈报义务**——每条排除带理由与依据来源。每条带四要素——决策内容（可判定的取值，"合理/适中"不算）、依据来源（产物哪一节）、归属（异议时退回哪个阶段）、确认/异议选项；只取产物已有内容，不向用户索要产物未定义的字段。
 - **逐条交互**：决策点一次呈一条，用户答复后才呈下一条——禁止一次性全量倾倒，也禁止把多条合并成组降低确认摩擦；产物全文阅读与逐条确认解耦，用户说"看DESIGN"即单独呈全文。
 - **落盘与放行**：用户答复逐条原文追加落`USER_GATES.md`；TASK_STATE门禁行记录呈报形态（全文/仅清单）备审计；全部确认才放行，有异议的条目按归属路由给owner Agent返工，受影响产物原地刷新、对应评审从该阶段重跑。orchestrator不自己回答技术问题。
