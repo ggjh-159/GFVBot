@@ -118,7 +118,9 @@ pin_flink_jdk() {
     mkdir -p "$FLINK_HOME/conf"
     touch "$conf"
     local cur
-    cur=$(grep -E '^env\.java\.home:' "$conf" | head -1 \
+    # || true: with set -e/pipefail, a no-match grep (the fill-only case this
+    # function exists for) must not abort the build.
+    cur=$({ grep -E '^env\.java\.home:' "$conf" || true; } | head -1 \
           | sed 's/^env\.java\.home:[[:space:]]*//; s/[[:space:]]*$//')
     if [ -z "$cur" ]; then
         echo "env.java.home: $JAVA_HOME" >> "$conf"

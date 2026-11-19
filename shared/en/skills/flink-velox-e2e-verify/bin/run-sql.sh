@@ -71,5 +71,11 @@ grep -E '^([0-9]+> )?[-+][IUD]\[' "$out" | sed -E 's/^[0-9]+> //' >"$tmp" || tru
 mv "$tmp" "$out"
 
 rows=$(wc -l <"$out")
+# Row-count self-check: a successful submission that captured zero rows is
+# almost always a failed job or a missed capture, not an empty result — fail
+# loud instead of letting an empty diff pass as a "match".
+if [ "$rows" -eq 0 ]; then
+  echo "[$mode] WARNING: 0 changelog rows captured — check $submit_log and the TaskManager .out files; confirm the job reached FINISHED" >&2
+fi
 echo "[$mode] $(basename "$sql"): captured $rows changelog rows -> $out"
 echo "confirm the job reached FINISHED before trusting the capture"
