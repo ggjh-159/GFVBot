@@ -12,7 +12,8 @@
       "flink-velox-build",
       "flink-velox-unit-test",
       "flink-velox-docs-search",
-      "flink-velox-code-review"
+      "flink-velox-code-review",
+      "flink-velox-performance-verify"
     ],
     "docs": [
       "nexmark-queries.md",

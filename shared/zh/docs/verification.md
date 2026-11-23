@@ -1,6 +1,6 @@
 # 验证工作流
 
-GFV的任何改动——表达式、算子、聚合或性能调整——都走同一个闭环验证：重编jar、重启集群、提交nexmark查询、读结果。本页覆盖闭环全程；编译步骤本身由flink-velox-build skill负责。
+GFV的任何改动——表达式、算子、聚合或性能调整——都走同一个闭环验证：重编jar、重启集群、提交nexmark查询、读结果。本页覆盖闭环全程；编译步骤本身由flink-velox-build skill负责，性能对比（GFV/原生比值测试）由flink-velox-performance-verify skill负责。
 
 前置：按README走查初始化过的工作区（repos已克隆、flink与nexmark经env-init安装、`.gfvbot/env.json`存在）。下文路径来自环境归档：flink安装是`stack.flink.path`，nexmark home（含`bin/run_query.sh`与`queries/`目录）是`stack.nexmark.home`。
 

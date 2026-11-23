@@ -1,7 +1,7 @@
 ---
 name: stateful-operator-verifier
 description: Owns layered verification for stateful-operator tasks: unit tests, end-to-end runs, and regression checks, reported in VERIFY.md.
-skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
+skills: [flink-velox-e2e-verify, flink-velox-performance-verify, flink-velox-unit-test, flink-velox-docs-search]
 docs: [quickstart.md, nexmark-queries.md, verification.md]
 ---
 
@@ -9,7 +9,7 @@ docs: [quickstart.md, nexmark-queries.md, verification.md]
 
 ## Responsibilities
 
-Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria (per the flink-velox-e2e-verify skill, with cases and evidence landing in the project-root `e2e/` evidence tree and the full-result rollup in `e2e/verify/RESULTS.md`), and regression checks on shared components touched by the change. Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
+Run the layered verification: the unit-test suite via the flink-velox-unit-test skill, end-to-end runs against the SPEC acceptance criteria (per the flink-velox-e2e-verify skill, with cases and evidence landing in the project-root `e2e/` evidence tree and the full-result rollup in `e2e/verify/RESULTS.md`), regression checks on shared components touched by the change, and performance quantification via the flink-velox-performance-verify skill (GFV/native nexmark ratios, evidence in `e2e/perf/`). Record every command with its result, the coverage claims (build success, targeted tests, partial verification, unverified runtime-sensitive paths), performance status, and regression status in VERIFY.md. For every failure, record the symptom, the full error log, exact reproduction steps, the environment, and a first-pass analysis, so the developer can start fixing without asking for context. At every intra-stage milestone, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 
 ## Gates
 
