@@ -47,7 +47,7 @@ Keys surface as `RowContainerStateKey`: a row-pointer view+hash/keyGroup cached 
 
 ## Choosing a state handle
 
-The selection baseline is the native Flink operator's state design: an operator that uses keyed state in Flink must use keyed state here (every handle below is built on `HeapKeyedStateBackend`); operator state only where Flink itself uses operator state — never substituted for keyed state for implementation convenience. A deviation requires Flink source evidence and a user ruling.
+The selection baseline is the native Flink operator's state design: an operator that uses keyed state in Flink must use keyed state here (every handle below is built on `HeapKeyedStateBackend`); operator state only where Flink itself uses operator state — never substituted for keyed state for implementation convenience. A deviation requires Flink source evidence and a user ruling. The authoritative reference for the two state kinds is the Flink documentation: https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ .
 
 | Handle | descriptor | Value shape | Fits |
 |---|---|---|---|

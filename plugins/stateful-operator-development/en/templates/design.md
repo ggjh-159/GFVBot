@@ -73,7 +73,7 @@ The selection baseline is the native Flink operator's state design: an operator 
 | velox4j | `plan/<Node>.java` plus `stateful/KeyedStateSpec` | mirror class |
 | gluten | `planner/.../StreamExec<Xxx>.java` | shadow override |
 
-Modification boundary: this table lists only files the Scope section allows — plan translation, the new node class with serde registration, the planner dispatch branch, operator implementation files, unit tests, velox4j mirror classes, gluten shadow override. Framework core (operator base classes, state backend and handle implementations, RowContainer, serde infrastructure, shared utilities) is read-only and never appears here; a missing framework capability goes to §10 pending decisions and requires explicit user authorization with a separate verification boundary.
+Modification boundary: this table lists only files the Scope section allows — plan translation, the new node class with serde registration, the planner dispatch branch, operator implementation files, unit tests, velox4j mirror classes, gluten shadow override. Framework code and velox native code are not modified: operator base classes, state backend and handle implementations, RowContainer, serde infrastructure, shared utilities, and velox native code outside `experimental/stateful` never appear here. The existing framework interfaces correspond one-to-one with the Flink operator API and are never deleted or reshaped — when an interface seems unusable, write "why the original interface cannot serve" into §10 and have the user rule; a missing capability likewise goes to §10 and requires explicit user authorization with a separate verification boundary.
 
 ## 5. Execution and data flow
 

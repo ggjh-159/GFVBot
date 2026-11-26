@@ -26,9 +26,11 @@ stages:
 
 大规模velox上游同步不在范围内，除非用户明确授权并单列验证边界。
 
-修改边界（铁律）：算子开发只触碰下列文件——计划翻译（gluten影子ExecNode、velox `StatefulPlanner`分派分支）、计划节点新增类与serde注册（`StatefulPlanNode.h`只增不改既有节点类）、velox算子实现文件（`velox/experimental/stateful/<目录>/<Operator>.h/.cpp`）与其单测、velox4j镜像类、gluten接线。框架核心只读：算子基类、状态后端与句柄实现、RowContainer、serde基础设施与通用工具——不新增API、不改签名、不改行为。框架能力不够属于`feasible with upstream dependency`，列为待裁决项经用户显式授权后单列验证边界，绝不静默扩展框架。
+修改边界（铁律）：算子开发只触碰执行计划类与velox算子类的实现——计划翻译（gluten影子ExecNode、velox `StatefulPlanner`分派分支）、计划节点新增类与serde注册（`StatefulPlanNode.h`只增不改既有节点类）、velox算子实现文件（`velox/experimental/stateful/<目录>/<Operator>.h/.cpp`）与其单测、velox4j镜像类、gluten接线。框架代码与velox原生代码不修改：算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具，以及`experimental/stateful`之外的velox原生代码——不新增API、不改签名、不删除、不改行为。框架既有接口与Flink算子API一一对应，是算子实现的合约：认为某个接口不可用时不得删除、重塑或绕开，必须在待裁决项写明"原接口为何不能满足"并经用户裁决。框架能力不够属于`feasible with upstream dependency`，经用户显式授权后单列验证边界，绝不静默扩展框架。
 
-状态选型基准（铁律）：以Flink原生算子的状态设计为准——Flink原生用keyed state的算子，这里必须用keyed state（`HeapKeyedStateBackend` typed API＋对应句柄）；operator state只用于Flink原生就用operator state的场景。偏离必须在设计契约对照节给Flink源码依据并作为待裁决项经用户门禁1裁决，不得以实现简便为由用operator state替代keyed state。
+任务粒度（铁律）：一个任务只实现一个算子变体——同族多种变体（如窗口的三种类型）拆成独立任务、独立PR，先做一个再滚动下一个；SPEC把同族其他变体列入范围外并标注为后续任务，不让单次改动膨胀成框架级大PR。
+
+状态选型基准（铁律）：以Flink原生算子的状态设计为准——Flink原生用keyed state的算子，这里必须用keyed state（`HeapKeyedStateBackend` typed API＋对应句柄）；operator state只用于Flink原生就用operator state的场景。两类state的区别以Flink官方文档为基准出处：https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ 。偏离必须在设计契约对照节给Flink源码依据并作为待裁决项经用户门禁1裁决，不得以实现简便为由用operator state替代keyed state。
 
 ## Agent
 
@@ -70,7 +72,7 @@ stages:
 
 ### Spec
 
-architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。可行性分析经flink-velox-stateful-spec-analysis技能执行：语义映射×设施供给双维定档、查矩阵得四选一结论；任务级约束只升不降、伴随约束逐条记录，素材按SPEC模板节并入。
+architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。范围只收一个算子变体：同族其他变体（如窗口的其他类型）列入范围外并标注为后续任务（范围节任务粒度铁律）。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。可行性分析经flink-velox-stateful-spec-analysis技能执行：语义映射×设施供给双维定档、查矩阵得四选一结论；任务级约束只升不降、伴随约束逐条记录，素材按SPEC模板节并入。
 
 门禁：reviewer在SPEC_REVIEW.md上签`pass`或`fail`——没有第三种；`fail`必须给出具体修改意见。`not feasible`结论终止或降级任务。`fail`打回architect修订SPEC（原地刷新后重审）。
 

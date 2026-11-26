@@ -20,7 +20,7 @@
 
 - Goal: <one sentence on what the operator must do>
 - In scope:
-- Out of scope:
+- Out of scope: <sibling variants (e.g. the other window kinds) are out of scope by default — one task and one PR each, listed here as follow-up tasks>
 
 ## Interface specification
 

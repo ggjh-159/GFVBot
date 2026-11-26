@@ -33,7 +33,7 @@ Distill the target operator's mechanism facts from the Flink sources, seeding th
 - Three dataflow streams: the record / watermark / timer paths (processElement → state; processWatermark → fire → propagation).
 - The changelog determination chain: which flag decides an updating stream + a scenario table (scenario / trigger / RowKind / state action).
 - A key behavior-points list, each with file:line — late-data handling, time zones, empty windows, output ahead of watermark propagation, and so on; the items must line up with the SPEC's behavior specification.
-- Native state design: locate the Flink operator's implementation class and its state declarations — `ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`, keyed versus operator state, descriptor and name — with file:line; this is the baseline for the §3.1 state-handle selection and a mandatory item of the alignment list.
+- Native state design: locate the Flink operator's implementation class and its state declarations — `ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`, keyed versus operator state, descriptor and name — with file:line; this is the baseline for the §3.1 state-handle selection and a mandatory item of the alignment list. The authoritative reference for the two state kinds is the Flink documentation (https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ ): Keyed State is partitioned by key and recovered/rescaled by key group; Operator State is bound to the operator's parallel instances and only redistributed as list/union — using Operator State for a per-key operator is a selection error.
 
 ### Step 2 — verify the GFV current state across the three stages
 

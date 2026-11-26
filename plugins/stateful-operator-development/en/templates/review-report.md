@@ -26,6 +26,7 @@
 | Audit item | Ruling | Basis |
 |---|---|---|
 | Specification complete (every template section present) | | |
+| Scope holds one operator variant; sibling variants are out of scope and marked as follow-up tasks | | |
 | Feasibility conclusion evidenced (checked item by item against the implementation-contract doc) | | |
 | Acceptance criteria verifiable | | |
 | Verification plan covers the acceptance criteria | | |

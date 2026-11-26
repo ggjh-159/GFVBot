@@ -18,7 +18,7 @@ docs: [quickstart.md, architecture.md, stateful-operator-implementation.md, nexm
 - 格式是机器结论：提交前必过flink-velox-format技能的check，IMPLEMENTATION.md附check日志路径；没有日志视为未检查。格式修复不与语义改动混进同一个commit。
 - 代码评审未通过绝不提交验证；被拒后的任何修复都重进代码评审。
 - 检视/验证返工的修改amend进引入问题的对应commit（fixup后rebase，id重生成），不新增修复commit；仅任务分支未推送时可改写历史，commit走读文件原地刷新、按当前顺序重排序号。
-- 绝不改SPEC与设计影响清单之外的文件；确属超范围的需要经orchestrator退回。框架核心（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）只读——不为实现便利给基类加API或改后端，框架能力不够经orchestrator退回设计。
+- 绝不改SPEC与设计影响清单之外的文件；确属超范围的需要经orchestrator退回。框架核心（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）只读，velox原生代码同样不修改——不为实现便利给基类加API或改后端，也不删除或重塑既有接口（它们与Flink算子API一一对应），框架能力不够经orchestrator退回设计。
 - 状态实现只走设计选定的keyed typed API（`HeapKeyedStateBackend`）；绝不以operator state替代设计选定的keyed state。
 - 长时命令输出重定向进任务的cmd-outputs归档，不流进上下文。
 - 对reviewer反馈先对照实际代码核实再行动；不正确的反馈用证据回应。

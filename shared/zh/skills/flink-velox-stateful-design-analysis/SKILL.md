@@ -33,7 +33,7 @@ design阶段architect的机制级分析程序：以已批准的SPEC为合约，�
 - 数据流三流：record/watermark/timer路径（processElement→状态；processWatermark→fire→传播）。
 - changelog判定链：哪个标志决定updating流＋场景表（场景/触发/RowKind/状态动作）。
 - 关键行为要点清单：逐条带file:line——迟到判定、时区、空窗、输出先于watermark传播等；条目要与SPEC行为规格对得上。
-- 原生状态设计：定位Flink对应算子的实现类及其状态声明——`ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`、keyed还是operator state、descriptor与命名——带file:line；这是§3.1状态句柄选型的基准，也是对齐清单的必对齐项。
+- 原生状态设计：定位Flink对应算子的实现类及其状态声明——`ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`、keyed还是operator state、descriptor与命名——带file:line；这是§3.1状态句柄选型的基准，也是对齐清单的必对齐项。两类state的区别以Flink官方文档为基准出处（https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ ）：Keyed State随key分区、按key-group恢复与rescale；Operator State绑定算子并行实例、只按list/union重分发——按key维护状态的算子用Operator State是选型错误。
 
 ### 第2步——GFV现状三段核实
 

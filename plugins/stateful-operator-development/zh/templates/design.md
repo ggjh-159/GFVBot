@@ -73,7 +73,7 @@
 | velox4j | `plan/<Node>.java`＋`stateful/KeyedStateSpec` | 镜像类 |
 | gluten | `planner/.../StreamExec<Xxx>.java` | 影子覆盖 |
 
-修改边界：本表只列范围节允许的文件——计划翻译、节点新增类与serde注册、planner分派分支、算子实现文件、单测、velox4j镜像类、gluten影子覆盖。框架核心（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）只读，不出现在本表；框架能力不够进§10待裁决项，经用户显式授权后单列验证边界。
+修改边界：本表只列范围节允许的文件——计划翻译、节点新增类与serde注册、planner分派分支、算子实现文件、单测、velox4j镜像类、gluten影子覆盖。框架代码与velox原生代码不修改：算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具，以及`experimental/stateful`之外的velox原生代码，不出现在本表。既有框架接口与Flink算子API一一对应，不得删除或重塑——认为某个接口不可用，在§10写明"原接口为何不能满足"并经用户裁决；框架能力不够同样进§10，经用户显式授权后单列验证边界。
 
 ## 5. 执行与数据流
 
