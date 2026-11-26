@@ -15,11 +15,9 @@
   "templates": [
     "spec.md",
     "design.md",
-    "task-state.md",
     "implementation.md",
     "audit-report.md",
-    "test-report.md",
-    "pr.md"
+    "test-report.md"
   ],
   "shared": {
     "skills": [
@@ -38,7 +36,11 @@
       "internals"
     ],
     "templates": [
-      "upstream-contribution"
+      "upstream-contribution",
+      "task-state.md",
+      "progress.md",
+      "user-gates.md",
+      "pr.md"
     ]
   }
 }

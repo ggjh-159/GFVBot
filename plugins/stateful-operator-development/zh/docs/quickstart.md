@@ -35,7 +35,7 @@ gfvbot env && gfvbot env-init                  # 环境扫描与补齐
 | verify | verifier | 最终验收pass＋用户门禁3 | verifier/VERIFY.md |
 | retro | architect | 全部产物归档 | developer/PR.md、architect/SUMMARY.md |
 
-任务状态实时记录在`tasks/<任务名>/TASK_STATE.md`（模板`task-state.md`），会话中断后从它恢复；阶段内进度看`PROGRESS.md`心跳。
+任务状态实时记录在`tasks/<任务名>/TASK_STATE.md`（shared模板`docs/gfvbot/shared/templates/task-state.md`），会话中断后从它恢复；阶段内进度看`PROGRESS.md`心跳。
 
 ## 提示词模板
 

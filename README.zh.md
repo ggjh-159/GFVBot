@@ -29,7 +29,7 @@ GFV（gluten-flink-velox集成路线）的AI底座。内容按插件组织：一
 
 ### `aggregate-function-development`——聚合函数开发
 
-面向SUM/COUNT/AVG及自定义聚合：将多行收敛为单值的函数。该场景的核心是实现velox的Aggregate接口、完成accumulate（累计）/merge（分片合并）/finalize（收尾输出）链路，并接入批式与窗口聚合执行。
+面向SUM/COUNT/AVG及自定义聚合：将多行收敛为单值的函数。该场景的核心是实现velox的Aggregate接口、完成accumulate（累计）/merge（分片合并）/finalize（收尾输出）链路并接入批式聚合执行；聚合算子本身（GroupAggregator、WindowAggregator等）归有状态算子场景。
 
 ### `performance-optimization`——性能提升
 

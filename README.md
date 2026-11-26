@@ -29,7 +29,7 @@ For window aggregation, streaming joins, TopN, deduplication, and other operator
 
 ### `aggregate-function-development` — aggregate function development
 
-For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into a single value. The core of this scenario is implementing velox's Aggregate interface, completing the accumulate (accumulation) / merge (shard merge) / finalize (final output) chain, and integrating with batch and window aggregation execution.
+For SUM/COUNT/AVG and custom aggregates: functions that collapse many rows into a single value. The core of this scenario is implementing velox's Aggregate interface, completing the accumulate (accumulation) / merge (shard merge) / finalize (final output) chain, and integrating with batch aggregation execution; the aggregation operators themselves (GroupAggregator, WindowAggregator, and the like) belong to the stateful-operator scenario.
 
 ### `performance-optimization` — performance optimization
 

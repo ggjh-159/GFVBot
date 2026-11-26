@@ -12,17 +12,14 @@
 
 ## 门禁记录
 
-产物原地刷新，轮次历史只在这里——每轮门禁追加一行：
+产物原地刷新，轮次历史只在这里——每轮门禁追加一行。评审类门禁按本插件workflow阶段模型逐道列行，名称、裁决词与报告路径以workflow为准：
 
 | 门禁 | 轮次 | 裁决 | 报告 | 日期 |
 |---|---|---|---|---|
-| SPEC评审 | 1 | <pass/fail/未开始> | `tasks/<task-name>/reviewer/SPEC_REVIEW.md` | |
-| 设计评审 | 1 | <pass/fail/未开始> | `tasks/<task-name>/reviewer/DESIGN_REVIEW.md` | |
+| <评审门禁，按workflow阶段模型> | 1 | <裁决词按workflow> | `tasks/<task-name>/reviewer/<报告>.md` | |
 | 用户门禁1（设计后） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
-| 代码评审 | 1 | <pass/fail/未开始> | `tasks/<task-name>/reviewer/CODE_REVIEW.md` | |
-| 用户门禁2（验证前） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
-| 最终验收 | 1 | <pass/fail/未开始> | `tasks/<task-name>/reviewer/REVIEW_GATE.md` | |
-| 用户门禁3（retro前） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
+| 用户门禁2（<位置按workflow>） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
+| 用户门禁3（<位置按workflow>） | — | <已放行/未放行> | `tasks/<task-name>/USER_GATES.md` | |
 
 ## 产物索引
 
@@ -30,17 +27,14 @@
 tasks/<task-name>/
   TASK_STATE.md                  本文件：跨Agent状态锚点
   USER_GATES.md                  用户门禁决策点与用户答复的逐轮追加记录
-  PROGRESS.md                    阶段内进度心跳：owner逐里程碑追加一行
-  architect/    SPEC.md  DESIGN.md  SUMMARY.md  RETROSPECTIVE.md
-  developer/    IMPLEMENTATION.md  PR.md  RETROSPECTIVE.md
-  reviewer/     SPEC_REVIEW.md  DESIGN_REVIEW.md  CODE_REVIEW.md  REVIEW_GATE.md
-  verifier/     VERIFY.md  RETROSPECTIVE.md
-  upstream/     社区issue/PR草稿（按shared upstream-contribution模板，经用户确认后提交）
+  PROGRESS.md                    阶段内进度心跳：owner逐里程碑追加一行（时间+agent+一句话）
+  <agent>/                       各Agent产物：目录与文件名按本插件workflow的产物契约
+  upstream/                      社区issue/PR草稿（按shared upstream-contribution模板，经用户确认后提交）
 
 tmp/<task-name>/logs/            只放日志（随时可清理，不作裁决依据）：cmd-outputs/  jobs/
 ```
 
-e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`——不在任务目录下、跨任务沉淀为回归用例库，全量结果汇总在`e2e/verify/RESULTS.md`。
+项目根另有验证证据树——不在任务目录下、跨任务沉淀为回归用例库：`e2e/{sql,data,out,verify}/`（全量结果汇总在`e2e/verify/RESULTS.md`）与性能对比的`e2e/perf/`。
 
 ## 快照与裁决惯例
 

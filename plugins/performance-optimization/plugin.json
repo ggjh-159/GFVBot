@@ -3,23 +3,43 @@
   "description": "Performance optimization: benchmark comparison, profiling, bottleneck analysis, and the optimization loop",
   "description_zh": "性能提升：基准对比、profiling、瓶颈定位与优化闭环",
   "workflow": "workflow.md",
-  "agents": [],
+  "agents": [
+    "performance-orchestrator",
+    "performance-analyst",
+    "performance-developer",
+    "performance-reviewer",
+    "performance-verifier"
+  ],
   "skills": [],
   "docs": ["quickstart.md"],
-  "templates": [],
+  "templates": [
+    "spec.md",
+    "design.md",
+    "implementation.md",
+    "verify.md",
+    "review-report.md"
+  ],
   "shared": {
     "skills": [
       "flink-velox-build",
       "flink-velox-unit-test",
       "flink-velox-docs-search",
       "flink-velox-code-review",
-      "flink-velox-performance-verify"
+      "flink-velox-performance-verify",
+      "flink-velox-e2e-verify",
+      "flink-velox-commit-walkthrough"
     ],
     "docs": [
       "nexmark-queries.md",
       "verification.md",
       "architecture.md",
       "internals"
+    ],
+    "templates": [
+      "task-state.md",
+      "progress.md",
+      "user-gates.md",
+      "pr.md"
     ]
   }
 }

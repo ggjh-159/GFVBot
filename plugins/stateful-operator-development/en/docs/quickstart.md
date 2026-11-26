@@ -33,7 +33,7 @@ A typical task — deduplicate by key, emit only the first row (+I), drop later 
 | verify | verifier | final acceptance pass + user gate 3 | verifier/VERIFY.md |
 | retro | architect | all artifacts archived | developer/PR.md, architect/SUMMARY.md |
 
-Live task state is kept in `tasks/<task-name>/TASK_STATE.md` (template `task-state.md`) and recovered from there after a session break; intra-stage progress shows in the `PROGRESS.md` heartbeat.
+Live task state is kept in `tasks/<task-name>/TASK_STATE.md` (shared template `docs/gfvbot/shared/templates/task-state.md`) and recovered from there after a session break; intra-stage progress shows in the `PROGRESS.md` heartbeat.
 
 ## Prompt template
 
