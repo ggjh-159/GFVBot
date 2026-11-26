@@ -134,7 +134,7 @@ tmp/<task-name>/dispatch/        派发简报：每份派发落一份（owner、
 tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作门禁依据，随时可清理
 ```
 
-产物由插件模板初始化：SPEC/DESIGN/IMPLEMENTATION/VERIFY/TASK_STATE/评审报告分别用`templates/`下的spec.md、design.md、implementation.md、verify.md、task-state.md、review-report.md，PR用pr.md，USER_GATES/PROGRESS用user-gates.md、progress.md；评审报告模板四道门禁复用，各删无关章节。有模板的产物H1/H2标题集合与编号风格照模板逐字一致——不增、不删、不改名；owner落盘前结构自检，reviewer每道评审先做结构对照，不符即`fail`按"文档"归属返工。
+产物由模板初始化：SPEC/DESIGN/IMPLEMENTATION/VERIFY/评审报告用插件`templates/`下的spec.md、design.md、implementation.md、verify.md、review-report.md；TASK_STATE/USER_GATES/PROGRESS/PR用shared模板`docs/gfvbot/shared/templates/`下的task-state.md、user-gates.md、progress.md、pr.md；评审报告模板四道门禁复用，各删无关章节。有模板的产物H1/H2标题集合与编号风格照模板逐字一致——不增、不删、不改名；owner落盘前结构自检，reviewer每道评审先做结构对照，不符即`fail`按"文档"归属返工。
 
 排版纪律（任务树全部产物适用，评审必检）：一个bullet只说一个事实，禁止用"；"串联第二个事实；表格单元格只放事实与锚点、不超过两行，推理过程移独立行；段落单行流动文本不硬换行。返工路由横向覆盖：某产物因问题X被退回时，orchestrator必须扫描同门禁全部呈报产物与任务树既有产物是否存在同类X，一并路由整改——只改被点名的一份不算完成。
 

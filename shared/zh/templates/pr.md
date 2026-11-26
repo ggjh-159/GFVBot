@@ -13,27 +13,29 @@
 
 ## 2. 提交计划
 
-目标项目仓的commit划分，一个commit单一主题：
+改动涉及的每个仓库各自划分commit，一个commit单一主题；不涉及的仓删行：
 
-| 序 | 提交信息 | 涉及文件 |
-|---|---|---|
-| 1 | | |
+| 仓 | 序 | 提交信息 | 涉及文件 |
+|---|---|---|---|
+| velox | 1 | | |
+| velox4j | 1 | | |
+| gluten | 1 | | |
 
 ## 3. PR描述
 
 - 标题：<一行概括>
 - 背景与动机：<引SPEC「目标与范围」>
 - 改动摘要：<引IMPLEMENTATION.md§1>
-- 验证结果：<引VERIFY.md§7与`e2e/verify/RESULTS.md`路径>
+- 验证结果：<引验证报告（VERIFY.md或TEST_REPORT.md）对应节与`e2e/verify/RESULTS.md`路径>
 - 风险与遗留：<引SUMMARY.md对应条目>
 
 ## 4. 合入前检查单
 
-- [ ] REVIEW_GATE.md签`pass`
+- [ ] 最终评审（REVIEW_GATE.md或RESULT_AUDIT.md）签通过
 - [ ] 用户门禁3已确认
 - [ ] IMPLEMENTATION.md与最终代码一致（返工后已原地刷新）
 - [ ] 单测全过
-- [ ] e2e验证结果已引用路径与结论
+- [ ] 验证结果已引用路径与结论（e2e验证、性能对比按任务适用）
 - [ ] 文档更新已落地或已列待办
 - [ ] 涉上游仓时`upstream/`草稿已备好待用户确认
 - [ ] 未自动提交任何issue或PR

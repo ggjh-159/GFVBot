@@ -12,17 +12,14 @@
 
 ## Gate records
 
-Artifacts refresh in place; round history lives only here — one appended line per gate round:
+Artifacts refresh in place; round history lives only here — one appended line per gate round. Review gates get one row each, following this plugin's workflow stage model; names, verdict words, and report paths are defined by the workflow:
 
 | Gate | Round | Verdict | Report | Date |
 |---|---|---|---|---|
-| SPEC review | 1 | <pass/fail/not started> | `tasks/<task-name>/reviewer/SPEC_REVIEW.md` | |
-| Design review | 1 | <pass/fail/not started> | `tasks/<task-name>/reviewer/DESIGN_REVIEW.md` | |
+| <review gate, per the workflow stage model> | 1 | <verdict word per the workflow> | `tasks/<task-name>/reviewer/<report>.md` | |
 | User gate 1 (after design) | — | <released/not released> | `tasks/<task-name>/USER_GATES.md` | |
-| Code review | 1 | <pass/fail/not started> | `tasks/<task-name>/reviewer/CODE_REVIEW.md` | |
-| User gate 2 (before verification) | — | <released/not released> | `tasks/<task-name>/USER_GATES.md` | |
-| Final acceptance | 1 | <pass/fail/not started> | `tasks/<task-name>/reviewer/REVIEW_GATE.md` | |
-| User gate 3 (before retro) | — | <released/not released> | `tasks/<task-name>/USER_GATES.md` | |
+| User gate 2 (<position per the workflow>) | — | <released/not released> | `tasks/<task-name>/USER_GATES.md` | |
+| User gate 3 (<position per the workflow>) | — | <released/not released> | `tasks/<task-name>/USER_GATES.md` | |
 
 ## Artifact index
 
@@ -30,17 +27,14 @@ Artifacts refresh in place; round history lives only here — one appended line 
 tasks/<task-name>/
   TASK_STATE.md                  this file: cross-agent state anchor
   USER_GATES.md                  per-round appended record of user-gate decision points and user replies
-  PROGRESS.md                    intra-stage progress heartbeat: one appended line per milestone by the owner
-  architect/    SPEC.md  DESIGN.md  SUMMARY.md  RETROSPECTIVE.md
-  developer/    IMPLEMENTATION.md  PR.md  RETROSPECTIVE.md
-  reviewer/     SPEC_REVIEW.md  DESIGN_REVIEW.md  CODE_REVIEW.md  REVIEW_GATE.md
-  verifier/     VERIFY.md  RETROSPECTIVE.md
-  upstream/     community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
+  PROGRESS.md                    intra-stage progress heartbeat: one appended line per milestone by the owner (time + agent + one sentence)
+  <agent>/                       per-agent artifacts: directories and file names follow this plugin's workflow artifact contract
+  upstream/                      community issue/PR drafts (per the shared upstream-contribution templates, filed after user confirmation)
 
 tmp/<task-name>/logs/            logs only (cleanable anytime, never gate evidence): cmd-outputs/  jobs/
 ```
 
-The e2e verification evidence tree lives at the project root, `e2e/{sql,data,out,verify}/` — outside task directories, accreting across tasks into a regression bank; the full-result rollup lives in `e2e/verify/RESULTS.md`.
+Verification evidence trees live at the project root — outside task directories, accreting across tasks into a regression bank: `e2e/{sql,data,out,verify}/` (full-result rollup in `e2e/verify/RESULTS.md`) and the performance-comparison tree `e2e/perf/`.
 
 ## Snapshot and verdict conventions
 

@@ -13,27 +13,29 @@ Target-project documentation tree entries to sync:
 
 ## 2. Commit plan
 
-Commit breakdown for the target-project repo, one topic per commit:
+Each touched repo gets its own commit breakdown, one topic per commit; drop rows for repos not touched:
 
-| # | Commit message | Files |
-|---|---|---|
-| 1 | | |
+| Repo | # | Commit message | Files |
+|---|---|---|---|
+| velox | 1 | | |
+| velox4j | 1 | | |
+| gluten | 1 | | |
 
 ## 3. PR description
 
 - Title: <one line>
 - Background and motivation: <cite SPEC "Goal and scope">
 - Change summary: <cite IMPLEMENTATION.md §1>
-- Verification results: <cite VERIFY.md §7 and the `e2e/verify/RESULTS.md` path>
+- Verification results: <cite the matching section of the verification report (VERIFY.md or TEST_REPORT.md) and the `e2e/verify/RESULTS.md` path>
 - Risks and leftovers: <cite the corresponding SUMMARY.md entries>
 
 ## 4. Pre-merge checklist
 
-- [ ] REVIEW_GATE.md signed `pass`
+- [ ] Final review (REVIEW_GATE.md or RESULT_AUDIT.md) signed as passed
 - [ ] User gate 3 confirmed
 - [ ] IMPLEMENTATION.md consistent with the final code (refreshed in place after rework)
 - [ ] All unit tests pass
-- [ ] e2e verification results cited with path and conclusion
+- [ ] Verification results cited with path and conclusion (e2e verification and performance comparison as applicable to the task)
 - [ ] Documentation updates landed or listed as pending
 - [ ] Upstream drafts under `upstream/` ready for user confirmation when upstream repos are touched
 - [ ] No issue or PR submitted automatically

@@ -3,23 +3,44 @@
   "description": "Aggregate function development: velox Aggregate implementations, the accumulate/merge/finalize chain, and batch integration",
   "description_zh": "聚合函数开发：velox Aggregate实现、accumulate/merge/finalize链路与批处理接入",
   "workflow": "workflow.md",
-  "agents": [],
+  "agents": [
+    "aggregate-function-orchestrator",
+    "aggregate-function-architect",
+    "aggregate-function-developer",
+    "aggregate-function-reviewer",
+    "aggregate-function-verifier"
+  ],
   "skills": [],
   "docs": ["quickstart.md"],
-  "templates": [],
+  "templates": [
+    "spec.md",
+    "design.md",
+    "implementation.md",
+    "verify.md",
+    "review-report.md"
+  ],
   "shared": {
     "skills": [
       "flink-velox-build",
       "flink-velox-unit-test",
       "flink-velox-docs-search",
-      "flink-velox-code-review"
+      "flink-velox-code-review",
+      "flink-velox-e2e-verify",
+      "flink-velox-commit-walkthrough"
     ],
     "docs": [
       "nexmark-queries.md",
       "verification.md",
       "architecture.md",
       "flink-expressions",
-      "internals"
+      "internals",
+      "stateful-operator-implementation.md"
+    ],
+    "templates": [
+      "task-state.md",
+      "progress.md",
+      "user-gates.md",
+      "pr.md"
     ]
   }
 }

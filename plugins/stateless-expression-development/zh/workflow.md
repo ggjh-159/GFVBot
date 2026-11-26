@@ -80,7 +80,7 @@ architect按DESIGN模板（`templates/design.md`）填写。必做动作：
 
 ### Implement
 
-developer按已通过的设计编码：velox函数+flinksql注册+CMake+单测、velox4j调用链单测（EvaluationTest式harness、FLINK preset），gluten映射条目。构建部署只走flink-velox-build技能（绝不跳过C++构建）；单测只走flink-velox-unit-test；然后在GFV集群上做轻量e2e自测（自构造输入、print sink、验证脚本）。一切记录进IMPLEMENTATION.md，包括超出设计影响清单的改动（超范围改动是审计的致命发现项）。交付前按PR模板（`templates/pr.md`）备好PR.md：提交计划、PR描述、合入前检查单。
+developer按已通过的设计编码：velox函数+flinksql注册+CMake+单测、velox4j调用链单测（EvaluationTest式harness、FLINK preset），gluten映射条目。构建部署只走flink-velox-build技能（绝不跳过C++构建）；单测只走flink-velox-unit-test；然后在GFV集群上做轻量e2e自测（自构造输入、print sink、验证脚本）。一切记录进IMPLEMENTATION.md，包括超出设计影响清单的改动（超范围改动是审计的致命发现项）。交付前按shared PR模板（`docs/gfvbot/shared/templates/pr.md`）备好PR.md：提交计划、PR描述、合入前检查单。
 
 门禁：reviewer产出CODE_AUDIT（B节：与设计一致性、文档与实现同步、安全性、单测对设计矩阵的完整性、代码格式、更简/更优写法、冗余/可扩展性/可读性）。通过+用户门禁2放行交付。
 
@@ -127,7 +127,7 @@ tmp/<task-name>/logs/            只放日志：cmd-outputs/  jobs/——不作�
 
 e2e验证证据树在项目根`e2e/{sql,data,out,verify}/`，不在任务目录下——SQL表达验证范围、数据是固定输入、输出与对比是运行证据，跨任务沉淀为回归用例库；全量结果汇总在`e2e/verify/RESULTS.md`（每轮原地刷新），TEST_REPORT只引用其路径与结论。
 
-TASK_STATE.md是唯一的恢复锚点：每次阶段流转与门禁裁决后更新。产物是快照：返工原地刷新既有文件，描述对象变了（代码回退重落、口径变更）须先刷新受影响产物再进下一门禁。
+TASK_STATE.md是唯一的恢复锚点：每次阶段流转与门禁裁决后更新。产物是快照：返工原地刷新既有文件，描述对象变了（代码回退重落、口径变更）须先刷新受影响产物再进下一门禁。产物由模板初始化：SPEC/DESIGN/IMPLEMENTATION/审计与测试报告用插件`templates/`下的对应模板；TASK_STATE/USER_GATES/PROGRESS/PR用shared模板`docs/gfvbot/shared/templates/`下的task-state.md、user-gates.md、progress.md、pr.md。
 
 进度跟进：owner agent每到一个里程碑（读完关键参考、草拟完一节、跑完一轮构建）向`PROGRESS.md`追加一行：时间、agent、一句话——时间戳必须取`date +%F %T`实测输出，禁止估算，会话上下文携带的"当前时间"是陈旧快照，同样不可作判定依据。orchestrator派发时说明交给谁、预期产出什么，owner返回后立即汇报并更新TASK_STATE.md；owner返回而产物未落即派发失败，立即核查重派——回合内的进展核查是orchestrator职责，跨时段的静默看护是主会话职责（见运行拓扑）。用户随时`tail -f tasks/<task-name>/PROGRESS.md`感知进展。
 
