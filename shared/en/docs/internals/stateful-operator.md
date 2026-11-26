@@ -16,7 +16,8 @@ Three design decisions carry everything:
 |   | operator_     embedded native exec::Operator               |    |
 |   |               (FilterProject / TableScan / HashProbe ...)  |    |
 |   | targets_      downstream shells                            |    |
-|   | stateHandler_ state + timer handle (stateful operators)    |    |
+|   | stateHandler_ state + timer handle (legacy; not           |    |
+|   |               constructed by typed operators)             |    |
 |   +-------------------------------------------------------------+    |
 |                                                                     |
 |  advance: chain head advanceWithFuture                              |
@@ -55,7 +56,7 @@ Three design decisions carry everything:
 
 ## Stage 3: the shell and the cascade
 
-`StatefulOperator` owns the embedded native operator, the downstream target list, and (for stateful operators) a `stateHandler_`. The base-class virtuals form the streaming lifecycle API — `initialize`, `isFinished`, `addInput`, `advance`, `advanceWithFuture`, `close`, `finish`, `processWatermark`, `processWatermarkStatus`, `checkWatermarkStatus`, `initializeState` — and the default implementations just delegate to the embedded operator and recurse into targets, so a purely stateless transform plugs in with zero code.
+`StatefulOperator` owns three things: the embedded native operator, the downstream target list, and `stateHandler_` (legacy — no longer constructed once typed operators build their own `HeapKeyedStateBackend`). The base-class virtuals form the streaming lifecycle API — `initialize`, `isFinished`, `addInput`, `advance`, `advanceWithFuture`, `close`, `finish`, `processWatermark`, `processWatermarkStatus`, `checkWatermarkStatus`, `initializeState` — and the default implementations just delegate to the embedded operator and recurse into targets, so a purely stateless transform plugs in with zero code.
 
 The load-bearing method is `pushOutput`: a non-tail operator's output goes directly to `targets_[i]->addInput` + `advance` (recursion); the tail hands elements to the task's pendings_. One advance rolls data to the tail or parks it inside an operator (a window accumulating) — no queues in between. `finish` drains: noMoreInput, then loop getOutput until dry — window operators flush their last outputs here. Multi-input watermark handling merges per-input watermarks (combined minimum) and emits status transitions on idle changes, mirroring Flink's combined watermark semantics.
 
@@ -65,7 +66,7 @@ The load-bearing method is `pushOutput`: a non-tail operator's output goes direc
 
 ## Stage 5: state and timers
 
-One `StreamOperatorStateHandler` per operator, deliberately mirroring Flink's `StreamOperatorStateHandler` shape. All state values are `RowVectorPtr` — state is vectors, like everything else.
+New keyed-state operators do not go through this layer — the typed `HeapKeyedStateBackend` is the current contract (see the [implementation guide](../stateful-operator-implementation.md)). Legacy path: one `StreamOperatorStateHandler` per operator, deliberately mirroring Flink's same-named class. All state values are `RowVectorPtr` — state is vectors, like everything else.
 
 | API | Shape | Typical use |
 |---|---|---|
@@ -79,7 +80,7 @@ One `StreamOperatorStateHandler` per operator, deliberately mirroring Flink's `S
 
 ## Stage 6: checkpoint and the RocksDB pass-through
 
-`StatefulOperator#snapshotState` recurses along the chain: the embedded operator's own snapshot plus the state handler's snapshot plus any `Snapshotable` embedded operator; heap backends produce explicit snapshot records (strings) collected back into the Flink state store. `restoreState` and `notifyCheckpointComplete` (sink commits) are symmetric.
+`StatefulOperator#snapshotState` recurses along the chain: the wrapped operator's own snapshot and the targets' snapshots run unconditionally; the state handler's snapshot and any `Snapshotable` embedded operator's snapshot run only when the handler exists — typed operators build their own backend so the handler is never constructed, and the walk does not break on a missing handler (covered by `StatefulOperatorCheckpointTest`). Heap backends produce explicit snapshot records (strings) collected back into the Flink state store. `restoreState` and `notifyCheckpointComplete` (sink commits) are symmetric.
 
 The RocksDB path is the interesting one: Velox does not run its own RocksDB — it uses **Flink's live instance**. On the Java side, `WindowAggOperator#initializeState` reflects the native handles out of Flink's `RocksDBKeyedStateBackend` (the db object, read/write options, the column family handle), packs them with key/accumulator type info into `RocksDBKeyedStateBackendParameters`, and passes them through `task.initializeState`. The C++ backend then reads and writes the same db. One RocksDB holds both Flink-native and Velox state, and Flink's barrier keeps them consistent; non-RocksDB backends take the explicit-snapshot path above.
 

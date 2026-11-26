@@ -14,6 +14,7 @@
 
 set -u
 export GFVBOT_LANG=en   # assertions grep English messages; keep them stable
+export GFVBOT_NO_CC_BRIDGE=1   # lifecycle block: no CC bridge (stub block below)
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 
@@ -76,7 +77,7 @@ anchor_ok() {
 a "install A: anchor exact" anchor_ok
 a "install A: record exists" test -f "$T/.gfvbot/records/stateful-operator-development.claude.json"
 a "install A: shared skill landed" test -f "$T/.claude/skills/flink-velox-build/SKILL.md"
-a "install A: agent landed" test -f "$T/.claude/agents/stateful-operator-reviewer.md"
+a "install A: agent landed in plugin subfolder" test -f "$T/.claude/agents/stateful-operator-development/stateful-operator-reviewer.md"
 a "install A: docs landed at neutral path" test -f "$T/docs/gfvbot/stateful-operator-development/stateful-arch.md"
 a "install A: docs content is the en side" grep -q 'E2E FIXTURE' "$T/docs/gfvbot/stateful-operator-development/stateful-arch.md"
 a "install A: no language layer in landing" test ! -e "$T/docs/gfvbot/stateful-operator-development/en"
@@ -128,7 +129,7 @@ mkdir -p "$TO"
 bash "$COPY/installer/install.sh" --plugin performance-optimization --tool opencode --target "$TO" >/dev/null 2>&1
 a "opencode: index landed" test -f "$TO/.opencode/gfvbot/index.md"
 a "opencode: shared skill landed" test -f "$TO/.opencode/skills/flink-velox-build/SKILL.md"
-a "opencode: agent landed" test -f "$TO/.opencode/agents/performance-reviewer.md"
+a "opencode: agent landed in plugin subfolder" test -f "$TO/.opencode/agents/performance-optimization/performance-reviewer.md"
 a "opencode: AGENTS.md anchor carries index copy" grep -q 'gfvbot:plugin:performance-optimization' "$TO/AGENTS.md"
 bash "$COPY/installer/uninstall.sh" performance-optimization --target "$TO" >/dev/null 2>&1
 a "opencode: reclaim zero residue" bash -c "[ -z \"\$(ls -A '$TO')\" ]"
@@ -137,9 +138,9 @@ a "opencode: reclaim zero residue" bash -c "[ -z \"\$(ls -A '$TO')\" ]"
 TL="$SANDBOX/target-langswitch"
 mkdir -p "$TL"
 bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TL" >/dev/null 2>&1
-a "langswitch: en agent body landed by default" grep -q 'fixture agent body (en)' "$TL/.claude/agents/stateful-operator-reviewer.md"
+a "langswitch: en agent body landed by default" grep -q 'fixture agent body (en)' "$TL/.claude/agents/stateful-operator-development/stateful-operator-reviewer.md"
 bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TL" --lang zh >/dev/null 2>&1
-a "langswitch: zh agent body replaced en" bash -c "grep -q '（中文版）' '$TL/.claude/agents/stateful-operator-reviewer.md'"
+a "langswitch: zh agent body replaced en" bash -c "grep -q '（中文版）' '$TL/.claude/agents/stateful-operator-development/stateful-operator-reviewer.md'"
 a "langswitch: zh doc content replaced" bash -c "grep -q '（中文版）' '$TL/docs/gfvbot/stateful-operator-development/stateful-arch.md'"
 a "langswitch: landing path still neutral" test -f "$TL/docs/gfvbot/stateful-operator-development/stateful-arch.md"
 a "langswitch: record lang=zh" bash -c "jq -e '.lang==\"zh\"' '$TL/.gfvbot/records/stateful-operator-development.claude.json'"
@@ -223,6 +224,91 @@ a "clone: failed repo not recorded in env.json" bash -c "! jq -e '.repos.velox.o
 a "clone: summary lists the failed repo" bash -c "
   GFVBOT_CLONE_TRIES=1 GFVBOT_CLONE_RETRY_SLEEP=0 \
   bash '$COPY/installer/bin/gfvbot' clone velox --target '$TF' 2>&1 | grep -q 'Re-run the same command'"
+
+# --- CC plugin channel bridge: stub claude, files + CLI calls ------------------
+TB="$SANDBOX/target-bridge"
+mkdir -p "$TB/bin" "$TB/t"
+cat > "$TB/bin/claude" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >> "$CLAUDE_STUB_LOG"
+# fidelity: the real CLI reads <path>/.claude-plugin/marketplace.json on the
+# spot — a marketplace add whose manifest is missing fails with rc=1
+# (regression guard: the manifest must be built before the add call)
+if [ "${1:-}" = plugin ] && [ "${2:-}" = marketplace ] && [ "${3:-}" = add ] \
+   && [ -n "${4:-}" ] && [ ! -f "$4/.claude-plugin/marketplace.json" ]; then
+  echo "STUB-ERR: manifest missing at $4" >> "$CLAUDE_STUB_LOG"
+  exit 1
+fi
+exit 0
+STUB
+chmod +x "$TB/bin/claude"
+export GFVBOT_CC_REGISTRY="$TB/registry.json"   # isolate from the real user registry
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TB/t" >/dev/null 2>&1
+a "bridge: marketplace.json valid and lists the plugin" \
+  jq -e '.name=="gfvbot" and (.plugins|length)==1 and .plugins[0].name=="stateful-operator-development" and .plugins[0].source=="./stateful-operator-development"' \
+     "$TB/t/.gfvbot/marketplace/.claude-plugin/marketplace.json"
+a "bridge: plugin card carries version" \
+  jq -e '.name=="stateful-operator-development" and .version=="1.0.0"' \
+     "$TB/t/.gfvbot/marketplace/stateful-operator-development/.claude-plugin/plugin.json"
+a "bridge: agent copy qualified in body" \
+  grep -q 'stateful-operator-development:stateful-operator-reviewer' \
+     "$TB/t/.gfvbot/marketplace/stateful-operator-development/agents/stateful-operator-reviewer.md"
+a "bridge: frontmatter name stays bare" \
+  bash -c "grep -q '^name: stateful-operator-reviewer' '$TB/t/.gfvbot/marketplace/stateful-operator-development/agents/stateful-operator-reviewer.md'"
+a "bridge: index references qualified" \
+  grep -q 'stateful-operator-development:stateful-operator-reviewer' "$TB/t/.claude/gfvbot/index.md"
+a "bridge: cli marketplace add called with absolute path" \
+  grep -q "plugin marketplace add $TB/t/.gfvbot/marketplace --scope project" "$TB/calls.log"
+a "bridge: manifest present at add time (no stub errors)" \
+  bash -c "! grep -q 'STUB-ERR' '$TB/calls.log'"
+a "bridge: cli plugin install called" \
+  grep -q 'plugin install stateful-operator-development@gfvbot --scope project' "$TB/calls.log"
+a "bridge: record tracks bridge files" \
+  bash -c "jq -e '[.files[] | select(contains(\"/.gfvbot/marketplace/\"))] | length >= 3' '$TB/t/.gfvbot/records/stateful-operator-development.claude.json'"
+# second plugin joins the marketplace; version stays put on identical content
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/install.sh" --plugin performance-optimization --tool claude --target "$TB/t" >/dev/null 2>&1
+a "bridge: second plugin listed" \
+  jq -e '(.plugins|length)==2' "$TB/t/.gfvbot/marketplace/.claude-plugin/marketplace.json"
+# language switch over the bridge: content change bumps to the zh minor line
+# and triggers the CLI cache refresh calls
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TB/t" --lang zh >/dev/null 2>&1
+a "bridge: lang switch bumps to zh minor" \
+  jq -e '.version=="1.1.0"' "$TB/t/.gfvbot/marketplace/stateful-operator-development/.claude-plugin/plugin.json"
+a "bridge: cache refresh calls made" \
+  bash -c "grep -q 'plugin marketplace update gfvbot' '$TB/calls.log' && grep -q 'plugin update stateful-operator-development@gfvbot --scope project' '$TB/calls.log'"
+# uninstall one: manifest rebuilt without it, entry unregistered
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/uninstall.sh" stateful-operator-development --tool claude --target "$TB/t" >/dev/null 2>&1
+a "bridge: uninstalled plugin leaves the manifest" \
+  jq -e '(.plugins|length)==1 and .plugins[0].name=="performance-optimization"' \
+     "$TB/t/.gfvbot/marketplace/.claude-plugin/marketplace.json"
+a "bridge: plugin dir dropped" \
+  test ! -e "$TB/t/.gfvbot/marketplace/stateful-operator-development"
+a "bridge: cli plugin uninstall called" \
+  grep -q 'plugin uninstall stateful-operator-development@gfvbot --scope project' "$TB/calls.log"
+# uninstall the last: marketplace removed, bridge tree gone
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/uninstall.sh" performance-optimization --tool claude --target "$TB/t" >/dev/null 2>&1
+a "bridge: cli marketplace remove called on empty" \
+  grep -q 'plugin marketplace remove gfvbot' "$TB/calls.log"
+a "bridge: tree gone after last uninstall" \
+  test ! -e "$TB/t/.gfvbot/marketplace"
+
+# other projects still registered: marketplace remove must be withheld even
+# when this target's bridge is empty (remove is global by marketplace name)
+mkdir -p "$TB/t2"
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls2.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/install.sh" --plugin stateful-operator-development --tool claude --target "$TB/t2" >/dev/null 2>&1
+jq -n '{plugins: {"stateful-operator-development@gfvbot": [{scope: "project", projectPath: "/other/project"}]}}' > "$TB/registry.json"
+env -u GFVBOT_NO_CC_BRIDGE CLAUDE_STUB_LOG="$TB/calls2.log" PATH="$TB/bin:$PATH" \
+  bash "$COPY/installer/uninstall.sh" stateful-operator-development --tool claude --target "$TB/t2" >/dev/null 2>&1
+a "bridge: remove withheld when other projects registered" \
+  bash -c "! grep -q 'plugin marketplace remove' '$TB/calls2.log'"
+a "bridge: local tree still dropped" \
+  test ! -e "$TB/t2/.gfvbot/marketplace"
 
 echo
 echo "e2e: $PASS passed, $FAIL failed"

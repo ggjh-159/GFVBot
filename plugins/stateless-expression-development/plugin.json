@@ -18,7 +18,8 @@
     "task-state.md",
     "implementation.md",
     "audit-report.md",
-    "test-report.md"
+    "test-report.md",
+    "pr.md"
   ],
   "shared": {
     "skills": [

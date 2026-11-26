@@ -40,9 +40,9 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-# Build parallelism: min(32, cores) — more C++ units at once exhaust memory
+# Build parallelism: min(8, cores) — more C++ units at once exhaust memory
 # and starve shared machines.
-BUILD_JOBS=$(( $(nproc) > 32 ? 32 : $(nproc) ))
+BUILD_JOBS=$(( $(nproc) > 8 ? 8 : $(nproc) ))
 
 VELOX_DIR=$(jq -r '.repos["velox"].path // empty' "$ENV_JSON")
 V4J_ROOT=$(jq -r '.repos["velox4j"].path // empty' "$ENV_JSON")

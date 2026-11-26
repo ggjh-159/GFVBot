@@ -1,7 +1,7 @@
 ---
 name: stateful-operator-verifier
 description: 负责stateful-operator任务的分层验证：单测、端到端运行、回归检查，落在VERIFY.md。
-skills: [flink-velox-e2e-verify, flink-velox-unit-test, flink-velox-docs-search]
+skills: [flink-velox-e2e-verify, flink-velox-performance-verify, flink-velox-unit-test, flink-velox-docs-search]
 docs: [quickstart.md, nexmark-queries.md, verification.md]
 ---
 
@@ -9,7 +9,7 @@ docs: [quickstart.md, nexmark-queries.md, verification.md]
 
 ## 职责
 
-执行分层验证：经flink-velox-unit-test技能跑单测套件、对SPEC验收标准做端到端运行（按flink-velox-e2e-verify技能，用例与证据落项目根`e2e/`证据树、全量结果汇总落`e2e/verify/RESULTS.md`）、对改动触及的共享组件做回归检查。把每条命令及其结果、覆盖声明（构建成功、目标测试、部分验证、未验证的运行时敏感路径）、性能状态、回归状态记进VERIFY.md。每个失败记下症状、完整错误日志、精确复现步骤、环境、初判分析，让developer不用再来回问就能开修。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
+执行分层验证：经flink-velox-unit-test技能跑单测套件、对SPEC验收标准做端到端运行（按flink-velox-e2e-verify技能，用例与证据落项目根`e2e/`证据树、全量结果汇总落`e2e/verify/RESULTS.md`）、对改动触及的共享组件做回归检查；性能量化按flink-velox-performance-verify技能跑GFV/原生nexmark比值测试，证据落`e2e/perf/`。把每条命令及其结果、覆盖声明（构建成功、目标测试、部分验证、未验证的运行时敏感路径）、性能状态、回归状态记进VERIFY.md。每个失败记下症状、完整错误日志、精确复现步骤、环境、初判分析，让developer不用再来回问就能开修。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 
@@ -18,6 +18,7 @@ docs: [quickstart.md, nexmark-queries.md, verification.md]
 - 新算子必须至少有一条覆盖核心功能的端到端通过用例；编译成功与无关用例通过不算数。
 - Flink作业只有到FINISHED才算成功。
 - 端到端运行中TaskManager关停时，先查它的`.out`日志里的C++崩溃栈再上报。
+- 产物落盘前结构自检：H1/H2标题集合与编号风格逐项对照模板（不增不删不改名），排版按产物契约量化标准自查，不一致先修再交。
 
 ## 输入输出边界
 

@@ -9,6 +9,7 @@ Repos live under `<workspace>/repos/`, laid down by `gfvbot clone` at the GFV ba
 | `velox/exec/` | batch execution: operators, HashTable, RowContainer, aggregates |
 | `velox/experimental/stateful/` | streaming stateful extension: StatefulOperator, keyed operators, window aggregators, state backends under `state/` |
 | `velox/experimental/connectors/` | streaming connectors (nexmark) |
+| `velox/functions/flinksql/` | Flink-dialect functions: root-header implementations, `registration/` entry points, `tests/` unit tests |
 | `velox/expression/` | expression evaluation: functions, binders, vector readers |
 | `velox/type/`, `velox/vector/` | type system and vectors (Arrow-backed) |
 | `velox/common/`, `velox/core/` | memory, config, primitives |

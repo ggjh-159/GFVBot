@@ -1,6 +1,6 @@
 # Verification workflow
 
-Every GFV change — an expression, an operator, an aggregate, or a performance tweak — is verified through the same loop: rebuild the jars, restart the cluster, submit a nexmark query, read the result. This page covers the loop end to end; the build step itself is owned by the flink-velox-build skill.
+Every GFV change — an expression, an operator, an aggregate, or a performance tweak — is verified through the same loop: rebuild the jars, restart the cluster, submit a nexmark query, read the result. This page covers the loop end to end; the build step itself is owned by the flink-velox-build skill, and performance comparison (GFV/native ratio benchmarking) by the flink-velox-performance-verify skill.
 
 Prerequisites: a workspace initialized per the README walkthrough (repos cloned, flink and nexmark installed via env-init, `.gfvbot/env.json` present). Paths below come from the env archive: the flink installation is `stack.flink.path` and the nexmark home (holding `bin/run_query.sh` and the `queries/` directory) is `stack.nexmark.home`.
 

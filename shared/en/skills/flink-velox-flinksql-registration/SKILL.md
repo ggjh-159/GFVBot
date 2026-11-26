@@ -17,13 +17,13 @@ Expression implementations prefer reusing existing velox libraries/classes, incl
 
 | Piece | Location (under the velox repo) |
 |---|---|
-| Function implementation | `velox/functions/flinksql/<Function or family>.h` (simple UDF) or `.cpp` (vector function) |
-| Registration entry | `velox/functions/flinksql/Register.cpp` — `registerFunctions(prefix)` in namespace `facebook::velox::functions::flinksql` |
-| Header | `velox/functions/flinksql/Register.h` |
+| Function implementation | `velox/functions/flinksql/<Family>Functions.h` (simple UDF; a vector function's factory wrapper lives in the family's Registration.cpp) |
+| Registration entry | `velox/functions/flinksql/registration/RegistrationFunctions.cpp` — `registerFunctions(prefix)` in namespace `facebook::velox::functions::flinksql`, split per family into `registerXxxFunctions` |
+| Header | `velox/functions/flinksql/registration/RegistrationFunctions.h` |
 | Build wiring | `velox/functions/flinksql/CMakeLists.txt` |
 | Tests | `velox/functions/flinksql/tests/` — follow the existing expression test pattern |
 
-The existing `regexp_extract` (re2-based, `RegexFunctions.h`) is the in-tree reference for a full flinksql registration; the stateful-side `count_char`/`extract`/`split_index` under `velox/experimental/stateful/udf/` show the simple-UDF shape.
+In-tree references for a full flinksql registration: simple UDFs see `StringFunctions.h` (the trim/pad family); vector functions see `regexp_extract` in `registration/StringFunctionsRegistration.cpp` (wrapping velox core `functions/lib/Re2Functions.h`, NULL on empty match); the stateful-side `count_char`/`extract`/`split_index` under `velox/experimental/stateful/udf/` show the simple-UDF shape.
 
 ## Registration mechanics
 
@@ -42,7 +42,7 @@ Registering the velox function is necessary but not sufficient — the Flink cal
 ## Checklist
 
 - [ ] Implementation file(s) under `velox/functions/flinksql/`, namespace-correct
-- [ ] Registration added to `Register.cpp` with explicit signatures
+- [ ] Registration added to the family's `registration/*FunctionsRegistration.cpp` with explicit signatures
 - [ ] `CMakeLists.txt` compiles the new files
 - [ ] flinksql unit test covers the type matrix and null/edge behavior
 - [ ] Loader prefix verified against velox4j call sites
