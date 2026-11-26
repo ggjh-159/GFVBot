@@ -44,6 +44,9 @@
 | 句柄 | <Aggregating/Value/List/Map>State | |
 | namespace | <VoidNamespace/自定义Namespace> | |
 | 值形态 | <RowContainer行/单值/vector/map> | |
+| Flink原生基准 | `<Flink算子类>用<句柄>（keyed/operator），源码路径:行号` | 选型照Flink原生；偏离进§10待裁决 |
+
+选型基准是Flink原生算子的状态设计：Flink用keyed state的算子这里必须用keyed state（`HeapKeyedStateBackend` typed API）；operator state只用于Flink原生就用operator state的场景，不得以实现简便为由替代。
 
 ### 3.2 生命周期范式落位
 
@@ -69,6 +72,8 @@
 | velox | `velox/experimental/stateful/tests/<Test>.cpp` | 单测 |
 | velox4j | `plan/<Node>.java`＋`stateful/KeyedStateSpec` | 镜像类 |
 | gluten | `planner/.../StreamExec<Xxx>.java` | 影子覆盖 |
+
+修改边界：本表只列范围节允许的文件——计划翻译、节点新增类与serde注册、planner分派分支、算子实现文件、单测、velox4j镜像类、gluten影子覆盖。框架核心（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）只读，不出现在本表；框架能力不够进§10待裁决项，经用户显式授权后单列验证边界。
 
 ## 5. 执行与数据流
 

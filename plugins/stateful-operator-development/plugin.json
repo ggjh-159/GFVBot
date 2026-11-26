@@ -27,6 +27,7 @@
       "flink-velox-code-review",
       "flink-velox-commit-walkthrough",
       "flink-velox-e2e-verify",
+      "flink-velox-format",
       "flink-velox-performance-verify",
       "flink-velox-stateful-spec-analysis",
       "flink-velox-stateful-design-analysis"

@@ -57,9 +57,11 @@ Failed-case handling: <none / per case: cause, fix or deferral reason>
 ## 6. General self-check
 
 - [ ] Code matches the design, no out-of-scope changes
+- [ ] The diff touches no framework-core files (operator base classes, state backend and handle implementations, RowContainer, serde infrastructure, shared utilities)
+- [ ] State goes only through the designed keyed typed API; no operator state substituted for keyed state
 - [ ] No security issues (null dereference / out-of-bounds / injected concatenation, etc.)
 - [ ] Unit tests complete and all passing, each runnable standalone
-- [ ] Code format passes
+- [ ] flink-velox-format skill check passed (log: `tmp/<task-name>/logs/cmd-outputs/<file>`)
 - [ ] No obviously simpler or more efficient alternative
 
 ## 7. Deviations from the design

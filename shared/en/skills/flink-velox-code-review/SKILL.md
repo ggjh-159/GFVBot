@@ -17,11 +17,11 @@ description: Structured review of GFV code changes — layer boundaries, resourc
 
 ### Stage 0 — format baseline
 
-Changed files pass a machine format check first; format failures block the deep review:
+Changed files pass a machine format check first; format failures block the deep review. The check goes only through the flink-velox-format skill (`bin/format.sh check <repo-path>`), which dispatches each repo's canonical entry — velox's `check.py`/clang-format, spotless for velox4j and gluten-flink — so no ad-hoc commands are assembled here:
 
-- C++ changes (velox repo, the gluten repo's `cpp/`): run `clang-format --dry-run --Werror <changed files>` per the repo-root `.clang-format`; the gluten repo's CI-equivalent entry is `dev/check.py format`.
-- Java changes (velox4j, gluten-flink): check basic format consistency — import order, trailing whitespace, tab mixing; when the repo carries a format toolchain (spotless and the like), run the repo's entry.
-- Format issues go into the issue list (severity HIGH); fixing format does not change the change-surface tags.
+- Run check once per touched repo and rule by the exit code (0 clean, 1 violations); archive the output under `tmp/<task-name>/logs/cmd-outputs/` and cite the log path in the report.
+- Any violation goes into the issue list (severity HIGH, attribution "implementation") and blocks the deep review; fix format with the same skill's fix mode — fixing format does not change the change-surface tags.
+- Files in the violation list outside this change set are pre-existing repo format debt: note them, do not fix them, and never widen the change set.
 
 ### Stage 1 — change-surface analysis
 

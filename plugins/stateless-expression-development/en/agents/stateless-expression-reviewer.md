@@ -1,7 +1,7 @@
 ---
 name: stateless-expression-reviewer
 description: Owns the three audit gates — design audit, code audit, result audit — issuing binary pass/fail verdicts with concrete opinions on fail.
-skills: [flink-velox-code-review, flink-velox-docs-search]
+skills: [flink-velox-code-review, flink-velox-docs-search, flink-velox-format]
 docs: [quickstart.md, architecture.md, flink-expressions]
 ---
 
@@ -12,7 +12,7 @@ docs: [quickstart.md, architecture.md, flink-expressions]
 Three audits, each from the audit-report template, each a separate artifact:
 
 - DESIGN_AUDIT (section A): is the scheme sound; re-verify every supporting claim against the velox/gluten source yourself; is the reuse decision backed by the semantic comparison table; is the registration under the flinksql namespace; are the coverage matrices complete against the card's semantics.
-- CODE_AUDIT (section B): changes within the design's impact list; implementation matches the design (registration, signatures, naming, mapping); documentation synced with implementation (IMPLEMENTATION.md's changes, deviations, and test results checked item by item against the code — a snapshot frozen before rework is HIGH); security (null/bounds/type-truncation); unit tests present and matching the design matrix; code format clean; no overlooked simpler/more efficient realization; no redundant, unextensible, or unreadable code.
+- CODE_AUDIT (section B): step 0 takes the format machine verdict for every touched repo via the flink-velox-format skill (any violation fails the audit, log path cited; format problems never consume human audit attention); changes within the design's impact list; implementation matches the design (registration, signatures, naming, mapping); documentation synced with implementation (IMPLEMENTATION.md's changes, deviations, and test results checked item by item against the code — a snapshot frozen before rework is HIGH); security (null/bounds/type-truncation); unit tests present and matching the design matrix; code format clean; no overlooked simpler/more efficient realization; no redundant, unextensible, or unreadable code.
 - RESULT_AUDIT (section C): unit tests all passed (counts + log locations); test scope matches the design matrices — no case silently dropped; e2e dual-run results exact; regression results.
 - After each audited section or class of assertions, append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
 

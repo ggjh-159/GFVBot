@@ -26,6 +26,10 @@ stages:
 
 大规模velox上游同步不在范围内，除非用户明确授权并单列验证边界。
 
+修改边界（铁律）：算子开发只触碰下列文件——计划翻译（gluten影子ExecNode、velox `StatefulPlanner`分派分支）、计划节点新增类与serde注册（`StatefulPlanNode.h`只增不改既有节点类）、velox算子实现文件（`velox/experimental/stateful/<目录>/<Operator>.h/.cpp`）与其单测、velox4j镜像类、gluten接线。框架核心只读：算子基类、状态后端与句柄实现、RowContainer、serde基础设施与通用工具——不新增API、不改签名、不改行为。框架能力不够属于`feasible with upstream dependency`，列为待裁决项经用户显式授权后单列验证边界，绝不静默扩展框架。
+
+状态选型基准（铁律）：以Flink原生算子的状态设计为准——Flink原生用keyed state的算子，这里必须用keyed state（`HeapKeyedStateBackend` typed API＋对应句柄）；operator state只用于Flink原生就用operator state的场景。偏离必须在设计契约对照节给Flink源码依据并作为待裁决项经用户门禁1裁决，不得以实现简便为由用operator state替代keyed state。
+
 ## Agent
 
 | Agent | 职责 |
@@ -72,15 +76,15 @@ architect把任务描述转成规格合约，由插件模板`templates/spec.md`�
 
 ### Design
 
-architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入（公式定位）、现状调研（翻译链三段诚实分级＋复用处置枚举）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流（含对齐清单）、checkpoint语义、测试策略、风险对照陷阱表、限制清单、待裁决项。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend五步、addInput七步范式与陷阱清单逐项对照。设计素材经flink-velox-stateful-design-analysis技能产出：机制级语义深化、现状三段诚实分级、复用处置枚举、对齐清单、限制清单与待裁决项；每条结论一句依据，待裁决项经用户门禁1逐条裁决后原地回填。
+architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入（公式定位）、现状调研（翻译链三段诚实分级＋复用处置枚举）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流（含对齐清单）、checkpoint语义、测试策略、风险对照陷阱表、限制清单、待裁决项。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend五步、addInput七步范式与陷阱清单逐项对照。状态选型照Flink原生（铁律）：先定位Flink对应算子的实现类与其状态声明（句柄类型与keyed/operator属性，带源码路径），写进契约对照的状态句柄选型表与对齐清单；Flink用keyed state的算子这里就用keyed state，偏离进待裁决项。受影响文件表只列修改边界允许的文件（范围节铁律）；框架能力不够时写进待裁决项而非安排框架改动。设计素材经flink-velox-stateful-design-analysis技能产出：机制级语义深化、Flink原生状态设计调研、现状三段诚实分级、复用处置枚举、对齐清单、限制清单与待裁决项；每条结论一句依据，待裁决项经用户门禁1逐条裁决后原地回填。
 
-门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
+门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性（状态选型与Flink原生一致、句柄类型与keyed/operator属性有Flink源码依据）、修改边界合规（受影响文件表无框架核心文件，除非SPEC显式授权）与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
 
 ### Implement
 
-developer按设计实现、自编译、过格式、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
+developer按设计实现、自编译、经flink-velox-format技能过格式（提交前硬规则：check不过不得commit，日志归档进cmd-outputs）、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
 
-门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
+门禁：reviewer签署CODE_REVIEW.md。评审必含格式机器检查（经flink-velox-format技能check通过，报告引用日志路径，有违规即`fail`）、对SPEC与设计影响清单的改动范围合规检查（diff触及框架核心文件——算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具——即必改级，除非SPEC显式授权该改动并单列验证边界）、状态实现合规检查（以operator state替代设计选定的keyed state即必改级）、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
 
 ### Verify
 

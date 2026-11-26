@@ -47,6 +47,8 @@ Keys surface as `RowContainerStateKey`: a row-pointer view+hash/keyGroup cached 
 
 ## Choosing a state handle
 
+The selection baseline is the native Flink operator's state design: an operator that uses keyed state in Flink must use keyed state here (every handle below is built on `HeapKeyedStateBackend`); operator state only where Flink itself uses operator state — never substituted for keyed state for implementation convenience. A deviation requires Flink source evidence and a user ruling.
+
 | Handle | descriptor | Value shape | Fits |
 |---|---|---|---|
 | `AggregatingState<K,N>` | accumulators+init/merge callbacks | RowContainer row, accumulator layout (isomorphic to HashAggregation rows) | aggregation: function updates slots in place |

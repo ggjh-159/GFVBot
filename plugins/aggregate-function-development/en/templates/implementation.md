@@ -49,7 +49,7 @@ Failing-case handling: <none / item by item: reason, fix, or suspension reason>
 - [ ] Code matches the design, no out-of-scope changes
 - [ ] No safety issues (null pointers / out-of-bounds / injection-style concatenation, etc.)
 - [ ] Unit tests complete and all passing, runnable standalone
-- [ ] code format passes
+- [ ] flink-velox-format skill check passed (log: `tmp/<task-name>/logs/cmd-outputs/<file>`)
 - [ ] No obviously simpler or more efficient alternative
 
 ## 6. Deviations from the design

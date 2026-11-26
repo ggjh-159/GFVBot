@@ -82,7 +82,7 @@ Gate: the reviewer produces DESIGN_AUDIT (audit-report template, section A: sche
 
 The developer codes per the approved design: velox function + flinksql registration + CMake + unit tests, velox4j call-chain tests (EvaluationTest-style harness, FLINK preset), gluten mapping entry. Build and deploy only via the flink-velox-build skill (never skip the C++ build); unit tests only via flink-velox-unit-test; then a lightweight e2e self-check (self-constructed input, print sink, verify script) on the GFV cluster. Records everything in IMPLEMENTATION.md, including any change beyond the design's impact list (out-of-scope changes are a critical audit finding). Before delivery, prepares PR.md per the shared PR template (`docs/gfvbot/shared/templates/pr.md`): commit plan, PR description, pre-merge checklist.
 
-Gate: the reviewer produces CODE_AUDIT (section B: design consistency, documentation synced with implementation, security, unit-test completeness vs the design matrix, code format, simpler/more efficient alternatives, redundancy/extensibility/readability). Pass + user gate 2 releases delivery.
+Gate: the reviewer produces CODE_AUDIT (step 0 takes the format machine verdict for every touched repo via the flink-velox-format skill — any violation fails the audit; section B: design consistency, documentation synced with implementation, security, unit-test completeness vs the design matrix, the format-check log path, simpler/more efficient alternatives, redundancy/extensibility/readability). Pass + user gate 2 releases delivery.
 
 ### Verify
 

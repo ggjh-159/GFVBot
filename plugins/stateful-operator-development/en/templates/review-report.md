@@ -36,6 +36,8 @@
 |---|---|---|
 | Within SPEC scope; out-of-scope items written back to SPEC | | |
 | Contract matching complete (handle selection / five-and-seven-step lifecycle / iron rules, DESIGN §3) | | |
+| State selection consistent with native Flink (handle type and keyed/operator attribute backed by Flink source evidence, DESIGN §3.1) | | |
+| Modification boundary respected: no framework-core files in the impacted-files table unless the SPEC explicitly authorizes them (DESIGN §4) | | |
 | Impacted layers complete (velox node/operator/tests, velox4j mirror, gluten override) | | |
 | Cites concrete paths/class names/commands, no generic description | | |
 | Typography discipline met (bullets, one fact per bullet + anchors, no prose) | | |
@@ -54,7 +56,9 @@
 
 | Audit item | Ruling | Basis |
 |---|---|---|
+| flink-velox-format skill check passed (one row per touched repo, log path cited; any violation is a fail) | | |
 | Diff entirely inside the SPEC and design impact lists (out of scope = required level) | | |
+| Diff touches no framework-core files (operator base classes / state backend and handle implementations / RowContainer / serde infrastructure / shared utilities) — touching one is required level unless the SPEC explicitly authorizes it | | |
 
 ### C2. Contract conformance
 
@@ -62,6 +66,7 @@
 |---|---|---|
 | transformation stays non-keyed | | |
 | typed API (no legacy-plane calls) | | |
+| State goes only through the designed keyed typed API; no operator state substituted (substitution = required level) | | |
 | Lifecycle discipline (wiring timing / close order / advance at batch boundaries / fail loud) | | |
 
 ### C3. Unit-test coverage (mandatory; missing = required level)

@@ -49,6 +49,7 @@
 
 | Audit item | Finding | Basis |
 |---|---|---|
+| flink-velox-format skill check passed (one row per touched repo, log path cited; any violation is a fail) | | |
 | The diff stays within the SPEC and design impact list (out of scope = required-level; drive-by refactoring is out of scope) | | |
 
 ### C2. Semantics unchanged and benchmark discipline (mandatory)

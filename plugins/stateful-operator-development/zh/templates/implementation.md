@@ -57,9 +57,11 @@
 ## 6. 通用自查清单
 
 - [ ] 代码与设计方案一致，无超范围改动
+- [ ] diff未触及框架核心文件（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）
+- [ ] 状态只走设计选定的keyed typed API，无operator state替代keyed state
 - [ ] 无安全规范问题（空指针/越界/注入式拼接等）
 - [ ] 单元测试齐全且全部通过，测试可独立运行
-- [ ] code format通过
+- [ ] 经flink-velox-format技能check通过（日志：`tmp/<task-name>/logs/cmd-outputs/<文件>`）
 - [ ] 无更简单/更高效的明显替代写法
 
 ## 7. 对设计的偏差

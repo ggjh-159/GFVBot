@@ -52,5 +52,5 @@
 - [ ] 代码与设计方案一致，无超范围改动
 - [ ] 无安全规范问题（空指针/越界/注入式拼接等）
 - [ ] 单元测试齐全且全部通过
-- [ ] code format通过（clang-format/mvn对应检查）
+- [ ] 经flink-velox-format技能check通过（日志：`tmp/<task-name>/logs/cmd-outputs/<文件>`）
 - [ ] 无更简单/更高效的明显替代写法（自查：冗余、不可扩展、可读性差）

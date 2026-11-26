@@ -61,7 +61,7 @@
 |---|---|---|
 | Safety (null dereference / out-of-bounds / type truncation ...) | | |
 | Unit tests complete (against the §7 matrix) | | |
-| Code format passes | | |
+| flink-velox-format skill check passed (one row per touched repo, log path cited; any violation fails the audit) | | |
 | No simpler or faster implementation ignored | | |
 | No redundant / unscalable / unreadable code | | |
 

@@ -80,9 +80,9 @@ analyst在已批准的SPEC内按`templates/design.md`产出分层定位与优化
 
 ### Implement
 
-developer按方案实施优化改动、自编译、过格式、更新或新增单测。优化不得改变查询语义——触及语义路径的改动必须有对应的正确性回归用例。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与场景自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
+developer按方案实施优化改动、自编译、经flink-velox-format技能过格式（提交前硬规则：check不过不得commit，日志归档进cmd-outputs）、更新或新增单测。优化不得改变查询语义——触及语义路径的改动必须有对应的正确性回归用例。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与场景自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
 
-门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查、语义不变检查（优化改动是否触及结果路径而无回归保障）与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
+门禁：reviewer签署CODE_REVIEW.md。评审必含格式机器检查（经flink-velox-format技能check通过，报告引用日志路径，有违规即`fail`）、对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查、语义不变检查（优化改动是否触及结果路径而无回归保障）与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
 
 ### Verify
 
