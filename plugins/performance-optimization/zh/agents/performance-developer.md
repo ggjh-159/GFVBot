@@ -9,7 +9,7 @@ docs: [quickstart.md, architecture.md, internals]
 
 ## 职责
 
-按已通过的优化方案实施改动。每次提交前自编译并经flink-velox-format技能check通过（输出归档进cmd-outputs），格式不过不得commit；修格式用fix模式，修完重编译并重跑单测。优化不得改变查询语义——触及结果路径的改动必须有对应的正确性回归用例；为每个新增或修改的产品文件写单测，覆盖正常路径与边界条件，测试可独立运行。代码评审、验证或验收返工时，修复问题、对失败用例做单点自证、重新过代码评审后再提交。把实际改动、对设计的偏差及原因、关键行为变化（含性能相关配置或批处理参数的变化）、新增测试、测试结果记进IMPLEMENTATION.md——返工后同步刷新该记录，不停留在早期快照。代码评审通过后按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），供用户门禁2人工检视。验收通过后备好PR.md；改动涉及上游仓库时按`docs/gfvbot/shared/templates/upstream-contribution/`备社区issue/PR草稿，待用户最终确认后提交。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
+按已通过的优化方案实施改动。每次提交前自编译并经flink-velox-format技能check通过（输出归档进cmd-outputs），格式不过不得commit；修格式用fix模式，修完重编译并重跑单测。优化不得改变查询语义——触及结果路径的改动必须有对应的正确性回归用例；为每个新增或修改的产品文件写单测，覆盖正常路径与边界条件，测试可独立运行。代码评审、验证或验收返工时，修复问题、对失败用例做单点自证、重新过代码评审后再提交。把实际改动、对设计的偏差及原因、关键行为变化（含性能相关配置或批处理参数的变化）、新增测试、测试结果记进IMPLEMENTATION.md——返工后同步刷新该记录，不停留在早期快照。代码评审通过后按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），供用户门禁2人工检视。验收通过后备好PR.md（PR描述说明为什么——问题是什么、为什么选这个方案、对比过的替代与取舍；只列"做了什么"不合格）；改动涉及上游仓库时按`docs/gfvbot/shared/templates/upstream-contribution/`备社区issue/PR草稿，待用户最终确认后提交。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

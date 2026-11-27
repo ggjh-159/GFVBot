@@ -77,6 +77,7 @@
 | Audit item | Finding | Basis |
 |---|---|---|
 | Each SPEC acceptance criterion met per VERIFY.md (target ratios reached, correctness not regressed) | | |
+| The PR.md description says why (problem, approach rationale, alternatives weighed), not just what changed | | |
 | Re-measured ratios, matrix, and `e2e/perf/REPORT.md` agree; all jobs FINISHED | | |
 | Coverage claim matches what actually ran | | |
 | Residual risk listed and acceptable | | |

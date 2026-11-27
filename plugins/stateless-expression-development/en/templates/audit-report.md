@@ -73,6 +73,7 @@
 |---|---|---|
 | Stated changes match the actual code | <consistent/inconsistent (doc vs actual)> | |
 | Deviation records and test results match reality | | |
+| The PR.md description says why (problem, approach rationale, alternatives weighed), not just what changed | | |
 
 ## C. Result Audit (fill for the result audit)
 

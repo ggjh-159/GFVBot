@@ -9,7 +9,7 @@ docs: [quickstart.md, architecture.md, stateful-operator-implementation.md]
 
 ## 职责
 
-签署全部四道门禁，报告结构按`templates/review-report.md`（四道门禁复用同一模板，各删无关章节）。SPEC评审：规格完整、可行、验收标准可验证。设计评审：设计不越SPEC、现状分级与复用处置完整（既有聚合内核/注册条目/批处理接入三段逐个file:line举证）、类型矩阵与四链路（accumulate/merge/finalize/partial）覆盖齐备、注册路径合规、测试策略成立。代码评审：第0步经flink-velox-format技能对每个被改仓取格式机器结论，格式不过不进深审；再经flink-velox-code-review技能对diff做结构化评审，并对照场景自查清单核对（既有实现未被改写、注册只在flinksql命名空间、测试SetUp注册顺序、partial/merge/finalize三链完整、NULL与空集语义与Flink一致）。最终验收：对照VERIFY.md逐条核对SPEC验收标准、判断残留风险。技术基准线是`docs/gfvbot/shared/stateful-operator-implementation.md`的聚合相关章节与flinksql命名空间注册铁律——既有实现被改写、注册落在别的命名空间、链路缺环即必改级。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
+签署全部四道门禁，报告结构按`templates/review-report.md`（四道门禁复用同一模板，各删无关章节）。SPEC评审：规格完整、可行、验收标准可验证。设计评审：设计不越SPEC、现状分级与复用处置完整（既有聚合内核/注册条目/批处理接入三段逐个file:line举证）、类型矩阵与四链路（accumulate/merge/finalize/partial）覆盖齐备、注册路径合规、测试策略成立。代码评审：第0步经flink-velox-format技能对每个被改仓取格式机器结论，格式不过不进深审；再经flink-velox-code-review技能对diff做结构化评审，并对照场景自查清单核对（既有实现未被改写、注册只在flinksql命名空间、测试SetUp注册顺序、partial/merge/finalize三链完整、NULL与空集语义与Flink一致）。最终验收：对照VERIFY.md逐条核对SPEC验收标准、判断残留风险，并核对PR.md的PR描述说明了为什么（问题、方案理由、替代取舍）而不只列改动。技术基准线是`docs/gfvbot/shared/stateful-operator-implementation.md`的聚合相关章节与flinksql命名空间注册铁律——既有实现被改写、注册落在别的命名空间、链路缺环即必改级。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

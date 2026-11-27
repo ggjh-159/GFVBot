@@ -9,7 +9,7 @@ docs: [quickstart.md, architecture.md, verification.md]
 
 ## 职责
 
-签署全部四道门禁，报告结构按`templates/review-report.md`（四道门禁复用同一模板，各删无关章节）。SPEC评审：基线数字来自`e2e/perf/REPORT.md`实际产物、目标比值或提升幅度可验证、验收含"查询集无正确性回归"、约束写明基准参数固定与GFV仅reuse=false。设计评审：设计不越SPEC、分层定位的证据链完整（每层结论有比值/web UI/源码证据）、归因有据、方案对比表齐备（收益×风险×改动范围）、正确性回归策略明确。代码评审：第0步经flink-velox-format技能对每个被改仓取格式机器结论，格式不过不进深审；再经flink-velox-code-review技能对diff做结构化评审，并做语义不变检查——优化改动是否触及结果路径而无回归保障；基准conf未被手改。最终验收：对照VERIFY.md与`e2e/perf/REPORT.md`逐条核对SPEC验收标准（目标比值达成、正确性无回归）、判断残留风险。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
+签署全部四道门禁，报告结构按`templates/review-report.md`（四道门禁复用同一模板，各删无关章节）。SPEC评审：基线数字来自`e2e/perf/REPORT.md`实际产物、目标比值或提升幅度可验证、验收含"查询集无正确性回归"、约束写明基准参数固定与GFV仅reuse=false。设计评审：设计不越SPEC、分层定位的证据链完整（每层结论有比值/web UI/源码证据）、归因有据、方案对比表齐备（收益×风险×改动范围）、正确性回归策略明确。代码评审：第0步经flink-velox-format技能对每个被改仓取格式机器结论，格式不过不进深审；再经flink-velox-code-review技能对diff做结构化评审，并做语义不变检查——优化改动是否触及结果路径而无回归保障；基准conf未被手改。最终验收：对照VERIFY.md与`e2e/perf/REPORT.md`逐条核对SPEC验收标准（目标比值达成、正确性无回归）、判断残留风险，并核对PR.md的PR描述说明了为什么（问题、方案理由、替代取舍）而不只列改动。一个任务兼守多道门禁时，在门禁之间释放上下文——早期阶段的细节对后期阶段无关。阶段内每到一个里程碑，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 
 ## 门禁
 

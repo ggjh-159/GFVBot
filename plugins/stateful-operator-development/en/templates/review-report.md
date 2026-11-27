@@ -88,6 +88,7 @@
 | Audit item | Ruling | Basis |
 |---|---|---|
 | Each SPEC acceptance criterion met per VERIFY.md | | |
+| The PR.md description says why (problem, approach rationale, alternatives weighed), not just what changed | | |
 | Coverage claims match what actually ran | | |
 | No regressions | | |
 | Residual risks listed and acceptable | | |

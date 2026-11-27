@@ -94,7 +94,7 @@ verifier跑分层验证：单测、对验收标准的端到端双跑、nexmark�
 
 ### Retro
 
-developer备好PR.md（文档更新、提交计划、PR描述、合入前检查单）。改动涉及velox/velox4j/gluten仓库时，developer同时按`docs/gfvbot/shared/templates/upstream-contribution/`的路由规则备社区草稿：每个被改仓库一份PR草稿、每个聚合函数至多一个issue草稿（改gluten仓用gluten模板，否则用velox/velox4j模板），落`tasks/<task-name>/upstream/`，经用户最终确认后才实际提交——Agent绝不自动提issue或PR。architect产出SUMMARY.md：最终范围、获批的设计偏差、各阶段评审裁决、验证覆盖、遗留风险、后续建议、经验教训是否值得沉淀进插件skills/docs（值得的给出沉淀建议）。每个参与Agent写RETROSPECTIVE.md，列失误、教训、流程建议。最终设计文档归档进目标项目自己的文档树；细则从目标项目惯例。
+developer备好PR.md（文档更新、提交计划、PR描述、合入前检查单）。PR描述必须说明为什么：问题是什么、为什么选这个方案（对比过的替代与取舍）——只列"做了什么"的描述不合格，退回重写。改动涉及velox/velox4j/gluten仓库时，developer同时按`docs/gfvbot/shared/templates/upstream-contribution/`的路由规则备社区草稿：每个被改仓库一份PR草稿、每个聚合函数至多一个issue草稿（改gluten仓用gluten模板，否则用velox/velox4j模板），落`tasks/<task-name>/upstream/`，经用户最终确认后才实际提交——Agent绝不自动提issue或PR。architect产出SUMMARY.md：最终范围、获批的设计偏差、各阶段评审裁决、验证覆盖、遗留风险、后续建议、经验教训是否值得沉淀进插件skills/docs（值得的给出沉淀建议）。每个参与Agent写RETROSPECTIVE.md，列失误、教训、流程建议。最终设计文档归档进目标项目自己的文档树；细则从目标项目惯例。
 
 ## 允许的回退与禁止的跳步
 
