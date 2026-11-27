@@ -47,6 +47,7 @@
 
 | Audit item | Finding | Basis |
 |---|---|---|
+| flink-velox-format skill check passed (one row per touched repo, log path cited; any violation is a fail) | | |
 | The diff stays within the SPEC and design impact list (out of scope = required-level) | | |
 
 ### C2. Contract compliance
@@ -75,6 +76,7 @@
 | Audit item | Finding | Basis |
 |---|---|---|
 | Each SPEC acceptance criterion met per VERIFY.md | | |
+| The PR.md description says why (problem, approach rationale, alternatives weighed), not just what changed | | |
 | Coverage claim matches what actually ran | | |
 | No regression | | |
 | Residual risk listed and acceptable | | |

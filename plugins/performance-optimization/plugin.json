@@ -27,7 +27,8 @@
       "flink-velox-code-review",
       "flink-velox-performance-verify",
       "flink-velox-e2e-verify",
-      "flink-velox-commit-walkthrough"
+      "flink-velox-commit-walkthrough",
+      "flink-velox-format"
     ],
     "docs": [
       "nexmark-queries.md",

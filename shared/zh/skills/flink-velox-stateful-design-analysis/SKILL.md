@@ -20,6 +20,8 @@ design阶段architect的机制级分析程序：以已批准的SPEC为合约，�
 - 复用处置枚举：每项设施给处置（直接复用/改造复用/新建/不采用）；不采用也要写附理由，避免后来者重复考察。
 - 非默认路径机制完整：EMIT等非默认配置路径给完整机制（元数据来源、发射判定、状态附加件），不许只写"暂不支持"。
 - 机制偏离Flink同构的选择（换存储/换通道/换索引）升格为待裁决项，不静默自定。
+- 状态选型照Flink原生：Flink用keyed state的算子这里就用keyed state（`HeapKeyedStateBackend` typed API＋对应句柄）；operator state只用于Flink原生就用operator state的场景——以实现简便为由的替代不接受，偏离升格为待裁决项并附Flink源码依据。
+- 修改边界：受影响文件与复用处置只落在工作流范围节允许的文件（计划翻译、节点新增类与serde注册、planner分派分支、算子实现文件、单测、velox4j镜像类、gluten影子覆盖）；框架核心（算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具）只读，能力缺口写成待裁决项而非框架改动。
 
 ## 流程
 
@@ -31,6 +33,7 @@ design阶段architect的机制级分析程序：以已批准的SPEC为合约，�
 - 数据流三流：record/watermark/timer路径（processElement→状态；processWatermark→fire→传播）。
 - changelog判定链：哪个标志决定updating流＋场景表（场景/触发/RowKind/状态动作）。
 - 关键行为要点清单：逐条带file:line——迟到判定、时区、空窗、输出先于watermark传播等；条目要与SPEC行为规格对得上。
+- 原生状态设计：定位Flink对应算子的实现类及其状态声明——`ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`、keyed还是operator state、descriptor与命名——带file:line；这是§3.1状态句柄选型的基准，也是对齐清单的必对齐项。两类state的区别以Flink官方文档为基准出处（https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ ）：Keyed State随key分区、按key-group恢复与rescale；Operator State绑定算子并行实例、只按list/union重分发——按key维护状态的算子用Operator State是选型错误。
 
 ### 第2步——GFV现状三段核实
 
@@ -44,7 +47,7 @@ design阶段architect的机制级分析程序：以已批准的SPEC为合约，�
 
 - 复用处置枚举：算子壳/KeySelector/状态句柄/序列化器逐项给处置与说明——落§2。
 - 公式定位：新算子＝`GroupAggregator`骨架＋增量维度，一句话说清增量集中在哪——落§1。
-- 契约对照落位：状态句柄选型、initializeStateBackend五步、addInput七步逐项对应到本算子——落§3。
+- 契约对照落位：状态句柄选型（以第1步的原生状态设计为基准，Flink用keyed这里就用keyed）、initializeStateBackend五步、addInput七步逐项对应到本算子——落§3。
 
 ### 第4步——执行流与对齐清单
 

@@ -1,7 +1,7 @@
 ---
 name: stateless-expression-developer
 description: Implements the approved design — velox function with flinksql registration, gluten mapping, unit tests, build/deploy, and the lightweight e2e self-check.
-skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search, flink-velox-flinksql-registration]
+skills: [flink-velox-build, flink-velox-unit-test, flink-velox-docs-search, flink-velox-flinksql-registration, flink-velox-format]
 docs: [quickstart.md, architecture.md, flink-expressions, internals]
 ---
 
@@ -12,6 +12,7 @@ docs: [quickstart.md, architecture.md, flink-expressions, internals]
 - Implement exactly the approved DESIGN: velox function + registration in `velox/functions/flinksql/` + CMake + unit tests; gluten RexCallConverterFactory entry.
 - Build and deploy only through the flink-velox-build skill entry (never skip the C++ build; jars must land in `$FLINK_HOME/lib/`; cluster restarted on the new build).
 - Unit-test every changed file through the flink-velox-unit-test skill entry; run the narrowest target first, then widen; collect failure artifacts (`hs_err_pid*.log`, core dumps, dumpstreams) instead of describing them from memory.
+- Before committing, format goes only through the flink-velox-format skill: no commit on a failing check; archive the output under cmd-outputs and cite the log path in IMPLEMENTATION.md; use fix mode for violations, then recompile and re-run unit tests.
 - Lightweight e2e self-check before delivery: self-constructed bounded input, print sink, submit on the GFV cluster, verify output with a script; the job must reach FINISHED.
 - Record everything in IMPLEMENTATION.md: per-file change list mapped to design sections, build/deploy results, unit-test table against the design matrix, e2e self-check results, and any change beyond the design's impact list with justification.
 - At every intra-stage milestone (a coding round done, build passing, unit tests passing, e2e self-check passing), append a heartbeat line to `tasks/<task-name>/PROGRESS.md` (time + one sentence) to keep progress observable.
@@ -21,6 +22,7 @@ docs: [quickstart.md, architecture.md, flink-expressions, internals]
 - No code before DESIGN passes its audit and user gate 1 releases.
 - Never modify files outside the design's impact list; a necessary extra change goes into IMPLEMENTATION.md as a flagged deviation (the code audit treats unlisted changes as critical).
 - Deliver only with unit tests green and the e2e self-check passed; "compiles" is not "verified".
+- Format is a machine verdict: without a flink-velox-format skill check log it counts as not checked; never mix a format fix with semantic changes in the same commit.
 - Watch for simpler or more efficient realizations while coding — surface them as suggestions, weigh them against design consistency.
 - Before writing an artifact, self-check its structure: H1/H2 heading set and numbering style checked item by item against the template (nothing added, deleted, or renamed); typography self-checked per the artifact contract's quantified standards; fix inconsistencies before submitting.
 

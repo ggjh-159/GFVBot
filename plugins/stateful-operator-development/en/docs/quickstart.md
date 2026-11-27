@@ -14,7 +14,7 @@ Contract first: the spec and design stages check `docs/gfvbot/shared/stateful-op
 
 ## Example task: streaming deduplication operator
 
-A typical task — deduplicate by key, emit only the first row (+I), drop later duplicates, and store the seen marker in ValueState:
+A typical task — deduplicate by key, emit only the first row (+I), drop later duplicates, and store the seen marker in ValueState. One task implements one operator variant: sibling variants (e.g. the three window kinds) get their own task and PR, one at a time:
 
 1. **SPEC**: fill the `spec.md` template; the feasibility assessment is the first section, checked item by item against the implementation-contract doc (ValueState handle; no partition semantics, use VoidNamespace)
 2. **Design**: fill `design.md` — current-state survey (three-stage grading of the translation chain + reuse dispositions), contract matching (handle selection, five/seven-step placement with the alignment list, non-keyed iron rule), impacted files across the three repos, unit-test matrix (appendOnly/kinds/changelog/snapshot round-trip/rescale), risks against the pitfall table, limitations and pending decisions

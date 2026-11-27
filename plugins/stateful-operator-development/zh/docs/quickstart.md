@@ -16,7 +16,7 @@ gfvbot env && gfvbot env-init                  # 环境扫描与补齐
 
 ## 示例任务：流式去重算子（Deduplication）
 
-一个典型任务——按key去重、仅首条输出（+I），后续重复丢弃，状态用ValueState存已见标记：
+一个典型任务——按key去重、仅首条输出（+I），后续重复丢弃，状态用ValueState存已见标记。一个任务只做一个算子变体：同族变体（如窗口的三种类型）各自独立任务与独立PR，先做一个再滚动下一个：
 
 1. **SPEC**：填`spec.md`模板，可行性评估第一节，对照实现契约文档逐项核对（ValueState句柄、无partition语义用VoidNamespace）
 2. **设计**：填`design.md`——现状调研（翻译链三段分级＋复用处置）、契约对照（句柄选型、五步/七步落位与对齐清单、非keyed铁律）、受影响三仓文件、单测矩阵（appendOnly/kinds/changelog/snapshot往返/rescale）、风险对照陷阱表、限制清单与待裁决项

@@ -23,9 +23,12 @@ Each touched repo gets its own commit breakdown, one topic per commit; drop rows
 
 ## 3. PR description
 
+The description must answer "why": what the problem is and why this approach — a description that only lists "what was done" does not qualify and is sent back for rewrite.
+
 - Title: <one line>
-- Background and motivation: <cite SPEC "Goal and scope">
-- Change summary: <cite IMPLEMENTATION.md §1>
+- Background and problem (why the change is needed): <the symptom or gap, its impact, what happens without the change; cite SPEC "Goal and scope" and the feasibility assessment>
+- Approach and rationale (why this approach): <the design-choice basis, alternatives considered and why they were rejected, the key trade-offs; cite the DESIGN plan section and the ruled pending decisions>
+- Change summary (what was done): <cite IMPLEMENTATION.md §1>
 - Verification results: <cite the matching section of the verification report (VERIFY.md or TEST_REPORT.md) and the `e2e/verify/RESULTS.md` path>
 - Risks and leftovers: <cite the corresponding SUMMARY.md entries>
 

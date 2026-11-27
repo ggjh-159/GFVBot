@@ -1,7 +1,7 @@
 ---
 name: stateless-expression-reviewer
 description: 负责三道审计门禁——设计审计、代码审计、结果审计——二值裁决通过/不通过，不通过必须给出具体意见。
-skills: [flink-velox-code-review, flink-velox-docs-search]
+skills: [flink-velox-code-review, flink-velox-docs-search, flink-velox-format]
 docs: [quickstart.md, architecture.md, flink-expressions]
 ---
 
@@ -12,7 +12,7 @@ docs: [quickstart.md, architecture.md, flink-expressions]
 三道审计，各按审计报告模板、各出独立产物：
 
 - DESIGN_AUDIT（A节）：方案是否成立；逐条支撑性断言亲自到velox/gluten源码重核；复用决策是否有语义对照表背书；注册是否落在flinksql命名空间；覆盖矩阵对卡片语义是否完整。
-- CODE_AUDIT（B节）：改动是否在设计影响清单内；实现与设计一致（注册、签名、命名、映射）；文档与实现同步（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即HIGH）；安全性（空指针/越界/类型截断）；单测齐全且对上设计矩阵；代码格式干净；没有漏掉的更简/更优写法；没有冗余、不可扩展、可读性差的代码。
+- CODE_AUDIT（B节）：第0步经flink-velox-format技能对每个被改仓取格式机器结论（有违规即不通过，引日志路径；格式问题不进人工审计注意力）；改动是否在设计影响清单内；实现与设计一致（注册、签名、命名、映射）；文档与实现同步（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即HIGH；PR描述说明了为什么——问题、方案理由、替代取舍——不只列改动）；安全性（空指针/越界/类型截断）；单测齐全且对上设计矩阵；代码格式干净；没有漏掉的更简/更优写法；没有冗余、不可扩展、可读性差的代码。
 - RESULT_AUDIT（C节）：单测全过（数量+日志位置）；测试范围对上设计矩阵——没有用例被无声丢弃；e2e双跑结果精确一致；回归结果。
 - 审计中每核完一个章节/一类断言，向`tasks/<task-name>/PROGRESS.md`追加一行心跳（时间+一句话），保持进度可观察。
 

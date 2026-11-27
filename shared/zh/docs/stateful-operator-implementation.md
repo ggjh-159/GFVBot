@@ -47,6 +47,8 @@ key的呈现是`RowContainerStateKey`：key行指针视图＋构造时缓存的h
 
 ## 状态句柄选型
 
+选型基准是Flink原生算子的状态设计：Flink用keyed state的算子这里必须用keyed state（下表句柄都建在`HeapKeyedStateBackend`上）；operator state只用于Flink原生就用operator state的场景，不得以实现简便为由用operator state替代keyed state——偏离须有Flink源码依据并经用户裁决。两类state的区别以Flink官方文档为准：https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ 。
+
 | 句柄 | descriptor | 值形态 | 适用 |
 |---|---|---|---|
 | `AggregatingState<K,N>` | accumulators＋init/merge回调 | RowContainer行，accumulator布局（与HashAggregation行同构） | 聚合：函数原地更新slot |

@@ -26,6 +26,12 @@ stages:
 
 大规模velox上游同步不在范围内，除非用户明确授权并单列验证边界。
 
+修改边界（铁律）：算子开发只触碰执行计划类与velox算子类的实现——计划翻译（gluten影子ExecNode、velox `StatefulPlanner`分派分支）、计划节点新增类与serde注册（`StatefulPlanNode.h`只增不改既有节点类）、velox算子实现文件（`velox/experimental/stateful/<目录>/<Operator>.h/.cpp`）与其单测、velox4j镜像类、gluten接线。框架代码与velox原生代码不修改：算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具，以及`experimental/stateful`之外的velox原生代码——不新增API、不改签名、不删除、不改行为。框架既有接口与Flink算子API一一对应，是算子实现的合约：认为某个接口不可用时不得删除、重塑或绕开，必须在待裁决项写明"原接口为何不能满足"并经用户裁决。框架能力不够属于`feasible with upstream dependency`，经用户显式授权后单列验证边界，绝不静默扩展框架。
+
+任务粒度（铁律）：一个任务只实现一个算子变体——同族多种变体（如窗口的三种类型）拆成独立任务、独立PR，先做一个再滚动下一个；SPEC把同族其他变体列入范围外并标注为后续任务，不让单次改动膨胀成框架级大PR。
+
+状态选型基准（铁律）：以Flink原生算子的状态设计为准——Flink原生用keyed state的算子，这里必须用keyed state（`HeapKeyedStateBackend` typed API＋对应句柄）；operator state只用于Flink原生就用operator state的场景。两类state的区别以Flink官方文档为基准出处：https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ 。偏离必须在设计契约对照节给Flink源码依据并作为待裁决项经用户门禁1裁决，不得以实现简便为由用operator state替代keyed state。
+
 ## Agent
 
 | Agent | 职责 |
@@ -66,21 +72,21 @@ stages:
 
 ### Spec
 
-architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。可行性分析经flink-velox-stateful-spec-analysis技能执行：语义映射×设施供给双维定档、查矩阵得四选一结论；任务级约束只升不降、伴随约束逐条记录，素材按SPEC模板节并入。
+architect把任务描述转成规格合约，由插件模板`templates/spec.md`驱动。SPEC覆盖范围与目标、接口规格、行为规格、验收标准、可行性评估、验证计划。范围只收一个算子变体：同族其他变体（如窗口的其他类型）列入范围外并标注为后续任务（范围节任务粒度铁律）。可行性评估是第一节：velox C++侧是否支持目标语义、Flink算子语义如何映射到velox语义（精确匹配、部分匹配、需要补偿）、能复用哪些既有代码、影响哪些层次，以及`feasible`、`feasible with constraints`、`feasible with upstream dependency`、`not feasible`四选一的结论。可行性评估对照`docs/gfvbot/shared/stateful-operator-implementation.md`（有状态算子实现契约：后端保证、状态句柄选型、生命周期范式）逐项核对。可行性分析经flink-velox-stateful-spec-analysis技能执行：语义映射×设施供给双维定档、查矩阵得四选一结论；任务级约束只升不降、伴随约束逐条记录，素材按SPEC模板节并入。
 
 门禁：reviewer在SPEC_REVIEW.md上签`pass`或`fail`——没有第三种；`fail`必须给出具体修改意见。`not feasible`结论终止或降级任务。`fail`打回architect修订SPEC（原地刷新后重审）。
 
 ### Design
 
-architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入（公式定位）、现状调研（翻译链三段诚实分级＋复用处置枚举）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流（含对齐清单）、checkpoint语义、测试策略、风险对照陷阱表、限制清单、待裁决项。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend五步、addInput七步范式与陷阱清单逐项对照。设计素材经flink-velox-stateful-design-analysis技能产出：机制级语义深化、现状三段诚实分级、复用处置枚举、对齐清单、限制清单与待裁决项；每条结论一句依据，待裁决项经用户门禁1逐条裁决后原地回填。
+architect在已批准的SPEC内按`templates/design.md`产出设计：任务与输入（公式定位）、现状调研（翻译链三段诚实分级＋复用处置枚举）、契约对照（状态句柄选型、生命周期范式落位、非keyed铁律）、受影响模块与文件（velox/velox4j/gluten三仓）、执行与数据流（含对齐清单）、checkpoint语义、测试策略、风险对照陷阱表、限制清单、待裁决项。设计引用具体路径、类名、命令；套在任何项目上都成立的泛泛描述不可接受。有状态算子的设计以`docs/gfvbot/shared/stateful-operator-implementation.md`为主技术参考——生命周期钩子、initializeStateBackend五步、addInput七步范式与陷阱清单逐项对照。状态选型照Flink原生（铁律）：先定位Flink对应算子的实现类与其状态声明（句柄类型与keyed/operator属性，带源码路径），写进契约对照的状态句柄选型表与对齐清单；Flink用keyed state的算子这里就用keyed state，偏离进待裁决项。受影响文件表只列修改边界允许的文件（范围节铁律）；框架能力不够时写进待裁决项而非安排框架改动。设计素材经flink-velox-stateful-design-analysis技能产出：机制级语义深化、Flink原生状态设计调研、现状三段诚实分级、复用处置枚举、对齐清单、限制清单与待裁决项；每条结论一句依据，待裁决项经用户门禁1逐条裁决后原地回填。
 
-门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
+门禁：reviewer签署DESIGN_REVIEW.md，裁决`pass`/`fail`二值；评审含契约对照完整性（状态选型与Flink原生一致、句柄类型与keyed/operator属性有Flink源码依据）、修改边界合规（受影响文件表无框架核心文件，除非SPEC显式授权）与排版纪律（按产物契约量化标准逐节抽验）。`fail`退回设计修订，修改意见逐条给出；修订原地刷新DESIGN.md并重审。通过后停在用户门禁1。
 
 ### Implement
 
-developer按设计实现、自编译、过格式、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
+developer按设计实现、自编译、经flink-velox-format技能过格式（提交前硬规则：check不过不得commit，日志归档进cmd-outputs）、写单测。每个新增或修改的产品文件必须有覆盖正常路径与边界条件的单测；测试必须可独立运行。developer把按模块分组的实际改动、对设计的偏差及原因、关键行为变化、新增测试清单、测试运行结果与契约自查清单记进IMPLEMENTATION.md（按`templates/implementation.md`填写）。
 
-门禁：reviewer签署CODE_REVIEW.md。评审必含对SPEC与设计影响清单的改动范围合规检查、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
+门禁：reviewer签署CODE_REVIEW.md。评审必含格式机器检查（经flink-velox-format技能check通过，报告引用日志路径，有违规即`fail`）、对SPEC与设计影响清单的改动范围合规检查（diff触及框架核心文件——算子基类、状态后端与句柄实现、RowContainer、serde基础设施、通用工具——即必改级，除非SPEC显式授权该改动并单列验证边界）、状态实现合规检查（以operator state替代设计选定的keyed state即必改级）、单测覆盖检查与文档同步检查（IMPLEMENTATION.md所述改动、偏差与测试结果对照代码逐项一致，快照停留在返工前即必改级）；缺测试是必改级问题。`fail`退回developer，修改意见标注归属；任何修复必须重过代码评审才能进验证。代码评审通过后、进用户门禁2前，developer按flink-velox-commit-walkthrough技能产出commit走读（按仓分目录、每commit一份），随门禁2呈报供人工检视。检视意见的返工修改amend进引入问题的对应commit（id重生成），不新增修复commit——仅任务分支未推送时可改写历史；走读文件原地刷新（命名不带commit id，仅rebase改变顺序时重排序号）。
 
 ### Verify
 
@@ -92,7 +98,7 @@ verifier跑分层验证：单测、对验收标准的端到端运行、共享组
 
 ### Retro
 
-developer备好PR.md（文档更新、提交计划、PR描述、合入前检查单）。改动涉及velox/velox4j/gluten仓库时，developer同时按`docs/gfvbot/shared/templates/upstream-contribution/`的路由规则备社区草稿：每个被改仓库一份PR草稿、每个算子至多一个issue草稿（改gluten仓用gluten模板，否则用velox/velox4j模板），落`tasks/<task-name>/upstream/`，经用户最终确认后才实际提交——Agent绝不自动提issue或PR。architect产出SUMMARY.md：最终范围、获批的设计偏差、各阶段评审裁决、验证覆盖、遗留风险、后续建议、经验教训是否值得沉淀进插件skills/docs（值得的给出沉淀建议）。每个参与Agent写RETROSPECTIVE.md，列失误、教训、流程建议。最终设计文档归档进目标项目自己的文档树；细则从目标项目惯例。
+developer备好PR.md（文档更新、提交计划、PR描述、合入前检查单）。PR描述必须说明为什么：问题是什么、为什么选这个方案（对比过的替代与取舍）——只列"做了什么"的描述不合格，退回重写。改动涉及velox/velox4j/gluten仓库时，developer同时按`docs/gfvbot/shared/templates/upstream-contribution/`的路由规则备社区草稿：每个被改仓库一份PR草稿、每个算子至多一个issue草稿（改gluten仓用gluten模板，否则用velox/velox4j模板），落`tasks/<task-name>/upstream/`，经用户最终确认后才实际提交——Agent绝不自动提issue或PR。architect产出SUMMARY.md：最终范围、获批的设计偏差、各阶段评审裁决、验证覆盖、遗留风险、后续建议、经验教训是否值得沉淀进插件skills/docs（值得的给出沉淀建议）。每个参与Agent写RETROSPECTIVE.md，列失误、教训、流程建议。最终设计文档归档进目标项目自己的文档树；细则从目标项目惯例。
 
 ## 允许的回退与禁止的跳步
 

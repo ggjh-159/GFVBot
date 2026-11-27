@@ -20,6 +20,8 @@ Required: `tasks/<task-name>/architect/SPEC.md` (SPEC review passed). Optional: 
 - Reuse disposition enumeration: a disposition for every facility (reuse directly / reuse with modification / build new / not adopted); facilities not adopted are written down too, with reasons, so later readers do not re-survey them.
 - Non-default paths carry a complete mechanism: EMIT and other non-default configuration paths get their full mechanism (metadata source, emit decision, state attachments) — never just "not supported yet".
 - Mechanism choices that deviate from Flink's structure (swapping storage / channel / indexing) are escalated to pending decisions, never made silently.
+- State selection follows native Flink: an operator that uses keyed state in Flink uses keyed state here (`HeapKeyedStateBackend` typed API plus the matching handle); operator state only where Flink itself uses operator state — substitution for implementation convenience is not accepted, and a deviation is escalated to a pending decision with Flink source evidence.
+- Modification boundary: impacted files and reuse dispositions land only on files the workflow's Scope section allows (plan translation, the new node class with serde registration, the planner dispatch branch, operator implementation files, unit tests, velox4j mirror classes, gluten shadow override); framework core (operator base classes, state backend and handle implementations, RowContainer, serde infrastructure, shared utilities) is read-only, and a capability gap is written as a pending decision, never as a framework change.
 
 ## Procedure
 
@@ -31,6 +33,7 @@ Distill the target operator's mechanism facts from the Flink sources, seeding th
 - Three dataflow streams: the record / watermark / timer paths (processElement → state; processWatermark → fire → propagation).
 - The changelog determination chain: which flag decides an updating stream + a scenario table (scenario / trigger / RowKind / state action).
 - A key behavior-points list, each with file:line — late-data handling, time zones, empty windows, output ahead of watermark propagation, and so on; the items must line up with the SPEC's behavior specification.
+- Native state design: locate the Flink operator's implementation class and its state declarations — `ValueState`/`MapState`/`ListState`/`AggregatingState`/`ReducingState`, keyed versus operator state, descriptor and name — with file:line; this is the baseline for the §3.1 state-handle selection and a mandatory item of the alignment list. The authoritative reference for the two state kinds is the Flink documentation (https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/state/ ): Keyed State is partitioned by key and recovered/rescaled by key group; Operator State is bound to the operator's parallel instances and only redistributed as list/union — using Operator State for a per-key operator is a selection error.
 
 ### Step 2 — verify the GFV current state across the three stages
 
@@ -44,7 +47,7 @@ Verify each translation-chain stage and grade it honestly (complete / half-done 
 
 - Reuse disposition enumeration: operator shell / KeySelector / state handles / serializers, each with a disposition and notes — lands in §2.
 - Formula positioning: new operator = the `GroupAggregator` skeleton + the delta, one sentence on where the delta concentrates — lands in §1.
-- Contract-matching placement: state handle selection, the initializeStateBackend five steps, and the addInput seven steps mapped item by item onto this operator — lands in §3.
+- Contract-matching placement: state handle selection (baseline: the step-1 native state design — keyed in Flink means keyed here), the initializeStateBackend five steps, and the addInput seven steps mapped item by item onto this operator — lands in §3.
 
 ### Step 4 — execution flow and the alignment list
 

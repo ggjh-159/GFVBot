@@ -4,7 +4,7 @@
 
 ## What changes are proposed in this pull request?
 
-<改动描述；与最终代码一致。>
+<先说为什么需要——问题/现象/缺口与影响；再说改了什么与为什么选这个方案（对比过的替代与取舍）；与最终代码一致。只列"做了什么"的描述不合格。>
 
 ## How was this patch tested?
 

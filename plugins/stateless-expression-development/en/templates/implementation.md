@@ -52,5 +52,5 @@ Self-built input → runs on the GFV cluster → verified by script:
 - [ ] Code matches the design; no out-of-scope changes
 - [ ] No safety issues (null dereference / out-of-bounds / injected concatenation ...)
 - [ ] Unit tests complete and all passing
-- [ ] Code format passes (clang-format / the mvn equivalent)
+- [ ] flink-velox-format skill check passed (log: `tmp/<task-name>/logs/cmd-outputs/<file>`)
 - [ ] No obviously simpler or faster alternative was overlooked (self-check: redundancy, poor scalability, poor readability)

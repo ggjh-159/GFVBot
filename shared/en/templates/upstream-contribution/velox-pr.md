@@ -4,7 +4,7 @@
 
 ## What changes are proposed in this pull request?
 
-<Description of the changes; must match the final code.>
+<Start with why it is needed — the problem/symptom/gap and its impact; then what changed and why this approach (alternatives considered, trade-offs); must match the final code. A description that only lists what was done does not qualify.>
 
 ## How was this patch tested?
 

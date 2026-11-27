@@ -49,6 +49,7 @@
 
 | Audit item | Finding | Basis |
 |---|---|---|
+| flink-velox-format skill check passed (one row per touched repo, log path cited; any violation is a fail) | | |
 | The diff stays within the SPEC and design impact list (out of scope = required-level; drive-by refactoring is out of scope) | | |
 
 ### C2. Semantics unchanged and benchmark discipline (mandatory)
@@ -76,6 +77,7 @@
 | Audit item | Finding | Basis |
 |---|---|---|
 | Each SPEC acceptance criterion met per VERIFY.md (target ratios reached, correctness not regressed) | | |
+| The PR.md description says why (problem, approach rationale, alternatives weighed), not just what changed | | |
 | Re-measured ratios, matrix, and `e2e/perf/REPORT.md` agree; all jobs FINISHED | | |
 | Coverage claim matches what actually ran | | |
 | Residual risk listed and acceptable | | |

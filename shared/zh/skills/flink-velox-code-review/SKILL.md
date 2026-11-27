@@ -17,11 +17,11 @@ description: GFV代码变更的结构化评审——层次边界、资源管理�
 
 ### 第0步——格式基线
 
-改动文件先过机器格式检查，格式不过不进入深审：
+改动文件先过机器格式检查，格式不过不进入深审。检查只走flink-velox-format技能（`bin/format.sh check <repo-path>`），由它按仓分派canonical入口——velox的`check.py`/clang-format、velox4j与gluten-flink的spotless——不再临时拼命令：
 
-- C++改动（velox仓、gluten仓`cpp/`）：按仓根`.clang-format`跑`clang-format --dry-run --Werror <改动文件>`；gluten仓的CI等价入口是`dev/check.py format`。
-- Java改动（velox4j、gluten-flink）：核对基础格式一致性——import顺序、行尾空白、tab混用；所在仓配有格式工具链（spotless等）时跑仓内入口。
-- 格式问题按问题清单列出（严重级HIGH）；修格式不改变变更面标签。
+- 每个被改仓跑一次check，以退出码为裁决（0干净、1有违规）；输出归档进`tmp/<task-name>/logs/cmd-outputs/`并在报告引用日志路径。
+- 有违规即按问题清单列出（严重级HIGH，归属"实现"），不进深审；修格式用同一技能的fix模式，修格式不改变变更面标签。
+- 违规清单里非本次改动的文件属仓内存量格式债：注明不修，不扩大变更面。
 
 ### 第1步——变更面分析
 
